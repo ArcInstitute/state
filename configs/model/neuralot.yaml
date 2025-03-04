@@ -20,3 +20,5 @@ kwargs:
       embd_pdrop: 0.0
       attn_pdrop: 0.0
       use_cache: false
+      dtype: torch.float32
+      attn_implementation: flash_attention_2

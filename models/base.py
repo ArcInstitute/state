@@ -137,6 +137,9 @@ class PerturbationModel(ABC, LightningModule):
                 hidden_dims=hidden_dims,
                 dropout=dropout
             )
+            if kwargs.get("bf16", False):
+                # Convert to bfloat16 for faster training
+                self.gene_decoder = self.gene_decoder.to(torch.bfloat16)
             logger.info(f"Initialized gene decoder for embedding {embed_key} to gene space")
         
 
@@ -391,42 +394,42 @@ class PerturbationModel(ABC, LightningModule):
 
             # add to calculate validation set metrics during training
             if isinstance(batch[k], torch.Tensor):
-                self.val_cache[k].append(batch[k].detach().cpu().numpy())
+                self.val_cache[k].append(batch[k].detach().cpu().float().numpy())
             else:
                 self.val_cache[k].append(batch[k])
 
         if "pred" not in self.val_cache:
             self.val_cache["pred"] = []
 
-        self.val_cache["pred"].append(pred.detach().cpu().numpy())
+        self.val_cache["pred"].append(pred.detach().cpu().float().numpy())
 
         if self.gene_decoder is not None:
             gene_pred = self.gene_decoder(pred)
             if "gene_pred" not in self.val_cache:
                 self.val_cache["gene_pred"] = []
 
-            self.val_cache["gene_pred"].append(gene_pred.detach().cpu().numpy())
+            self.val_cache["gene_pred"].append(gene_pred.detach().cpu().float().numpy())
 
     def _update_test_cache(self, batch, pred):
         for k in batch:
             if k not in self.test_cache:
                 self.test_cache[k] = []
             if isinstance(batch[k], torch.Tensor):
-                self.test_cache[k].append(batch[k].detach().cpu().numpy())
+                self.test_cache[k].append(batch[k].detach().cpu().float().numpy())
             else:
                 self.test_cache[k].append(batch[k])
 
         if "pred" not in self.test_cache:
             self.test_cache["pred"] = []
 
-        self.test_cache["pred"].append(pred.detach().cpu().numpy())
+        self.test_cache["pred"].append(pred.detach().cpu().float().numpy())
 
         if self.gene_decoder is not None:
             gene_pred = self.gene_decoder(pred)
             if "gene_pred" not in self.test_cache:
                 self.test_cache["gene_pred"] = []
 
-            self.test_cache["gene_pred"].append(gene_pred.detach().cpu().numpy())
+            self.test_cache["gene_pred"].append(gene_pred.detach().cpu().float().numpy())
 
     def compute_test_metrics(self, dataloader, prefix="test") -> Dict[str, float]:
         """
@@ -472,12 +475,12 @@ class PerturbationModel(ABC, LightningModule):
                 if np.random.rand() < 0.1 / self.batch_size or self.control_pert in batch["pert_name"]:
                     for k in batch:
                         if isinstance(batch[k], torch.Tensor):
-                            cache[k].append(batch[k].cpu().numpy())
+                            cache[k].append(batch[k].cpu().float().numpy())
                         else:
                             cache[k].append(batch[k])
-                    cache["pred"].append(latent_pred.cpu().numpy())
+                    cache["pred"].append(latent_pred.cpu().float().numpy())
                     if gene_pred is not None:
-                        cache["gene_pred"].append(gene_pred.cpu().numpy())
+                        cache["gene_pred"].append(gene_pred.cpu().float().numpy())
 
                 pbar.update(1)
             pbar.close()

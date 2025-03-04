@@ -106,7 +106,7 @@ class GlobalSimpleSumPerturbationModel(PerturbationModel):
                 else:
                     X_vals = batch["X"]
                 
-                X_cpu = X_vals.float().cpu()
+                X_cpu = X_vals.cpu().float()
                 pert_names = batch["pert_name"]
                 cell_types = batch["cell_type"]
                 
@@ -222,9 +222,9 @@ class GlobalSimpleSumPerturbationModel(PerturbationModel):
         super().on_save_checkpoint(checkpoint)
 
         # Convert tensors to CPU and NumPy arrays for serialization
-        checkpoint["global_basal"] = self.global_basal.cpu().numpy()
+        checkpoint["global_basal"] = self.global_basal.cpu().float().numpy()
         checkpoint["pert_mean_offsets"] = {
-            p_name: offset.cpu().numpy() for p_name, offset in self.pert_mean_offsets.items()
+            p_name: offset.cpu().float().numpy() for p_name, offset in self.pert_mean_offsets.items()
         }
 
         logger.info("GlobalSimpleSum: Saved global_basal and pert_mean_offsets to checkpoint.")

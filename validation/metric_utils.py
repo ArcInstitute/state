@@ -306,7 +306,7 @@ def compute_DE_pca(adata_pred, gene_names, pert_col, control_pert, k=50, transfo
     decoded_pred = transform.decode(adata_pred.X)
 
     # Create new anndata with decoded predictions
-    decoded_adata = ad.AnnData(X=decoded_pred.cpu().numpy(), obs=adata_pred.obs, var=pd.DataFrame(index=gene_names))
+    decoded_adata = ad.AnnData(X=decoded_pred.cpu().float().numpy(), obs=adata_pred.obs, var=pd.DataFrame(index=gene_names))
 
     # Compute DE using scanpy
     sc.tl.rank_genes_groups(decoded_adata, groupby=pert_col, reference=control_pert, rankby_abs=True, n_genes=k)

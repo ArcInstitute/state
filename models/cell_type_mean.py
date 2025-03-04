@@ -103,7 +103,7 @@ class CellTypeMeanModel(PerturbationModel):
                     X_vals = batch["X"]
                 
                 # Ensure the expression values are in float and on CPU
-                X_cpu = X_vals.float().cpu()
+                X_cpu = X_vals.float().cpu().float()
                 pert_names = batch["pert_name"]
                 cell_types = batch["cell_type"]
                 
@@ -194,7 +194,7 @@ class CellTypeMeanModel(PerturbationModel):
         super().on_save_checkpoint(checkpoint)
         # Convert each tensor to a CPU numpy array for serialization.
         checkpoint["celltype_pert_means"] = {
-            ct: mean.cpu().numpy() for ct, mean in self.celltype_pert_means.items()
+            ct: mean.cpu().float().numpy() for ct, mean in self.celltype_pert_means.items()
         }
         logger.info("CellTypeMeanModel: Saved celltype_pert_means to checkpoint.")
 

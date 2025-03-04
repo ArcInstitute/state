@@ -48,7 +48,7 @@ class PCATransform(nn.Module):
         #     force float32 to reduce memory usage; scikit-learn can handle it.)
         if isinstance(X, torch.Tensor):
             # Move to CPU and convert to numpy
-            X_cpu = X.to("cpu").detach().numpy().astype(np.float32)
+            X_cpu = X.to("cpu").detach().float().numpy().astype(np.float32)
         else:
             # Already numpy; just ensure float32
             X_cpu = X.astype(np.float32, copy=False)

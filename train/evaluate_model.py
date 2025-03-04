@@ -220,7 +220,7 @@ def main():
                      for k, v in batch.items()}
             batch_preds = model.predict_step(batch, batch_idx, padded=False)
             # Move each tensor in the returned dict to CPU to free GPU memory
-            batch_preds = {k: (v.cpu() if isinstance(v, torch.Tensor) else v) for k, v in batch_preds.items()}
+            batch_preds = {k: (v.cpu().float() if isinstance(v, torch.Tensor) else v) for k, v in batch_preds.items()}
             preds.append(batch_preds)
     logger.info("Aggregated predictions from manual loop.")
 
@@ -240,12 +240,12 @@ def main():
         # item["preds"] shape: [B, #genes or embed_dim], etc.
         # Some or all might be None
         if item["preds"] is not None:
-            all_preds.append(item["preds"].cpu().numpy())
+            all_preds.append(item["preds"].cpu().float().numpy())
         else:
             all_preds.append(None)
 
         if item["basal"] is not None:
-            all_basals.append(item["basal"].cpu().numpy())
+            all_basals.append(item["basal"].cpu().float().numpy())
         else:
             all_basals.append(None)
 
@@ -268,24 +268,24 @@ def main():
             if isinstance(item["gem_group"], list):
                 all_gem_groups.extend(item["gem_group"])
             elif isinstance(item["gem_group"], torch.Tensor):
-                all_gem_groups.extend(item["gem_group"].cpu().numpy())
+                all_gem_groups.extend(item["gem_group"].cpu().float().numpy())
             else:
                 all_gem_groups.append(item["gem_group"])
 
         if item["X"] is not None:
-            all_reals.append(item["X"].cpu().numpy())
+            all_reals.append(item["X"].cpu().float().numpy())
         else:
             all_reals.append(None)
 
         # Store X_hvg for HVG space ground truth
         if "X_hvg" in item and item["X_hvg"] is not None:
-            all_X_hvg.append(item["X_hvg"].cpu().numpy())
+            all_X_hvg.append(item["X_hvg"].cpu().float().numpy())
         else:
             all_X_hvg.append(None)
         
         # Store the decoded gene predictions if available
         if "gene_preds" in item and item["gene_preds"] is not None:
-            all_gene_preds.append(item["gene_preds"].cpu().numpy())
+            all_gene_preds.append(item["gene_preds"].cpu().float().numpy())
         else:
             all_gene_preds.append(None)
 

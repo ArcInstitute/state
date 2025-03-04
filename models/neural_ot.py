@@ -300,10 +300,10 @@ class NeuralOTPerturbationModel(PerturbationModel):
         """Track decoder performance during validation without training it."""
         if self.gene_decoder is not None and "X_hvg" in batch:
             # Get model predictions from validation step
-            latent_preds = outputs["predictions"]
+            latent_preds = outputs["predictions"].detach()
 
             # Train decoder to map latent predictions to gene space
-            gene_preds = self.gene_decoder(latent_preds) # verify this is automatically detached
+            gene_preds = self.gene_decoder(latent_preds)
             gene_targets = batch["X_hvg"] 
             
             # Get decoder predictions

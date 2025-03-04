@@ -29,7 +29,7 @@ import logging
 logger = logging.getLogger(__name__)
 torch.set_float32_matmul_precision("medium")
 
-def get_lightning_module(model_type: str, data_config: dict, model_config: dict, training_config: dict, var_dims: dict):
+def get_lightning_module(model_type: str, data_config: dict, model_config: dict, training_config: dict, var_dims: dict, global_config: dict):
     """Create model instance based on config."""
     # combine the model config and training config
     module_config = {**model_config, **training_config}
@@ -38,6 +38,7 @@ def get_lightning_module(model_type: str, data_config: dict, model_config: dict,
     module_config["gene_names"] = var_dims["gene_names"]
     module_config["batch_size"] = training_config["batch_size"]
     module_config["control_pert"] = data_config.get("control_pert", "non-targeting")
+    module_config["bf16"] = global_config.get("bf16", False)
 
     # if data_config["output_space"] == "gene" and data_config["embed_key"] == "X_uce":
     #     # the model outputs will be in gene space, so no decoder is needed
@@ -267,6 +268,7 @@ def train(cfg: DictConfig) -> None:
         cfg["model"]["kwargs"],
         cfg["training"],
         data_module.get_var_dims(),
+        cfg
     )
 
     # Set up logging
@@ -306,6 +308,11 @@ def train(cfg: DictConfig) -> None:
         callbacks=callbacks,
         gradient_clip_val=cfg["training"]["gradient_clip_val"],
     )
+
+    if cfg.get("bf16", False):
+        trainer_kwargs["precision"] = "bf16"
+    else:
+        trainer_kwargs["precision"] = 32
 
     # If it's SimpleSum, override to do exactly 1 epoch, ignoring `max_steps`.
     if (cfg["model"]["name"].lower() == "celltypemean" or cfg["model"]["name"].lower() == "globalsimplesum") and cfg[

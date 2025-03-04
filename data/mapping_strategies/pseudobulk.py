@@ -59,7 +59,7 @@ class PseudoBulkMappingStrategy(BaseMappingStrategy):
         if dataset.embed_key:
             X = dataset.h5_file[f"obsm/{dataset.embed_key}"][:]
         else:
-            X = np.vstack([dataset.fetch_gene_expression(idx).cpu().numpy() for idx in range(len(dataset))])
+            X = np.vstack([dataset.fetch_gene_expression(idx).cpu().float().numpy() for idx in range(len(dataset))])
 
         # Initialize storage for this split
         self.split_pert_indices[split] = {}
