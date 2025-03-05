@@ -155,9 +155,11 @@ class NeuralOTPerturbationModel(PerturbationModel):
             activation=self.activation_class,
         )
 
+        precision = self.get_precision()
         self.transformer_backbone, self.transformer_model_dim = get_transformer_backbone(
             self.transformer_backbone_key,
             self.transformer_backbone_kwargs,
+            precision,
         )
 
         self.project_out = build_mlp(

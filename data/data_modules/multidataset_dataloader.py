@@ -85,6 +85,7 @@ class MultiDatasetPerturbationDataModule(LightningDataModule):
         eval_pert: Optional[str] = None, # what is this... needs to go
         should_yield_control_cells: bool = True, # this should just always be true, remove it
         cell_sentence_len: int = 512,
+        dtype: str = "float32",
         **kwargs,
     ):
         """
@@ -127,6 +128,13 @@ class MultiDatasetPerturbationDataModule(LightningDataModule):
         self.should_yield_control_cells = should_yield_control_cells
         self.cell_sentence_len = cell_sentence_len
         logger.info(f"Using cell_sentence_len={cell_sentence_len}")
+
+        if dtype == "float32":
+            self.dtype = torch.float32
+        elif dtype == "float16":
+            self.dtype = torch.float16
+        elif dtype == "bfloat16":
+            self.dtype = torch.bfloat16
 
         self.pert_col = pert_col
         self.control_pert = control_pert
@@ -357,6 +365,7 @@ class MultiDatasetPerturbationDataModule(LightningDataModule):
                     random_state=self.random_seed,
                     should_yield_control_cells=self.should_yield_control_cells,
                     store_raw_expression=self.store_raw_expression,
+                    dtype=self.dtype,
                 )
 
                 train_sum = 0

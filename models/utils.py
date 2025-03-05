@@ -90,8 +90,9 @@ def get_loss_fn(loss: Union[str, nn.Module]) -> nn.Module:
         raise ValueError(f"Unsupported loss function: {loss}")
 
 
-def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
+def get_transformer_backbone(key, kwargs, precision) -> PreTrainedModel:
     if key == "GPT2":
+        kwargs['torch_dtype'] = precision
         config = GPT2Config(**kwargs)
         model = GPT2Model(config)
 

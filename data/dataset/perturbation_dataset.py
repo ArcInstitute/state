@@ -52,6 +52,7 @@ class PerturbationDataset(Dataset):
         store_raw_expression: bool = False,
         random_state: int = 42,
         should_yield_control_cells: bool = True,
+        dtype = torch.float32,
         **kwargs,
     ):
         """
@@ -85,6 +86,7 @@ class PerturbationDataset(Dataset):
         self.rng = np.random.RandomState(random_state)
         self.should_yield_control_cells = should_yield_control_cells
         self.should_yield_controls = should_yield_control_cells
+        self.dtype = dtype
 
         self.metadata_cache = GlobalH5MetadataCache().get_cache(
                 str(self.h5_path),
@@ -283,7 +285,7 @@ class PerturbationDataset(Dataset):
             indptr = self.h5_file["/X/indptr"]
             start_ptr = indptr[idx]
             end_ptr = indptr[idx + 1]
-            sub_data = torch.tensor(self.h5_file["/X/data"][start_ptr:end_ptr], dtype=torch.float32)
+            sub_data = torch.tensor(self.h5_file["/X/data"][start_ptr:end_ptr], dtype=self.dtype)
             sub_indices = torch.tensor(self.h5_file["/X/indices"][start_ptr:end_ptr], dtype=torch.long)
             counts = torch.sparse_csr_tensor(
                 torch.tensor([0], dtype=torch.long),
@@ -299,7 +301,7 @@ class PerturbationDataset(Dataset):
 
     def fetch_obsm_expression(self, idx: int, key: str) -> torch.Tensor:
         row_data = self.h5_file[f"/obsm/{key}"][idx]
-        return torch.tensor(row_data, dtype=torch.float32)
+        return torch.tensor(row_data, dtype=self.dtype)
 
     def get_gene_names(self) -> List[str]:
         """

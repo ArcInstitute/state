@@ -38,19 +38,7 @@ def get_lightning_module(model_type: str, data_config: dict, model_config: dict,
     module_config["gene_names"] = var_dims["gene_names"]
     module_config["batch_size"] = training_config["batch_size"]
     module_config["control_pert"] = data_config.get("control_pert", "non-targeting")
-    module_config["bf16"] = global_config.get("bf16", False)
-
-    # if data_config["output_space"] == "gene" and data_config["embed_key"] == "X_uce":
-    #     # the model outputs will be in gene space, so no decoder is needed
-    #     module_config["decoder"] = None
-    # else:
-    #     # the model outputs will be in latent space, so a decoder is needed
-    #     if module_config["embed_key"] == "X_uce":
-    #         # UCE log prob decoder requires gene names
-    #         module_config["decoder"] = UCELogProbDecoder()  # TODO-Abhi: try out new decoders here
-    #     else:
-    #         # Add more decoders here as needed
-    #         module_config["decoder"] = None
+    module_config["precision"] = global_config.get("precision", "float32")
 
     if model_type.lower() == "embedsum":
         return EmbedSumPerturbationModel(
@@ -309,10 +297,8 @@ def train(cfg: DictConfig) -> None:
         gradient_clip_val=cfg["training"]["gradient_clip_val"],
     )
 
-    if cfg.get("bf16", False):
-        trainer_kwargs["precision"] = "bf16"
-    else:
-        trainer_kwargs["precision"] = 32
+    if cfg["precision"] == "bfloat16":
+        trainer_kwargs["precision"] = "bf16-mixed"
 
     # If it's SimpleSum, override to do exactly 1 epoch, ignoring `max_steps`.
     if (cfg["model"]["name"].lower() == "celltypemean" or cfg["model"]["name"].lower() == "globalsimplesum") and cfg[

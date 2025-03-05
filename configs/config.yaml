@@ -7,8 +7,8 @@ defaults:
   - wandb: abhinav # Change this as needed
   - _self_
   
-use_flash_attention: true
-bf16: true
+attn_implementation: flash_attention_2
+precision: float32
 
 # output_dir must be an absolute path (so that launch scripts are fully descriptive)
 name: debug

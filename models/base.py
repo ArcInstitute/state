@@ -124,6 +124,7 @@ class PerturbationModel(ABC, LightningModule):
         self.lr = lr
         self.loss_fn = get_loss_fn(loss_fn)
 
+        self.precision = kwargs["precision"]
         self.gene_decoder = None
         if embed_key != "X_hvg" and output_space == "gene":
             if embed_key == "X_scfound":
@@ -137,7 +138,8 @@ class PerturbationModel(ABC, LightningModule):
                 hidden_dims=hidden_dims,
                 dropout=dropout
             )
-            if kwargs.get("bf16", False):
+            
+            if self.precision == "bfloat16":
                 # Convert to bfloat16 for faster training
                 self.gene_decoder = self.gene_decoder.to(torch.bfloat16)
             logger.info(f"Initialized gene decoder for embedding {embed_key} to gene space")
@@ -146,6 +148,9 @@ class PerturbationModel(ABC, LightningModule):
         # For caching validation data across steps, if desired
         self.val_cache = defaultdict(list)
         self.test_cache = defaultdict(list)
+
+    def get_precision(self):
+        return self.precision
 
     def transfer_batch_to_device(self, batch, device, dataloader_idx: int):
         return {k: (v.to(device) if isinstance(v, torch.Tensor) else v)

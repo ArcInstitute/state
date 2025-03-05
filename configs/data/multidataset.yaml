@@ -24,5 +24,6 @@ kwargs:
   pert_col: gene
   cell_type_key: cell_type
   control_pert: DMSO_TF
+  dtype: ${precision}
 output_dir: null
 debug: true
