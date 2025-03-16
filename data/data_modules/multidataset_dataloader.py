@@ -770,6 +770,12 @@ class MultiDatasetPerturbationDataModule(LightningDataModule):
         # TODO-Abhi: currently using a debug prefix to use unmerged replogle
         # datasets for testing, change this.
         working_folder = self.data_dir / f"{dataset_name}"
+
+        print(f"DEBUG: self.data_dir = {self.data_dir}")
+        print(f"DEBUG: dataset_name = {dataset_name}")
+        print(f"DEBUG: working_folder = {working_folder}")
+        print(f"DEBUG: current working directory: {Path.cwd()}")
+        
         if not working_folder.exists():
             raise FileNotFoundError(f"No directory named {working_folder}")
 

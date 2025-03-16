@@ -422,7 +422,7 @@ dependencies:
       - toolz==1.0.0
       - torchmetrics==1.6.0
       - tqdm==4.67.0
-      - transformers==4.50.0.dev0
+      - transformers==4.49.0
       - treelite==4.3.0
       - tzdata==2024.2
       - ucx-py-cu12==0.41.0

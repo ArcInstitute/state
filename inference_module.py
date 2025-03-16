@@ -121,6 +121,7 @@ class InferenceModule:
             "pertsets": PertSetsPerturbationModel,
             "old_neuralot": OldNeuralOTPerturbationModel,
             "decoder_only": DecoderOnlyPerturbationModel,
+            "gears": GEARS, 
         }
         
         if model_type not in model_classes:

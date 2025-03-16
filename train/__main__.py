@@ -24,6 +24,7 @@ from models import (
     OldNeuralOTPerturbationModel,
     DecoderOnlyPerturbationModel,
 )
+from models.gears import GEARS
 from callbacks import GradNormCallback
 
 import logging
@@ -91,6 +92,14 @@ def get_lightning_module(model_type: str, data_config: dict, model_config: dict,
         )
     elif model_type.lower() == "decoder_only":
         return DecoderOnlyPerturbationModel(
+            input_dim=var_dims["input_dim"],
+            gene_dim=var_dims["gene_dim"],
+            output_dim=var_dims["output_dim"],
+            pert_dim=var_dims["pert_dim"],
+            **module_config,
+        )
+    elif model_type.lower() == "gears":
+        return GEARS(
             input_dim=var_dims["input_dim"],
             gene_dim=var_dims["gene_dim"],
             output_dim=var_dims["output_dim"],
