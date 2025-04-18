@@ -344,8 +344,8 @@ def train(cfg: DictConfig) -> None:
         gradient_clip_val=cfg["training"]["gradient_clip_val"],
         profiler=PyTorchProfiler(
             dirpath=run_output_dir,
-            filename="pl_profile.json",
-            export_to_chrome=True
+            filename="chrome_trace.json",
+            export_to_chrome_trace=True
         ),
     )
 
