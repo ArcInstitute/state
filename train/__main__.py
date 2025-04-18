@@ -13,6 +13,8 @@ import torch
 import lightning.pytorch as pl
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint, Callback
+from lightning.pytorch.profilers import PyTorchProfiler
+import torch
 from omegaconf import DictConfig, OmegaConf
 
 from data.utils.modules import get_datamodule
@@ -334,13 +336,17 @@ def train(cfg: DictConfig) -> None:
     trainer_kwargs = dict(
         accelerator=accelerator,
         devices=1,
-        max_steps=cfg["training"]["max_steps"],  # for normal models
+        max_steps=10,  # for test: run only 10 steps
         check_val_every_n_epoch=None,
         val_check_interval=cfg["training"]["val_freq"],
         logger=loggers,
         callbacks=callbacks,
         gradient_clip_val=cfg["training"]["gradient_clip_val"],
-        # profiler='simple',
+        profiler=PyTorchProfiler(
+            dirpath=run_output_dir,
+            filename="pl_profile.json",
+            export_to_chrome=True
+        ),
     )
 
     # If it's SimpleSum, override to do exactly 1 epoch, ignoring `max_steps`.
@@ -351,6 +357,16 @@ def train(cfg: DictConfig) -> None:
 
     # Build trainer
     trainer = pl.Trainer(**trainer_kwargs)
+
+    # Ensure profiler trace is flushed at the end
+    if hasattr(trainer, 'profiler') and hasattr(trainer.profiler, 'summary'):  # Lightning >=1.6
+        import atexit
+        def flush_profiler():
+            try:
+                trainer.profiler.summary()
+            except Exception as e:
+                print(f"Profiler flush failed: {e}")
+        atexit.register(flush_profiler)
 
     # Load checkpoint if exists
     checkpoint_path = join(ckpt_callbacks[0].dirpath, "last.ckpt")
