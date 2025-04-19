@@ -169,37 +169,32 @@ class PerturbationDataset(Dataset):
         
         The index `idx` here is into the filtered set of cells.
         """
-        # Map idx to the underlying file index
-        underlying_idx = int(self.all_indices[idx])
-        split = self._find_split_for_idx(underlying_idx)
+        import torch
+        record_fn = getattr(torch.profiler, 'record_function', None) or torch.autograd.profiler.record_function
+        with record_fn("index_mapping"):
+            underlying_idx = int(self.all_indices[idx])
+            split = self._find_split_for_idx(underlying_idx)
 
-        # Get expression from the h5 file.
-        # For now, we assume the data is stored in "X" (could be counts) and/or in obsm (embed_key)
-        # (It is up to the downstream code to decide whether to use raw gene expression or a precomputed embedding.)
+        with record_fn("mapping_strategy.get_mapped_expressions"):
+            pert_expr, ctrl_expr, ctrl_idx = self.mapping_strategy.get_mapped_expressions(self, split, underlying_idx)
 
-        pert_expr, ctrl_expr, ctrl_idx = self.mapping_strategy.get_mapped_expressions(self, split, underlying_idx)
-        
-        # Get perturbation information using metadata cache
-        pert_code = self.metadata_cache.pert_codes[underlying_idx]
-        pert_name = self.metadata_cache.pert_categories[pert_code]
-        if self.pert_onehot_map is not None:
-            # map across all files to a consistent one hot encoding or featurization
-            pert_onehot = self.pert_onehot_map[pert_name]
-        else:
-            pert_onehot = None
+        with record_fn("metadata_fetch"):
+            pert_code = self.metadata_cache.pert_codes[underlying_idx]
+            pert_name = self.metadata_cache.pert_categories[pert_code]
+            if self.pert_onehot_map is not None:
+                pert_onehot = self.pert_onehot_map[pert_name]
+            else:
+                pert_onehot = None
 
-        # Get cell type using metadata cache
-        cell_type_code = self.metadata_cache.cell_type_codes[underlying_idx]
-        cell_type = self.metadata_cache.cell_type_categories[cell_type_code]
+            cell_type_code = self.metadata_cache.cell_type_codes[underlying_idx]
+            cell_type = self.metadata_cache.cell_type_categories[cell_type_code]
 
-        # Get batch information
-        batch_code = self.metadata_cache.batch_codes[underlying_idx]
-        batch_name = self.metadata_cache.batch_categories[batch_code]
-        if self.batch_onehot_map is not None:
-            # map across all files to a consistent one hot encoding or featurization
-            batch = self.batch_onehot_map[batch_name]
-        else:
-            batch = None
+            batch_code = self.metadata_cache.batch_codes[underlying_idx]
+            batch_name = self.metadata_cache.batch_categories[batch_code]
+            if self.batch_onehot_map is not None:
+                batch = self.batch_onehot_map[batch_name]
+            else:
+                batch = None
 
         sample = {
             "X": pert_expr,  # the perturbed cell’s data
@@ -210,7 +205,7 @@ class PerturbationDataset(Dataset):
             "gem_group": batch,
             "gem_group_name": batch_name,
         }
-        # Optionally, if raw gene expression is needed:
+
         # backwards compatibility for old cktps
         if 'output_space' not in self.__dict__:
             # for models trained before I added output_space here, infer the output space
@@ -220,9 +215,11 @@ class PerturbationDataset(Dataset):
                 self.output_space = "gene"
             
         if self.store_raw_expression and self.output_space == 'gene':
-            sample["X_hvg"] = self.fetch_obsm_expression(underlying_idx, 'X_hvg')
+            with record_fn("fetch_obsm_expression.X_hvg"):
+                sample["X_hvg"] = self.fetch_obsm_expression(underlying_idx, 'X_hvg')
         elif self.store_raw_expression and self.output_space == "all":
-            sample["X_hvg"] = self.fetch_gene_expression(underlying_idx)
+            with record_fn("fetch_gene_expression.X"):
+                sample["X_hvg"] = self.fetch_gene_expression(underlying_idx)
 
         if 'store_raw_basal' in self.__dict__:
             store_raw_basal = self.store_raw_basal
@@ -230,9 +227,11 @@ class PerturbationDataset(Dataset):
             store_raw_basal = False
 
         if store_raw_basal and self.output_space == 'gene':
-            sample["basal_hvg"] = self.fetch_obsm_expression(ctrl_idx, 'X_hvg')
+            with record_fn("fetch_obsm_expression.basal_hvg"):
+                sample["basal_hvg"] = self.fetch_obsm_expression(ctrl_idx, 'X_hvg')
         elif store_raw_basal and self.output_space == "all":
-            sample["basal_hvg"] = self.fetch_gene_expression(ctrl_idx)
+            with record_fn("fetch_gene_expression.basal_hvg"):
+                sample["basal_hvg"] = self.fetch_gene_expression(ctrl_idx)
 
         return sample
 

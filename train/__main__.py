@@ -336,7 +336,7 @@ def train(cfg: DictConfig) -> None:
     trainer_kwargs = dict(
         accelerator=accelerator,
         devices=1,
-        max_steps=10,  # for test: run only 10 steps
+        max_steps=20,  # for test: run only 10 steps
         check_val_every_n_epoch=None,
         val_check_interval=cfg["training"]["val_freq"],
         logger=loggers,
