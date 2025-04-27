@@ -22,7 +22,7 @@ from ott.problems.linear import linear_problem
 from ott.solvers.linear import sinkhorn
 from sklearn.metrics.pairwise import rbf_kernel
 from scipy.stats import pearsonr
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, auc
 from sklearn.metrics.pairwise import cosine_similarity
 from adjustpy import adjust
 from scipy.stats import ranksums
@@ -341,7 +341,7 @@ def compute_sig_gene_spearman(true_counts, pred_counts, pert_list):
     return corr
 
 
-def compute_directionality_agreement(DE_true_df, DE_pred_df, pert_list):
+def compute_directionality_agreement(DE_true_df, DE_pred_df, pert_list, p_val_thresh=0.05):
     """
     For each perturbation in pert_list, compute the fraction of overlapping genes that have
     matching fold change directionality, only considering significantly DE genes in the true data 
@@ -367,38 +367,30 @@ def compute_directionality_agreement(DE_true_df, DE_pred_df, pert_list):
     """
     
     directionality_matches = {}
-    
+
     for p in pert_list:
-        # Filter the true DE data for the current perturbation and retain only significantly DE genes (p < 0.05)
-        true_sub = DE_true_df[(DE_true_df['target'] == p) & (DE_true_df['p_value'] < 0.05)]
-        # Use all predicted data for this perturbation.
+        # Filter and merge the relevant rows for each perturbation
+        true_sub = DE_true_df[(DE_true_df['target'] == p) & (DE_true_df['p_value'] < p_val_thresh)]
         pred_sub = DE_pred_df[DE_pred_df['target'] == p]
-        
-        # If there are no significantly DE genes in true or no predictions, record NaN.
+
         if true_sub.empty or pred_sub.empty:
             directionality_matches[p] = np.nan
             continue
-        
-        # Build dictionaries: mapping each gene to its fold change.
-        true_fc = dict(zip(true_sub['feature'], true_sub['fold_change']))
-        pred_fc = dict(zip(pred_sub['feature'], pred_sub['fold_change']))
-        
-        matched = 0
-        total_overlap = 0
-        
-        # Compare the sign of fold change values for every gene in the significant true set that appears in predictions.
-        for gene, true_val in true_fc.items():
-            if gene in pred_fc:
-                total_overlap += 1
-                if np.sign(true_val) == np.sign(pred_fc[gene]):
-                    matched += 1
-        
-        # Calculate the fraction if there are overlapping genes.
-        if total_overlap > 0:
-            directionality_matches[p] = matched / total_overlap
-        else:
+
+        # Merge on feature (gene)
+        merged = pd.merge(true_sub[['feature', 'fold_change']], 
+                          pred_sub[['feature', 'fold_change']], 
+                          on='feature', 
+                          suffixes=('_true', '_pred'))
+
+        if merged.empty:
             directionality_matches[p] = np.nan
-            
+            continue
+
+        # Vectorized sign comparison: True if both FCs are < 1 or both >= 1
+        same_direction = ((merged['fold_change_true'] < 1) == (merged['fold_change_pred'] < 1))
+        directionality_matches[p] = same_direction.mean()
+
     return directionality_matches
 
 
@@ -508,8 +500,7 @@ def compute_downstream_DE_metrics(target_gene, pred_df, true_df, p_value_thresho
         'spearman': np.nan,
         'pr_auc': np.nan,
         'roc_auc': np.nan,
-        'significant_genes_count': len(sig_genes),
-        'directionality': np.nan ## Not implemented
+        'significant_genes_count': len(sig_genes)
     }
 
     if not sig_genes:
@@ -524,6 +515,9 @@ def compute_downstream_DE_metrics(target_gene, pred_df, true_df, p_value_thresho
         on='feature',
         suffixes=('_true', '_pred')
     )
+
+    # Assume no change for NaN
+    merged['fold_change_pred'] = merged['fold_change_pred'].fillna(1)
 
     if len(merged) > 1:
         try:
@@ -541,8 +535,8 @@ def compute_downstream_DE_metrics(target_gene, pred_df, true_df, p_value_thresho
         try:
             precision, recall, _ = precision_recall_curve(y_true, y_scores)
             fpr, tpr, _ = roc_curve(y_true, y_scores)
-            result['pr_auc'] = np.trapz(precision, recall)
-            result['roc_auc'] = np.trapz(tpr, fpr)
+            result['pr_auc'] = auc(recall, precision)
+            result['roc_auc'] = auc(fpr, tpr)
         except:
             pass
 

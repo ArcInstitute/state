@@ -56,6 +56,11 @@ def compute_metrics(
     shared_perts=None,
     outdir=None, # output directory to store raw de results
 ):
+    outdir = '/home/yhr/pert-sets'
+    relevant_perts = adata_pred.obs[pert_col].unique().tolist()[:5]
+    relevant_perts = relevant_perts + ['non-targeting']
+    adata_pred = adata_pred[adata_pred.obs[pert_col].isin(relevant_perts)]
+    adata_real = adata_real[adata_real.obs[pert_col].isin(relevant_perts)]
     
     pred_celltype_pert_dict = adata_pred.obs.groupby(celltype_col)[pert_col].agg(set).to_dict()
     real_celltype_pert_dict = adata_real.obs.groupby(celltype_col)[pert_col].agg(set).to_dict()
@@ -417,6 +422,7 @@ def get_downstream_DE_metrics(DE_pred_df, DE_true_df, outdir, celltype,
         df['abs_log_fold_change'] = np.abs(df['log_fold_change'].fillna(0))
     
     target_genes = DE_true_df['target'].unique()
+    breakpoint()
 
     with mp.Pool(processes=n_workers, initializer=init_worker, initargs=(DE_pred_df, DE_true_df)) as pool:
         func = partial(compute_downstream_DE_metrics_parallel, p_value_threshold=p_value_threshold)
