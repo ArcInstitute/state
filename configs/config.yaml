@@ -4,7 +4,7 @@ defaults:
   - data: multidataset
   - model: neuralot
   - training: default
-  - wandb: abhinav # Change this as needed
+  - wandb: sanjay # Change this as needed
   - _self_
   
 

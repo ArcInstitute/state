@@ -56,11 +56,15 @@ def compute_metrics(
     shared_perts=None,
     outdir=None, # output directory to store raw de results
 ):
-    outdir = '/home/yhr/pert-sets'
-    relevant_perts = adata_pred.obs[pert_col].unique().tolist()[:5]
+    #outdir = '/home/yhr/pert-sets'
+    relevant_perts = adata_pred.obs[pert_col].unique().tolist()
     relevant_perts = relevant_perts + ['non-targeting']
     adata_pred = adata_pred[adata_pred.obs[pert_col].isin(relevant_perts)]
     adata_real = adata_real[adata_real.obs[pert_col].isin(relevant_perts)]
+
+    # Fill Na's with 0's
+    adata_pred.X = np.nan_to_num(adata_pred.X, nan=0.0)
+    adata_real.X = np.nan_to_num(adata_real.X, nan=0.0)
     
     pred_celltype_pert_dict = adata_pred.obs.groupby(celltype_col)[pert_col].agg(set).to_dict()
     real_celltype_pert_dict = adata_real.obs.groupby(celltype_col)[pert_col].agg(set).to_dict()
@@ -164,6 +168,17 @@ def compute_metrics(
                         control_true = to_dense(adata_real_control.X)
                         control_preds = to_dense(adata_pred_control.X)
 
+                        confidence_preds_ctrl = None
+                        confidence_preds_pert = None
+
+                        if "confidence" in adata_pred.obsm:
+                            # Reduce: mean is irrelevant here since obsm broadcasts same value across embedding axis
+                            confidence_preds_ctrl = adata_pred_control.obsm["confidence"].mean(axis=1)
+                            confidence_preds_pert = adata_pred_pert.obsm["confidence"].mean(axis=1)
+                        
+                            metrics[celltype]["confidence_preds_ctrl"] = np.mean(confidence_preds_ctrl)
+                            metrics[celltype]["confidence_preds_pert"] = np.mean(confidence_preds_pert)
+
                         ## If matrix is sparse convert to dense
                         try:
                             pert_true = pert_true.toarray()
@@ -193,10 +208,10 @@ def compute_metrics(
                                 adata_real_gene_pert = adata_real_gene[true_gene_idx]
                                 
                                 # Get the predictions and true values for counts space
-                                pert_preds_gene = to_dense(adata_pred_gene_pert.X)
-                                pert_true_gene = to_dense(adata_real_gene_pert.X)
-                                control_true_gene = to_dense(adata_real_gene_control.X)
-                                control_preds_gene = to_dense(adata_pred_gene_control.X)
+                                pert_preds_gene = np.nan_to_num(to_dense(adata_pred_gene_pert.X), nan=0.0)
+                                pert_true_gene = np.nan_to_num(to_dense(adata_real_gene_pert.X), nan=0.0)
+                                control_true_gene = np.nan_to_num(to_dense(adata_real_gene_control.X), nan=0.0)
+                                control_preds_gene = np.nan_to_num(to_dense(adata_pred_gene_control.X), nan=0.0)
                                 
                                 # If matrix is sparse convert to dense
                                 try:
@@ -312,25 +327,26 @@ def compute_metrics(
 
 
                 # Compute recall for significant genes
-                DE_metrics_sig_genes = compute_gene_overlap_cross_pert(DE_true_sig_genes, DE_pred_sig_genes, control_pert=control_pert)
-                metrics[celltype]['DE_sig_genes_recall'] = [DE_metrics_sig_genes.get(p, 0.0) for p in metrics[celltype]["pert"]]
-                metrics[celltype]['DE_sig_genes_recall_avg'] = np.mean(list(DE_metrics_sig_genes.values()))
+                if DE_pred_sig_genes is not None:
+                    DE_metrics_sig_genes = compute_gene_overlap_cross_pert(DE_true_sig_genes, DE_pred_sig_genes, control_pert=control_pert)
+                    metrics[celltype]['DE_sig_genes_recall'] = [DE_metrics_sig_genes.get(p, 0.0) for p in metrics[celltype]["pert"]]
+                    metrics[celltype]['DE_sig_genes_recall_avg'] = np.mean(list(DE_metrics_sig_genes.values()))
 
-                # Record effect sizes
-                true_counts, pred_counts = compute_sig_gene_counts(DE_true_sig_genes, DE_pred_sig_genes, only_perts)
-                metrics[celltype]['DE_sig_genes_count_true'] = [true_counts.get(p, 0) for p in only_perts]
-                metrics[celltype]['DE_sig_genes_count_pred'] = [pred_counts.get(p, 0) for p in only_perts]
-
-
-                # Compute the Spearman correlation between the counts.
-                spearman_corr = compute_sig_gene_spearman(true_counts, pred_counts, only_perts)
-                metrics[celltype]['DE_sig_genes_spearman'] = spearman_corr
+                    # Record effect sizes
+                    true_counts, pred_counts = compute_sig_gene_counts(DE_true_sig_genes, DE_pred_sig_genes, only_perts)
+                    metrics[celltype]['DE_sig_genes_count_true'] = [true_counts.get(p, 0) for p in only_perts]
+                    metrics[celltype]['DE_sig_genes_count_pred'] = [pred_counts.get(p, 0) for p in only_perts]
 
 
-                # 3. Compute the directionality agreement.
-                directionality_agreement = compute_directionality_agreement(DE_true_df, DE_pred_df, only_perts)
-                metrics[celltype]['DE_direction_match'] = [directionality_agreement.get(p, np.nan) for p in only_perts]
-                metrics[celltype]['DE_direction_match_avg'] = np.nanmean(list(directionality_agreement.values()))
+                    # Compute the Spearman correlation between the counts.
+                    spearman_corr = compute_sig_gene_spearman(true_counts, pred_counts, only_perts)
+                    metrics[celltype]['DE_sig_genes_spearman'] = spearman_corr
+
+
+                    # 3. Compute the directionality agreement.
+                    directionality_agreement = compute_directionality_agreement(DE_true_df, DE_pred_df, only_perts)
+                    metrics[celltype]['DE_direction_match'] = [directionality_agreement.get(p, np.nan) for p in only_perts]
+                    metrics[celltype]['DE_direction_match_avg'] = np.nanmean(list(directionality_agreement.values()))
 
 
                 # Compute the actual top-k gene lists per perturbation
@@ -363,9 +379,10 @@ def compute_metrics(
                 metrics[celltype]["DE_true_genes"] = de_true_genes_col
 
                 # Compute additional DE metrics
-                print("Computing additional metrics")
-                get_downstream_DE_metrics(DE_pred_df, DE_true_df, outdir=outdir, 
-                                          celltype=celltype, n_workers=None, p_value_threshold=0.05)
+                if 'fold_change' in DE_pred_df and 'fold_change' in DE_true_df:
+                    print("Computing additional metrics")
+                    get_downstream_DE_metrics(DE_pred_df, DE_true_df, outdir=outdir, 
+                                            celltype=celltype, n_workers=None, p_value_threshold=0.05)
 
             if class_score_flag:
                 ## Compute classification score
@@ -422,7 +439,6 @@ def get_downstream_DE_metrics(DE_pred_df, DE_true_df, outdir, celltype,
         df['abs_log_fold_change'] = np.abs(df['log_fold_change'].fillna(0))
     
     target_genes = DE_true_df['target'].unique()
-    breakpoint()
 
     with mp.Pool(processes=n_workers, initializer=init_worker, initargs=(DE_pred_df, DE_true_df)) as pool:
         func = partial(compute_downstream_DE_metrics_parallel, p_value_threshold=p_value_threshold)

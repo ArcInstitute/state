@@ -82,6 +82,16 @@ def parse_args():
         ],
         help="Override the mapping strategy at inference time (optional).",
     )
+
+    """
+    parser.add_argument(
+        "--cell_sentence_length",
+        type=int,
+        default=1,
+        help = "Cell sentence length",
+    )
+    """
+
     parser.add_argument(
         "--test_time_finetune",
         type=int,
@@ -198,6 +208,7 @@ def main():
         data_module: MultiDatasetPerturbationDataModule = pickle.load(f)
     logger.info("Loaded data module from %s", data_module_path)
 
+    #data_module.cell_sentence_len = 1
     # seed everything
     pl.seed_everything(cfg["training"]["train_seed"])
 
@@ -215,7 +226,7 @@ def main():
             "random_state": cfg["training"]["train_seed"],
             "n_basal_samples": cfg["data"]["kwargs"]["n_basal_samples"],
             "k_neighbors": cfg["data"]["kwargs"].get("k_neighbors", 10),
-            "neighborhood_fraction": cfg["data"]["kwargs"].get("neighborhood_fraction", 0.0),
+            "neighborhood_fraction": cfg["data"]["kwargs"].get("neighborhood_fraction", 0.1),
             "map_controls": cfg["data"]["kwargs"].get("map_controls", False),
         }
         data_module.set_inference_mapping_strategy(mapping_cls, **strategy_kwargs)
@@ -304,6 +315,7 @@ def main():
 
     final_preds = np.empty((num_cells, output_dim), dtype=np.float16)
     final_reals = np.empty((num_cells, output_dim), dtype=np.float16)
+    final_preds_confidence = np.empty((num_cells, output_dim), dtype=np.float16)
 
     store_raw_expression = (
         data_module.embed_key is not None and 
@@ -328,6 +340,7 @@ def main():
         final_gene_preds = None
 
     current_idx = 0
+    batch_size = None
 
     # Initialize aggregation variables directly
     all_pert_names = []
@@ -364,11 +377,17 @@ def main():
             else:
                 all_gem_groups.append(batch_preds["gem_group"])
             
+            # Add support for confidence models
             batch_pred_np = batch_preds["preds"].cpu().numpy().astype(np.float16)
             batch_real_np = batch_preds["X"].cpu().numpy().astype(np.float16)
             batch_size = batch_pred_np.shape[0]
             final_preds[current_idx:current_idx+batch_size, :] = batch_pred_np
             final_reals[current_idx:current_idx+batch_size, :] = batch_real_np
+            try:
+                batch_pred_confidence = batch_preds["confidence"].cpu().numpy().astype(np.float16)
+                final_preds_confidence[current_idx: current_idx+batch_size, :] = batch_pred_confidence
+            except:
+                continue
             current_idx += batch_size
             
             # Handle X_hvg for HVG space ground truth
@@ -383,13 +402,20 @@ def main():
 
 
     logger.info("Creating anndatas from predictions from manual loop...")
-
+    logger.info(f"Batch size: {batch_size}")
 
     # Build pandas DataFrame for obs
     obs = pd.DataFrame({"pert_name": all_pert_names, "celltype_name": all_celltypes, "gem_group": all_gem_groups})
 
     # Create adata for predictions
     adata_pred = anndata.AnnData(X=final_preds, obs=obs)
+    # Add confidence prediction if applicable
+    try:
+        if not np.all([x is None for x in batch_pred_confidence]):
+            adata_pred.obsm["confidence"] = final_preds_confidence
+    except:
+        pass
+
     # Create adata for real
     adata_real = anndata.AnnData(X=final_reals, obs=obs)
 

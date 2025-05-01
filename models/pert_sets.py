@@ -519,6 +519,7 @@ class PertSetsPerturbationModel(PerturbationModel):
         Typically used for final inference. We'll replicate old logic:
          returning 'preds', 'X', 'pert_name', etc.
         """
+        confidence_pred = None
         if self.confidence_head is None:
             latent_output = self.forward(batch, padded=padded)  # shape [B, ...]
         else:
@@ -532,6 +533,7 @@ class PertSetsPerturbationModel(PerturbationModel):
             "celltype_name": batch.get("cell_type", None),
             "gem_group": batch.get("gem_group", None),
             "basal": batch.get("basal", None),
+            "confidence": confidence_pred,
         }
 
         basal_hvg = batch.get("basal_hvg", None)

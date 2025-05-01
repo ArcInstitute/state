@@ -1,5 +1,7 @@
 # File: models/neural_ot.py
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 
 from collections import defaultdict
@@ -9,6 +11,53 @@ from typing import Optional, Dict, List
 from models.base import PerturbationModel
 from models.decoders import DecoderInterface
 from models.utils import build_mlp, get_activation_class, get_transformer_backbone
+
+
+class ConfidenceHead(nn.Module):
+    """
+    A confidence head that predicts the expected loss value for a set of cells.
+    
+    The confidence head takes the transformer hidden state and predicts a single
+    scalar value representing the expected distribution loss.
+    """
+    
+    def __init__(self, hidden_dim, dropout=0.1):
+        """
+        Initialize the confidence head.
+        
+        Args:
+            hidden_dim: Dimension of the transformer hidden states
+            dropout: Dropout rate for the confidence head
+        """
+        super().__init__()
+        #self.pooling_method = pooling_method
+        
+        # MLP to predict confidence/uncertainty
+        self.confidence_net = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.LayerNorm(hidden_dim // 2),
+            nn.LeakyReLU(),
+            nn.Linear(hidden_dim // 2, hidden_dim // 2),
+            nn.LayerNorm(hidden_dim // 2),
+            nn.LeakyReLU(),
+            nn.Linear(hidden_dim // 2, 1)
+
+        )
+    
+    def forward(self, hidden_state):
+        """
+        Forward pass of the confidence head.
+        
+        Args:
+            hidden_states: Hidden state from the transformer [B, H]
+            
+        Returns:
+            confidence: Predicted confidence value [B, 1]
+        """
+        # Predict confidence/uncertainty value
+        confidence = self.confidence_net(hidden_state)  # [B, 1]
+        
+        return confidence
 
 class OldNeuralOTPerturbationModel(PerturbationModel):
     """
@@ -71,6 +120,13 @@ class OldNeuralOTPerturbationModel(PerturbationModel):
         # Build the distributional loss from geomloss
         self.loss_fn = SamplesLoss(loss=self.distributional_loss)
         # self.loss_fn = LearnableAlignmentLoss()
+
+        if 'confidence_head' in kwargs and kwargs['confidence_head']:
+            self.confidence_head = ConfidenceHead(hidden_dim)
+            self.confidence_loss_fn = nn.MSELoss()
+        else:
+            self.confidence_head = None
+            self.confidence_loss_fn = None
 
         # Build the underlying neural OT network
         self._build_networks()
@@ -150,13 +206,23 @@ class OldNeuralOTPerturbationModel(PerturbationModel):
         """
         prediction = self.perturb(batch["pert"], batch["basal"])
         output = self.project_out(prediction)
-       
-        return output
 
+        if self.confidence_head is not None:
+            confidence = self.confidence_head(prediction)
+            return output, confidence
+        else:
+            return output
+       
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
         # Get model predictions (in latent space)
-        pred = self(batch)
+
+        confidence_pred = None
+        if self.confidence_head is None:
+            pred = self.forward(batch)
+        else:
+            pred, confidence_pred = self.forward(batch)
+
         pred = pred.reshape(-1, self.cell_sentence_len, self.output_dim)
         # TODO: please improve this, do not assume self.cell_sentence_len for this model
         target = batch["X"]
@@ -183,17 +249,42 @@ class OldNeuralOTPerturbationModel(PerturbationModel):
         else:
             total_loss = main_loss
         
+
+        if confidence_pred is not None:
+            # Detach main loss to prevent gradients flowing through it
+            loss_target = main_loss.detach().clone().unsqueeze(0)
+
+            # Compute confidence loss
+            confidence_loss = self.confidence_loss_fn(confidence_pred, loss_target)
+            self.log("train/confidence_loss", confidence_loss)
+            
+            # Add to total loss
+            total_loss = total_loss + confidence_loss
+        
         
         return total_loss
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         """Validation step logic."""
-        pred = self(batch)
+        confidence_pred = None
+        if self.confidence_head is None:
+            pred = self.forward(batch)
+        else:
+            pred, confidence_pred = self.forward(batch)
+
         pred = pred.reshape(-1, self.cell_sentence_len, self.output_dim)
         target = batch["X"]
         target = target.reshape(-1, self.cell_sentence_len, self.output_dim)
         loss = self.loss_fn(pred, target).mean()
         self.log("val_loss", loss)
+
+        if confidence_pred is not None:
+            # Detach main loss to prevent gradients flowing through it
+            loss_target = loss.detach().clone().unsqueeze(0)
+
+            # Compute confidence loss
+            confidence_loss = self.confidence_loss_fn(confidence_pred, loss_target)
+            self.log("val/confidence_loss", confidence_loss)
 
         return {"loss": loss, "predictions": pred}
 
@@ -216,21 +307,41 @@ class OldNeuralOTPerturbationModel(PerturbationModel):
             self.log("decoder_val_loss", decoder_loss)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
-        pred = self.forward(batch, padded=False)
+        confidence_pred = None
+        if self.confidence_head is None:
+            pred = self.forward(batch)
+        else:
+            pred, confidence_pred = self.forward(batch)
+        
         target = batch["X"]
         pred = pred.reshape(1, -1, self.output_dim)
         target = target.reshape(1, -1, self.output_dim)
         loss = self.loss_fn(pred, target).mean()
         self.log("test_loss", loss)
+
+
         pred = pred.reshape(-1, self.output_dim)
         target = target.reshape(-1, self.output_dim)
+
+        if confidence_pred is not None:
+            # Detach main loss to prevent gradients flowing through it
+            loss_target = loss.detach().clone().unsqueeze(0)
+
+            # Compute confidence loss
+            confidence_loss = self.confidence_loss_fn(confidence_pred, loss_target)
+            self.log("test/confidence_loss", confidence_loss)
 
     def predict_step(self, batch, batch_idx, padded=True, **kwargs):
         """
         Typically used for final inference. We'll replicate old logic:
          returning 'preds', 'X', 'pert_name', etc.
         """
-        latent_output = self.forward(batch)  # shape [B, ...]
+        confidence_pred = None
+        if self.confidence_head is None:
+            latent_output = self.forward(batch)  # shape [B, ...]
+        else:
+            latent_output, confidence_pred = self.forward(batch) # shape [B, ...], [B, 1]
+
         output_dict = {
             "preds": latent_output,
             "X": batch.get("X", None),
@@ -239,6 +350,7 @@ class OldNeuralOTPerturbationModel(PerturbationModel):
             "celltype_name": batch.get("cell_type", None),
             "gem_group": batch.get("gem_group", None),
             "basal": batch.get("basal", None),
+            "confidence": confidence_pred,
         }
 
         if self.gene_decoder is not None:
@@ -246,3 +358,22 @@ class OldNeuralOTPerturbationModel(PerturbationModel):
             output_dict["gene_preds"] = gene_preds
 
         return output_dict
+
+    def configure_optimizers(self):
+        read_depth_lr_multiplier = 100
+
+        read_depth_params = []
+        other_params = []
+
+        for name, param in self.named_parameters():
+            if "read_depth" in name:
+                read_depth_params.append(param)
+            else:
+                other_params.append(param)
+        
+        optimizer = torch.optim.Adam([
+            {'params': other_params, 'lr': self.lr},
+            {'params': read_depth_params, 'lr': self.lr * read_depth_lr_multiplier}
+        ])
+        return optimizer
+

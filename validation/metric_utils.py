@@ -420,7 +420,7 @@ def compute_DE_for_truth_and_pred(
     Returns:
         (DE_true, DE_pred) as two data frames (index=pert_name, columns=top_k DE genes).
     """
-
+    gene_names = None
     if 'DMSO_TF' in control_pert: # only for tahoe dataset for now
         # attach var names to adata_real_ct, which consists of HVGs
         # real data is either just hvgs, or full transcriptome
@@ -434,28 +434,51 @@ def compute_DE_for_truth_and_pred(
         if 'non-targeting' in control_pert and adata_real_ct.X.shape[1] == 3609: # I hate this. replogle hvg
             temp = ad.read_h5ad('/large_storage/ctc/userspace/aadduri/datasets/hvg/replogle/jurkat.h5')
             adata_real_ct.var.index = temp.var.index.values
+        if 'non-targeting' in control_pert and adata_real_ct.X.shape[1] == 1280: # replogle UCE
+            temp = ad.read_h5ad('/large_storage/ctc/userspace/aadduri/datasets/hvg/replogle/jurkat.h5')
+            gene_names = temp.var.index.values
         # add more for replogle gene space, and other datasets, etc
     
-    # 2) HVG filtering (applied to each or to the combined data).
-    # This happens to the ground truth regardless of input space.
-    adata_real_hvg = adata_real_ct
-    adata_real_hvg.obs["pert_name"] = pd.Categorical(adata_real_hvg.obs["pert_name"])
+    # Decode adata_real_ct if needed
     start_true = time.time()
-    DE_true_fc, DE_true_pval, DE_true_pval_fc, DE_true_sig_genes, DE_true_df = parallel_compute_de(adata_real_hvg, control_pert, pert_col, k_de_genes, outdir=outdir, split='real')
+    if model_decoder is not None and adata_real_ct.X.shape[1] == 1280: # TO-DO: Fix this to be arbitrary embedding size later
+        print("Decoding ground truth UCE embeddings to compute DE... ")
+        # TO-DO: This needs to be update to compute all 3 types of de
+        real_de_genes_ranked = model_decoder.compute_de_genes(
+            adata_real_ct,
+            pert_col=pert_col,
+            control_pert=control_pert,
+            genes=gene_names if gene_names is not None else adata_real_ct.var.index.values,
+        )
+        DE_true_fc = real_de_genes_ranked.iloc[:, :k_de_genes]
+        DE_true_pval = DE_true_fc
+        DE_true_pval_fc = DE_true_fc
+        DE_true_sig_genes = None
+        DE_true_df = real_de_genes_ranked
+    else:
+        # 2) HVG filtering (applied to each or to the combined data).
+        # This happens to the ground truth regardless of input space.
+        adata_real_hvg = adata_real_ct
+        adata_real_hvg.obs["pert_name"] = pd.Categorical(adata_real_hvg.obs["pert_name"])
+        start_true = time.time()
+        DE_true_fc, DE_true_pval, DE_true_pval_fc, DE_true_sig_genes, DE_true_df = parallel_compute_de(adata_real_hvg, control_pert, pert_col, k_de_genes, outdir=outdir, split='real')
     print("Time taken for true DE: ", time.time() - start_true)
 
     start_pred = time.time()
     if model_decoder is not None:
-        # This needs to be update to compute all 3 types of de
+        # TO-DO: This needs to be update to compute all 3 types of de
         pred_de_genes_ranked = model_decoder.compute_de_genes(
             adata_pred_ct,
             pert_col=pert_col,
             control_pert=control_pert,
-            genes=adata_real_hvg.var.index.values,
+            genes=gene_names if gene_names is not None else adata_real_ct.var.index.values,
         )
         DE_pred_fc = pred_de_genes_ranked.iloc[:, :k_de_genes]
         DE_pred_pval = DE_pred_fc
         DE_pred_pval_fc = DE_pred_fc
+        #TO-DO: Correctly compute significant predicted genes
+        DE_pred_sig_genes = None
+        DE_pred_df = pred_de_genes_ranked
     else:
         # assume adata_pred_ct is already in gene space
         adata_pred_ct.var.index = adata_real_ct.var.index

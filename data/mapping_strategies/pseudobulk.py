@@ -145,8 +145,16 @@ class PseudoBulkMappingStrategy(BaseMappingStrategy):
 
         ctrl_indices = self.split_control_indices[split]
         return self.rng.choice(ctrl_indices, size=self.n_basal_samples, replace=True)
+    
+    def get_control_index(self, dataset, split, perturbed_idx):
+        """Returns a single control index from the same cell type as the perturbed cell."""
+        if split not in self.split_control_indices:
+            raise ValueError(f"Split {split} not registered")
 
-    def get_mapped_expressions(self, dataset, split, idx) -> Tuple[torch.Tensor, torch.Tensor]:
+        ctrl_indices = self.split_control_indices[split]
+        return self.rng.choice(ctrl_indices, size=1)
+
+    def get_mapped_expressions(self, dataset, split, idx) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Now just lookup precomputed pseudobulks."""
         if split not in self.split_control_pseudobulks:
             raise ValueError(f"Split {split} not registered")
@@ -156,7 +164,7 @@ class PseudoBulkMappingStrategy(BaseMappingStrategy):
         if is_control:
             # Get precomputed control pseudobulk
             ctrl_expr = self.split_control_pseudobulks[split][idx]
-            return ctrl_expr, ctrl_expr
+            return ctrl_expr, ctrl_expr, idx
         else:
             # Get perturbation name
             pert_code = dataset.h5_file[f"obs/{dataset.pert_col}/codes"][idx]
@@ -178,4 +186,4 @@ class PseudoBulkMappingStrategy(BaseMappingStrategy):
             control_expr_list = [self.split_control_pseudobulks[split][ctrl_idx] for ctrl_idx in ctrl_indices]
             control_expr = torch.stack(control_expr_list)[0]
 
-            return pert_expr, control_expr
+            return pert_expr, control_expr, ctrl_indices[0]
