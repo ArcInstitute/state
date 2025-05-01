@@ -433,11 +433,15 @@ def main():
     # Create adata for real data in gene space (if available)
     adata_real_gene = None
     if final_X_hvg is not None: # either this is available, or we are already working in gene space
+        if 'int_counts' in data_module.__dict__ and data_module.int_counts:
+            final_X_hvg = np.log1p(final_X_hvg)
         adata_real_gene = anndata.AnnData(X=final_X_hvg, obs=obs)
 
     # Create adata for gene predictions (if available)
     adata_pred_gene = None
     if final_gene_preds is not None and decoder is None: # otherwise we use UCE log prob decoder
+        if 'int_counts' in data_module.__dict__ and data_module.int_counts:
+            final_gene_preds = np.log1p(final_gene_preds)
         adata_pred_gene = anndata.AnnData(X=final_gene_preds, obs=obs)
 
     # # save out adata_real to the output directory

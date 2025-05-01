@@ -3,20 +3,25 @@ checkpoint: null
 device: cuda
 
 kwargs:
-  cell_set_len: 64
-  hidden_dim: 512
+  cell_set_len: 512
+  hidden_dim: 328
   loss: energy
   confidence_head: False
   n_encoder_layers: 4
   n_decoder_layers: 4
   predict_residual: True
+  softplus: True
+  freeze_pert: False
+  transformer_decoder: False
+  finetune_vci_decoder: False
   residual_decoder: False
+  batch_encoder: False
   nb_decoder: False
   distributional_loss: energy
   transformer_backbone_key: GPT2
   transformer_backbone_kwargs:
       n_positions: ${model.kwargs.cell_set_len}
-      n_embd: 512
+      n_embd: ${model.kwargs.hidden_dim}
       d_inner: 1024
       n_layer: 8
       n_head: 8

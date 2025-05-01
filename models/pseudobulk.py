@@ -103,7 +103,7 @@ class ConfidenceHead(nn.Module):
         
         return confidence
 
-class PertSetsPerturbationModel(PerturbationModel):
+class PseudobulkPerturbationModel(PerturbationModel):
     """
     This model:
       1) Projects basal expression and perturbation encodings into a shared latent space.
@@ -342,6 +342,9 @@ class PertSetsPerturbationModel(PerturbationModel):
         seq_input = torch.cat([pert_embedding, control_cells], dim=2) # Shape: [B, S, 2 * hidden_dim]
         seq_input = self.convolve(seq_input)  # Shape: [B, S, hidden_dim]
 
+        batch_size = seq_input.shape[0]
+
+
         if self.batch_encoder is not None:
             if padded:
                 batch = batch["gem_group"].reshape(-1, self.cell_sentence_len, self.batch_dim)
@@ -350,8 +353,18 @@ class PertSetsPerturbationModel(PerturbationModel):
             
             seq_input = seq_input + self.batch_encoder(batch)  # Shape: [B, S, hidden_dim]
         
+        # take the average across the sequence dimension
+        seq_input = seq_input.mean(dim=1, keepdim=True)  # Shape: [B, 1, hidden_dim]
+
         # forward pass + extract CLS last hidden state
-        res_pred = self.transformer_backbone(inputs_embeds=seq_input).last_hidden_state
+        res_pred = self.transformer_backbone(inputs_embeds=seq_input).last_hidden_state # Shape: [B, 1, hidden_dim]
+        out_dim = res_pred.shape[-1]
+
+        # broadcast to the sequence length
+        if padded:
+            res_pred = res_pred.expand(batch_size, self.cell_sentence_len, out_dim)  # Shape: [B, S, hidden_dim]
+        else:
+            res_pred = res_pred.expand(1, -1, out_dim)
 
         # add to basal if predicting residual
         if self.predict_residual:
@@ -523,7 +536,6 @@ class PertSetsPerturbationModel(PerturbationModel):
         Typically used for final inference. We'll replicate old logic:
          returning 'preds', 'X', 'pert_name', etc.
         """
-        confidence_pred = None
         if self.confidence_head is None:
             latent_output = self.forward(batch, padded=padded)  # shape [B, ...]
         else:
@@ -537,7 +549,6 @@ class PertSetsPerturbationModel(PerturbationModel):
             "celltype_name": batch.get("cell_type", None),
             "gem_group": batch.get("gem_group", None),
             "basal": batch.get("basal", None),
-            "confidence": confidence_pred,
         }
 
         basal_hvg = batch.get("basal_hvg", None)
