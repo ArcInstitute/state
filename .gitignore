@@ -3,6 +3,9 @@ echo "# Python
 __pycache__/
 *.py[cod]
 *$py.class" > .gitignore
+slurm-*.out
+*.err
+*.out
 
 # Add .gitignore to git
 git add .gitignore
