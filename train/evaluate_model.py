@@ -34,7 +34,7 @@ from data.mapping_strategies import (
     RandomMappingStrategy,
     PseudoBulkMappingStrategy,
 )
-from state_load.data_modules import PerturbationDataModule
+from vc_load.data_modules import PerturbationDataModule
 from validation.metrics import compute_metrics
 
 torch.multiprocessing.set_sharing_strategy('file_system')

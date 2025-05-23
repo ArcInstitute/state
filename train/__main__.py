@@ -19,8 +19,8 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from omegaconf import DictConfig, OmegaConf
 from lightning.pytorch.plugins.precision import MixedPrecision
 
-from state_load.utils.modules import get_datamodule
-from state_load.data_modules.tasks import parse_dataset_specs
+from vc_load.utils.modules import get_datamodule
+from vc_load.data_modules.tasks import parse_dataset_specs
 
 # from models.decoders import UCELogProbDecoder # commented out since it's not used yet
 from models import (
