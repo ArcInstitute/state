@@ -8,7 +8,7 @@ from os.path import join, exists
 from typing import List
 import sys
 
-sys.path.append("./vci_pretrain")
+sys.path.append("./state")
 
 import hydra
 import torch

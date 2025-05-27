@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 import sys
 import os
 
-from vci_pretrain.vci.inference import Inference
-from vci_pretrain.vci.finetune_decoder import Finetune
+from state.vci.inference import Inference
+from state.vci.finetune_decoder import Finetune
 
 
 class DecoderInterface(ABC):
