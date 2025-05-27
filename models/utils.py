@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from transformers import GPT2Model, GPT2Config, LlamaModel, LlamaConfig, PreTrainedModel
+from transformers import GPT2Model, GPT2Config, LlamaModel, LlamaConfig, PreTrainedModel, Qwen3Model, Qwen3Config
 from typing import Union
 
 
@@ -101,6 +101,10 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
             model.wpe.weight.requires_grad = False
 
         model_dim = config.n_embd
+    elif key == "qwen3": # using this because of good performance for 0.5B model, key differences are RMSNorm instead of LayerNorm, and no bias in the attention layers
+        config = Qwen3Config(**kwargs)
+        model = Qwen3Model(config)
+        model_dim = config.hidden_size
     elif key == "llama":
         config = LlamaConfig(**kwargs)
         model = LlamaModel(config)
