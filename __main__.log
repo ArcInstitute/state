@@ -1101,3 +1101,896 @@
 [INFO] Creating meta-batches with cell_sentence_len=512...
 [INFO] Of all batches, 132411 were full and 54201 were partial.
 [INFO] Sampler created with 5832 batches in 90.36 seconds.
+[INFO] Initializing DataModule: batch_size=2, workers=4, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=2, workers=4, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=2, workers=4, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 9.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=2, workers=4, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.64 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.69 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.58 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.62 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.73 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.50 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.54 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.74 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.60 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.45 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.60 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.71 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.61 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.87 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.65 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.42 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.54 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.52 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.45 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.44 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.64 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.65 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.77 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.54 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.71 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.60 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.54 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.46 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.65 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.62 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.66 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.64 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.55 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.50 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.62 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.50 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.47 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.58 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.52 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.71 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.55 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.58 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.72 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.52 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.58 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.69 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.48 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.52 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.46 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.61 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 73.31 / 79.77.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 16 were full and 602 were partial.
+[INFO] Sampler created with 20 batches in 0.21 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 56.09 / 35.76.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 7 were full and 1973 were partial.
+[INFO] Sampler created with 62 batches in 0.68 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 56.57 / 72.21.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 15 were full and 664 were partial.
+[INFO] Sampler created with 22 batches in 0.17 seconds.
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 56.57 / 72.21.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 15 were full and 664 were partial.
+[INFO] Sampler created with 22 batches in 0.18 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 83.45 / 87.53.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 75 were full and 3811 were partial.
+[INFO] Sampler created with 122 batches in 1.90 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 85.30 / 76.48.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 14 were full and 734 were partial.
+[INFO] Sampler created with 24 batches in 0.24 seconds.
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 102.43 / 106.94.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 84 were full and 2440 were partial.
+[INFO] Sampler created with 79 batches in 1.17 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 86.60 / 88.16.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 75 were full and 3749 were partial.
+[INFO] Sampler created with 120 batches in 2.77 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 86.60 / 88.16.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 75 were full and 3749 were partial.
+[INFO] Sampler created with 120 batches in 1.49 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 81.41 / 88.42.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 77 were full and 3679 were partial.
+[INFO] Sampler created with 118 batches in 4.21 seconds.

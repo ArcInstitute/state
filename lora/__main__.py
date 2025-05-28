@@ -151,6 +151,11 @@ def train(cfg: DictConfig) -> None:
         logger.info(f"Data module saved.")
 
     # Create model
+    # Set both hidden_dim and n_embd to 696 to match checkpoint
+    if "transformer_backbone_kwargs" in cfg["model"]["kwargs"]:
+        cfg["model"]["kwargs"]["hidden_dim"] = 696
+        cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["n_embd"] = 696
+
     model = PertSetsPerturbationModel(
         input_dim=data_module.get_var_dims()["input_dim"],
         gene_dim=data_module.get_var_dims()["gene_dim"],
@@ -158,6 +163,7 @@ def train(cfg: DictConfig) -> None:
         output_dim=data_module.get_var_dims()["output_dim"],
         pert_dim=data_module.get_var_dims()["pert_dim"],
         batch_dim=data_module.get_var_dims()["batch_dim"],
+        embed_key=cfg["data"]["kwargs"]["embed_key"],
         **cfg["model"]["kwargs"]
     )
 
@@ -223,53 +229,58 @@ def train(cfg: DictConfig) -> None:
         else:
             state_dict = checkpoint
 
-        # Handle pert_encoder dimension mismatch
-        pert_encoder_weight_key = "pert_encoder.0.weight"
-        if pert_encoder_weight_key in state_dict:
-            checkpoint_pert_dim = state_dict[pert_encoder_weight_key].shape[1]
-            if checkpoint_pert_dim != model.pert_dim:
-                print(
-                    f"pert_encoder input dimension mismatch: model.pert_dim = {model.pert_dim} but checkpoint expects {checkpoint_pert_dim}. Overriding model's pert_dim and rebuilding pert_encoder."
-                )
-                # Rebuild the pert_encoder with the new pert input dimension
-                from models.utils import build_mlp
-
-                model.pert_encoder = build_mlp(
-                    in_dim=model.pert_dim,
-                    out_dim=model.hidden_dim,
-                    hidden_dim=model.hidden_dim,
-                    n_layers=model.n_encoder_layers,
-                    dropout=model.dropout,
-                    activation=model.activation_class,
-                )
+        # Get current model state
+        model_state = model.state_dict()
 
         # Filter out mismatched size parameters
-        model_state = model.state_dict()
         filtered_state = {}
         for name, param in state_dict.items():
             if name in model_state:
                 if param.shape == model_state[name].shape:
                     filtered_state[name] = param
                 else:
-                    logger.warning(f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[name].shape}")
+                    print(f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[name].shape}")
             else:
-                logger.warning(f"Skipping parameter {name} as it doesn't exist in the current model")
+                print(f"Skipping parameter {name} as it doesn't exist in the current model")
 
-        # Load the filtered state dict
+        # Load the filtered state dict into the base model
         model.load_state_dict(filtered_state, strict=False)
-        logger.info("Successfully loaded checkpoint")
+        logger.info("Successfully loaded checkpoint into base model")
 
     # Apply LoRA to the model ONCE, after all checkpoint loading is complete
-    model = prepare_model_for_lora(
+    lora_config = None
+    if "lora_config" in cfg["model"]["kwargs"]["transformer_backbone_kwargs"]:
+        lora_config = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["lora_config"]
+    
+    # Apply LoRA to the model
+    lora_model = prepare_model_for_lora(
         model,
         model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-        lora_config=get_lora_config(
-            model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-            r=cfg["lora"]["r"],
-            lora_alpha=cfg["lora"]["lora_alpha"],
-            lora_dropout=cfg["lora"]["lora_dropout"],
-        )
+        lora_config=lora_config
     )
+
+    # Create a wrapper class to make the LoRA model compatible with Lightning
+    class LoRALightningWrapper(pl.LightningModule):
+        def __init__(self, lora_model, training_config):
+            super().__init__()
+            self.model = lora_model
+            self.training_config = training_config
+            self.save_hyperparameters()
+
+        def forward(self, *args, **kwargs):
+            return self.model(*args, **kwargs)
+
+        def training_step(self, batch, batch_idx):
+            return self.model.training_step(batch, batch_idx)
+
+        def validation_step(self, batch, batch_idx):
+            return self.model.validation_step(batch, batch_idx)
+
+        def configure_optimizers(self):
+            return self.model.configure_optimizers()
+
+    # Wrap the LoRA model in the Lightning wrapper
+    model = LoRALightningWrapper(lora_model, cfg["training"])
 
     # Build trainer
     trainer = pl.Trainer(
@@ -283,11 +294,11 @@ def train(cfg: DictConfig) -> None:
         gradient_clip_val=cfg["training"]["gradient_clip_val"],
     )
 
-    # Train
+    # Train - don't pass checkpoint_path since we've already loaded it
     trainer.fit(
         model,
         datamodule=data_module,
-        ckpt_path=checkpoint_path,
+        ckpt_path=None,  # Don't try to load checkpoint again
     )
 
     # Save final checkpoint
