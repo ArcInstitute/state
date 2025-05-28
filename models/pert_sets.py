@@ -358,8 +358,7 @@ class PertSetsPerturbationModel(PerturbationModel):
         if self.hparams.get("mask_attn", False):
             batch_size, seq_length, _ = seq_input.shape
             device = seq_input.device
-            num_heads = self.transformer_backbone.config.n_head
-
+            
             self.transformer_backbone._attn_implementation = "eager"
 
             # create a [1,1,S,S] mask

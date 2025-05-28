@@ -1,14 +1,13 @@
 import torch
 from torch.nn.functional import cross_entropy
 import torch.nn.functional as F
-from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModel, AutoModelForCausalLM
 from models.pert_sets import PertSetsPerturbationModel
 from functools import partialc
 
 #############################
 ##### Forward functions #####
 #############################
-
 
 def tokenize_for_ppl(model, tokenizer, prompts, completions):
     # Tokenize prompts and completions together
@@ -637,57 +636,6 @@ def cache_activations(
 ##### Model loading code #####
 ##############################
 
-
-def load_model_state(args):
-    model_name_or_path = args.model
-    model = AutoModel.from_pretrained(model_name_or_path, torch_dtype=torch.bfloat16, trust_remote_code=True, device_map="auto")
-    model.load_state_dict(torch.load(args.model_state_path))
-    return model
-
-def load_model(args):
-    model_name_or_path = args.model
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name_or_path,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,
-        device_map="auto",
-    )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name_or_path, trust_remote_code=True, use_fast=False
-    )
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    tokenizer.padding_side = "left"
-    tokenizer.mask_token_id = tokenizer.eos_token_id
-    tokenizer.sep_token_id = tokenizer.eos_token_id
-    tokenizer.cls_token_id = tokenizer.eos_token_id
-
-    if any(
-        [
-            n in model_name_or_path
-            for n in ["llama", "zephyr", "gemma", "mistral", "Qwen"]
-        ]
-    ):
-        module_str_dict = {
-            "layer": "model.model.layers[{layer_idx}]",
-            "attn": "model.model.layers[{layer_idx}].self_attn.o_proj",
-        }
-        n_layers = len(model.model.layers)
-    elif "gpt-j" in model_name_or_path:
-        module_str_dict = {
-            "layer": "model.transformer.h[{layer_idx}]",
-            "attn": "model.transformer.h[{layer_idx}].attn.o_proj",
-        }
-        n_layers = len(model.transformer.h)
-    elif "opt" in model_name_or_path:
-        module_str_dict = {
-            "layer": "model.model.decoder.layers[{layer_idx}]",
-            "attn": "model.model.decoder.layers[{layer_idx}].self_attn.o_proj",
-        }
-        n_layers = len(model.model.decoder.layers)
-    args.module_str_dict = module_str_dict
-    args.n_layers = n_layers
-    return model, tokenizer
-
 def get_modules(model):
     modules = []
     for name, module in model.named_modules():
@@ -721,6 +669,7 @@ def print_hooks(module):
 
     if no_hooks:
         print(f"{module.__class__.__name__} has no hooks.")
+
 
 def load_pert_sets_model(args):
     model = PertSetsPerturbationModel(
@@ -759,5 +708,6 @@ def load_pert_sets_model(args):
     
     if hasattr(args, 'model_state_path'):
         model.load_state_dict(torch.load(args.model_state_path))
-        
+    args.module_str_dict = module_str_dict
+    args.n_layers = n_layers
     return model

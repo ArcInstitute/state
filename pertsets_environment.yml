@@ -256,7 +256,8 @@ dependencies:
   - xorg-libxrender=0.9.11=hb9d3cd8_1
   - xorg-libxtst=1.2.5=hb9d3cd8_3
   - xorg-xorgproto=2024.1=hb9d3cd8_1
-  - xz=5.2.6=h166bdaf_0
+  - xz
+  # - xz=5.2.6=h166bdaf_0
   - zeromq=4.3.5=h3b0a872_7
   - zipp=3.21.0=pyhd8ed1ab_0
   - zlib=1.3.1=hb9d3cd8_2
