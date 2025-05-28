@@ -20,7 +20,7 @@ from data.utils.modules import get_datamodule
 from data.data_modules.tasks import parse_dataset_specs
 from models import PertSetsPerturbationModel
 from callbacks import GradNormCallback, BatchSpeedMonitorCallback
-from peft.lora import get_lora_config, prepare_model_for_lora
+from lora.lora import get_lora_config, prepare_model_for_lora
 
 import logging
 

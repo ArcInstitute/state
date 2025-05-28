@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from transformers import GPT2Model, GPT2Config, LlamaModel, LlamaConfig, PreTrainedModel, Qwen3Model, Qwen3Config
 from typing import Union, Optional, Dict, Any
-from peft.lora import prepare_model_for_lora
+from lora.lora import prepare_model_for_lora
 
 
 def build_mlp(
