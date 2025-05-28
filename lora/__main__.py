@@ -8,6 +8,8 @@ from os.path import join, exists
 from typing import List
 import sys
 
+sys.path.append("./vci_pretrain")
+
 import hydra
 import torch
 import lightning.pytorch as pl
@@ -16,8 +18,8 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from omegaconf import DictConfig, OmegaConf
 from lightning.pytorch.plugins.precision import MixedPrecision
 
-from data.utils.modules import get_datamodule
-from data.data_modules.tasks import parse_dataset_specs
+from vc_load.utils.modules import get_datamodule
+from vc_load.data_modules.tasks import parse_dataset_specs
 from models import PertSetsPerturbationModel
 from callbacks import GradNormCallback, BatchSpeedMonitorCallback
 from lora.lora import get_lora_config, prepare_model_for_lora
@@ -113,8 +115,12 @@ def train(cfg: DictConfig) -> None:
     if "train_seed" in cfg["training"]:
         pl.seed_everything(cfg["training"]["train_seed"])
 
+    # if the provided pert_col is drugname_drugconc, hard code the value of control pert
+    if cfg["data"]["kwargs"]["pert_col"] == "drugname_drugconc":
+        cfg["data"]["kwargs"]["control_pert"] = "[('DMSO_TF', 0.0, 'uM')]"
+
     # Parse dataset specs if needed
-    if cfg["data"]["name"] == "MultiDatasetPerturbationDataModule":
+    if cfg["data"]["name"] == "PerturbationDataModule":
         if isinstance(cfg["data"]["kwargs"]["train_task"], list):
             cfg["data"]["kwargs"]["train_specs"] = parse_dataset_specs(cfg["data"]["kwargs"]["train_task"])
         else:
@@ -127,52 +133,33 @@ def train(cfg: DictConfig) -> None:
 
     # Get data module
     data_module = get_datamodule(
-        cfg["data"]["name"],
-        cfg["data"]["kwargs"],
+        name=cfg["data"]["name"],
+        kwargs=cfg["data"]["kwargs"],
         batch_size=cfg["training"]["batch_size"],
         cell_sentence_len=cfg["model"]["kwargs"].get("cell_set_len", 512),
     )
 
-    # Create base model
+    # Special handling for multi-dataset case
+    if cfg["data"]["name"] == "PerturbationDataModule":
+        # if the data module already exists, just read it in
+        data_module.setup()
+
+        # Save data module for reproducibility
+        logger.info("Saving data module...")
+        with open(join(run_output_dir, "data_module.pkl"), "wb") as f:
+            pickle.dump(data_module, f)
+        logger.info(f"Data module saved.")
+
+    # Create model
     model = PertSetsPerturbationModel(
-        input_dim=cfg["model"]["kwargs"]["input_dim"],
-        hidden_dim=cfg["model"]["kwargs"]["hidden_dim"],
-        output_dim=cfg["model"]["kwargs"]["output_dim"],
-        pert_dim=cfg["model"]["kwargs"]["pert_dim"],
-        batch_dim=cfg["model"]["kwargs"].get("batch_dim"),
-        transformer_backbone_key=cfg["model"]["kwargs"]["transformer_backbone_key"],
-        transformer_backbone_kwargs=cfg["model"]["kwargs"]["transformer_backbone_kwargs"],
+        input_dim=data_module.get_var_dims()["input_dim"],
+        gene_dim=data_module.get_var_dims()["gene_dim"],
+        hvg_dim=data_module.get_var_dims()["hvg_dim"],
+        output_dim=data_module.get_var_dims()["output_dim"],
+        pert_dim=data_module.get_var_dims()["pert_dim"],
+        batch_dim=data_module.get_var_dims()["batch_dim"],
         **cfg["model"]["kwargs"]
     )
-
-    # Load checkpoint if provided
-    if "checkpoint_path" in cfg:
-        logger.info(f"Loading checkpoint from {cfg['checkpoint_path']}")
-        checkpoint = torch.load(cfg["checkpoint_path"], map_location="cpu")
-        
-        # Handle state dict loading
-        if "state_dict" in checkpoint:
-            state_dict = checkpoint["state_dict"]
-        else:
-            state_dict = checkpoint
-
-        # Filter out mismatched size parameters
-        model_state = model.state_dict()
-        filtered_state = {}
-        for name, param in state_dict.items():
-            if name in model_state:
-                if param.shape == model_state[name].shape:
-                    filtered_state[name] = param
-                else:
-                    logger.warning(f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[name].shape}")
-            else:
-                logger.warning(f"Skipping parameter {name} as it doesn't exist in the current model")
-
-        # Load the filtered state dict
-        model.load_state_dict(filtered_state, strict=False)
-        logger.info("Successfully loaded checkpoint")
-    else:
-        raise ValueError("No checkpoint_path provided in config. LoRA fine-tuning requires a pre-trained checkpoint.")
 
     # Set up logging
     loggers = get_loggers(
@@ -185,50 +172,61 @@ def train(cfg: DictConfig) -> None:
         cfg=cfg,
     )
 
+    # If using wandb, store the run path in a text file for eval
+    for lg in loggers:
+        if isinstance(lg, WandbLogger):
+            wandb_info_path = os.path.join(run_output_dir, "wandb_path.txt")
+            with open(wandb_info_path, "w") as f:
+                f.write(lg.experiment.path)
+            break
+
     # Set up callbacks
-    callbacks = get_checkpoint_callbacks(
+    ckpt_callbacks = get_checkpoint_callbacks(
         cfg["output_dir"],
         cfg["name"],
         cfg["training"]["val_freq"],
         cfg["training"].get("ckpt_every_n_steps", 4000),
     )
-
     # Add BatchSpeedMonitorCallback
     batch_speed_monitor = BatchSpeedMonitorCallback()
-    callbacks.append(batch_speed_monitor)
+    callbacks = ckpt_callbacks + [batch_speed_monitor]
 
-    # Build trainer
-    trainer = pl.Trainer(
-        accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=1,
-        max_steps=cfg["training"]["max_steps"],
-        check_val_every_n_epoch=None,
-        val_check_interval=cfg["training"]["val_freq"],
-        logger=loggers,
-        callbacks=callbacks,
-        gradient_clip_val=cfg["training"]["gradient_clip_val"],
-    )
+    logger.info("Loggers and callbacks set up.")
 
-    # Check for existing checkpoint to resume from
-    checkpoint_path = join(callbacks[0].dirpath, "last.ckpt")
-    if not exists(checkpoint_path):
-        checkpoint_path = None
-    else:
+    # Determine checkpoint path
+    checkpoint_path = None
+    
+    # First check for existing checkpoint to resume from
+    resume_checkpoint = join(ckpt_callbacks[0].dirpath, "last.ckpt")
+    if exists(resume_checkpoint):
+        checkpoint_path = resume_checkpoint
         logging.info(f"!! Resuming training from {checkpoint_path} !!")
+    else:
+        # If no resume checkpoint, check for initial checkpoint
+        if "checkpoint_path" in cfg:
+            checkpoint_path = cfg["checkpoint_path"]
+            logging.info(f"Using initial checkpoint from {checkpoint_path}")
+        elif "init_from" in cfg["model"]["kwargs"]:
+            checkpoint_path = cfg["model"]["kwargs"]["init_from"]
+            logging.info(f"Using initial checkpoint from init_from: {checkpoint_path}")
+        else:
+            raise ValueError("No checkpoint provided. LoRA fine-tuning requires a pre-trained checkpoint. Please provide either checkpoint_path in config or init_from in model.kwargs.")
 
-    # if a checkpoint does not exist, start with the provided checkpoint
-    # this is mainly used for pretrain -> finetune workflows
-    manual_init = cfg["model"]["kwargs"].get("init_from", None)
-    if checkpoint_path is None and manual_init is not None:
-        checkpoint_path = manual_init
+    # Load checkpoint
+    if checkpoint_path is not None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         checkpoint = torch.load(checkpoint_path, map_location=device)
-        model_state = model.state_dict()
-        checkpoint_state = checkpoint["state_dict"]
+        
+        # Handle state dict loading
+        if "state_dict" in checkpoint:
+            state_dict = checkpoint["state_dict"]
+        else:
+            state_dict = checkpoint
 
+        # Handle pert_encoder dimension mismatch
         pert_encoder_weight_key = "pert_encoder.0.weight"
-        if pert_encoder_weight_key in checkpoint_state:
-            checkpoint_pert_dim = checkpoint_state[pert_encoder_weight_key].shape[1]
+        if pert_encoder_weight_key in state_dict:
+            checkpoint_pert_dim = state_dict[pert_encoder_weight_key].shape[1]
             if checkpoint_pert_dim != model.pert_dim:
                 print(
                     f"pert_encoder input dimension mismatch: model.pert_dim = {model.pert_dim} but checkpoint expects {checkpoint_pert_dim}. Overriding model's pert_dim and rebuilding pert_encoder."
@@ -246,20 +244,20 @@ def train(cfg: DictConfig) -> None:
                 )
 
         # Filter out mismatched size parameters
+        model_state = model.state_dict()
         filtered_state = {}
-        for name, param in checkpoint_state.items():
+        for name, param in state_dict.items():
             if name in model_state:
                 if param.shape == model_state[name].shape:
                     filtered_state[name] = param
                 else:
-                    print(
-                        f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[name].shape}"
-                    )
+                    logger.warning(f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[name].shape}")
             else:
-                print(f"Skipping parameter {name} as it doesn't exist in the current model")
+                logger.warning(f"Skipping parameter {name} as it doesn't exist in the current model")
 
         # Load the filtered state dict
         model.load_state_dict(filtered_state, strict=False)
+        logger.info("Successfully loaded checkpoint")
 
     # Apply LoRA to the model ONCE, after all checkpoint loading is complete
     model = prepare_model_for_lora(
@@ -273,6 +271,18 @@ def train(cfg: DictConfig) -> None:
         )
     )
 
+    # Build trainer
+    trainer = pl.Trainer(
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=1,
+        max_steps=cfg["training"]["max_steps"],
+        check_val_every_n_epoch=None,
+        val_check_interval=cfg["training"]["val_freq"],
+        logger=loggers,
+        callbacks=callbacks,
+        gradient_clip_val=cfg["training"]["gradient_clip_val"],
+    )
+
     # Train
     trainer.fit(
         model,
@@ -280,8 +290,8 @@ def train(cfg: DictConfig) -> None:
         ckpt_path=checkpoint_path,
     )
 
-    # at this point if checkpoint_path does not exist, manually create one
-    checkpoint_path = join(callbacks[0].dirpath, "final.ckpt")
+    # Save final checkpoint
+    checkpoint_path = join(ckpt_callbacks[0].dirpath, "final.ckpt")
     if not exists(checkpoint_path):
         trainer.save_checkpoint(checkpoint_path)
 

@@ -1065,3 +1065,39 @@
 [INFO] Sampler created with 5586 batches in 82.14 seconds.
 [INFO] Of all batches, 132619 were full and 54074 were partial.
 [INFO] Sampler created with 5835 batches in 97.03 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type LS 180: 170 train perts, 967 test perts in 1.06 seconds.
+[INFO] Cell type NCI-H1573: 167 train perts, 970 test perts in 1.31 seconds.
+[INFO] Cell type C-33 A: 173 train perts, 964 test perts in 1.51 seconds.
+[INFO] Cell type COLO 205: 167 train perts, 970 test perts in 1.71 seconds.
+[INFO] Cell type RPMI-7951: 174 train perts, 963 test perts in 1.92 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate1.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate10.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate11.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate12.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate13.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate14.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate2.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate3.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate4.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate5.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate6.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate7.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate8.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate9.h5
+[INFO] Finished processing dataset tahoe_45_ct_vci_1.4.4
+[INFO] Using {'C-33 A', 'RPMI-7951', 'COLO 205'} as test cell types
+[INFO] Using {'NCI-H1573', 'LS 180'} as val cell types
+[INFO] Done! Train / Val / Test splits: 630 / 28 / 42
+[INFO] Initialized gene decoder for embedding X_vci_1.4.4 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 2939779. Cell set size mean / std before resampling: 434.75 / 142.49.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 4717 were full and 2045 were partial.
+[INFO] Sampler created with 212 batches in 2.53 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 80532371. Cell set size mean / std before resampling: 431.55 / 149.92.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 132411 were full and 54201 were partial.
+[INFO] Sampler created with 5832 batches in 90.36 seconds.
