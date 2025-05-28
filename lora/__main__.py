@@ -174,18 +174,6 @@ def train(cfg: DictConfig) -> None:
     else:
         raise ValueError("No checkpoint_path provided in config. LoRA fine-tuning requires a pre-trained checkpoint.")
 
-    # Apply LoRA to the model
-    model = prepare_model_for_lora(
-        model,
-        model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-        lora_config=get_lora_config(
-            model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-            r=cfg["lora"]["r"],
-            lora_alpha=cfg["lora"]["lora_alpha"],
-            lora_dropout=cfg["lora"]["lora_dropout"],
-        )
-    )
-
     # Set up logging
     loggers = get_loggers(
         output_dir=cfg["output_dir"],
@@ -273,43 +261,24 @@ def train(cfg: DictConfig) -> None:
         # Load the filtered state dict
         model.load_state_dict(filtered_state, strict=False)
 
-        # Apply LoRA to the model after loading weights
-        model = prepare_model_for_lora(
-            model,
+    # Apply LoRA to the model ONCE, after all checkpoint loading is complete
+    model = prepare_model_for_lora(
+        model,
+        model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
+        lora_config=get_lora_config(
             model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-            lora_config=get_lora_config(
-                model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-                r=cfg["lora"]["r"],
-                lora_alpha=cfg["lora"]["lora_alpha"],
-                lora_dropout=cfg["lora"]["lora_dropout"],
-            )
+            r=cfg["lora"]["r"],
+            lora_alpha=cfg["lora"]["lora_alpha"],
+            lora_dropout=cfg["lora"]["lora_dropout"],
         )
+    )
 
-        # Train - for clarity we pass None
-        trainer.fit(
-            model,
-            datamodule=data_module,
-            ckpt_path=None,
-        )
-    else:
-        # Apply LoRA to the model
-        model = prepare_model_for_lora(
-            model,
-            model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-            lora_config=get_lora_config(
-                model_type=cfg["model"]["kwargs"]["transformer_backbone_key"],
-                r=cfg["lora"]["r"],
-                lora_alpha=cfg["lora"]["lora_alpha"],
-                lora_dropout=cfg["lora"]["lora_dropout"],
-            )
-        )
-
-        # Train
-        trainer.fit(
-            model,
-            datamodule=data_module,
-            ckpt_path=checkpoint_path,
-        )
+    # Train
+    trainer.fit(
+        model,
+        datamodule=data_module,
+        ckpt_path=checkpoint_path,
+    )
 
     # at this point if checkpoint_path does not exist, manually create one
     checkpoint_path = join(callbacks[0].dirpath, "final.ckpt")
