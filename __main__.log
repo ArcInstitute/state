@@ -921,3 +921,129 @@
 [INFO] Creating meta-batches with cell_sentence_len=512...
 [INFO] Of all batches, 132411 were full and 54201 were partial.
 [INFO] Sampler created with 5832 batches in 100.87 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type SK-MEL-2: 168 train perts, 969 test perts in 0.76 seconds.
+[INFO] Cell type NCI-H1792: 177 train perts, 960 test perts in 0.78 seconds.
+[INFO] Cell type SNU-1: 150 train perts, 987 test perts in 0.97 seconds.
+[INFO] Cell type SNU-423: 157 train perts, 980 test perts in 0.74 seconds.
+[INFO] Cell type HCT15: 167 train perts, 970 test perts in 0.78 seconds.
+[INFO] Cell type NCI-H661: 175 train perts, 962 test perts in 0.82 seconds.
+[INFO] Cell type CHP-212: 165 train perts, 972 test perts in 0.91 seconds.
+[INFO] Cell type A-172: 156 train perts, 981 test perts in 1.22 seconds.
+[INFO] Cell type AN3 CA: 147 train perts, 990 test perts in 0.96 seconds.
+[INFO] Cell type SW480: 171 train perts, 966 test perts in 1.33 seconds.
+[INFO] Cell type H4: 157 train perts, 980 test perts in 1.39 seconds.
+[INFO] Cell type BT-474: 159 train perts, 978 test perts in 1.14 seconds.
+[INFO] Cell type HEC-1-A: 156 train perts, 981 test perts in 1.18 seconds.
+[INFO] Cell type CFPAC-1: 186 train perts, 951 test perts in 1.59 seconds.
+[INFO] Cell type HT-29: 175 train perts, 962 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate1.h5
+[INFO] Cell type HS-578T: 165 train perts, 972 test perts in 1.39 seconds.
+[INFO] Cell type RKO: 172 train perts, 965 test perts in 1.38 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate1.h5
+[INFO] Cell type NCI-H23: 164 train perts, 973 test perts in 1.81 seconds.
+[INFO] Cell type J82: 166 train perts, 971 test perts in 1.64 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate1.h5
+[INFO] Cell type SHP-77: 136 train perts, 1001 test perts in 2.07 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate1.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate10.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate10.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate10.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate10.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate11.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate11.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate11.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate11.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate12.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate12.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate12.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate12.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate13.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate13.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate13.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate13.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate14.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate14.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate14.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate14.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate2.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate2.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate2.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate2.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate3.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate3.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate3.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate4.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate3.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate4.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate4.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate4.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate5.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate5.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate5.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate6.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate6.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate5.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate6.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate6.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate7.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate7.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate8.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate8.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate7.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate7.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate9.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate9.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate8.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate8.h5
+[INFO] Finished processing dataset tahoe_45_ct_vci_1.4.4
+[INFO] Using {'BT-474', 'AN3 CA', 'RKO'} as test cell types
+[INFO] Using {'NCI-H661', 'SNU-423'} as val cell types
+[INFO] Done! Train / Val / Test splits: 630 / 28 / 42
+[INFO] Finished processing dataset tahoe_45_ct_vci_1.4.4
+[INFO] Using {'HEC-1-A', 'HS-578T', 'J82'} as test cell types
+[INFO] Using {'HCT15', 'CHP-212'} as val cell types
+[INFO] Done! Train / Val / Test splits: 630 / 28 / 42
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate9.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate9.h5
+[INFO] Finished processing dataset tahoe_45_ct_vci_1.4.4
+[INFO] Using {'CFPAC-1', 'SHP-77', 'NCI-H23'} as test cell types
+[INFO] Using {'SK-MEL-2', 'SW480'} as val cell types
+[INFO] Done! Train / Val / Test splits: 630 / 28 / 42
+[INFO] Finished processing dataset tahoe_45_ct_vci_1.4.4
+[INFO] Using {'H4', 'A-172', 'HT-29'} as test cell types
+[INFO] Using {'NCI-H1792', 'SNU-1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 630 / 28 / 42
+[INFO] Initialized gene decoder for embedding X_vci_1.4.4 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.4 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 1183208. Cell set size mean / std before resampling: 323.37 / 193.73.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 1593 were full and 2066 were partial.
+[INFO] Sampler created with 115 batches in 1.06 seconds.
+[INFO] Total # cells 1587540. Cell set size mean / std before resampling: 383.65 / 161.63.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 2042 were full and 2096 were partial.
+[INFO] Sampler created with 130 batches in 1.44 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.4 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.4 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 2261257. Cell set size mean / std before resampling: 411.74 / 157.42.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 3377 were full and 2115 were partial.
+[INFO] Sampler created with 172 batches in 1.96 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 5581005. Cell set size mean / std before resampling: 468.21 / 114.13.
+[INFO] Creating meta-batches with cell_sentence_len=512...
+[INFO] Of all batches, 9868 were full and 2052 were partial.
+[INFO] Sampler created with 373 batches in 4.84 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
