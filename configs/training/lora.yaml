@@ -1,0 +1,10 @@
+wandb_track: true
+weight_decay: 0.01  # Increased for better regularization with LoRA
+batch_size: 32  # Reduced batch size for LoRA training
+lr: 1e-4  # Lower learning rate for fine-tuning
+max_steps: 352000  # Matches the training script
+train_seed: 42
+val_freq: 8000  # Matches the training script
+ckpt_every_n_steps: 8000  # Matches the training script
+gradient_clip_val: 1.0  # Reduced for LoRA training
+loss_fn: mse 

@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 
 from transformers import GPT2Model, GPT2Config, LlamaModel, LlamaConfig, PreTrainedModel, Qwen3Model, Qwen3Config
-from typing import Union
+from typing import Union, Optional, Dict, Any
+from peft.lora import prepare_model_for_lora
 
 
 def build_mlp(
@@ -91,6 +92,9 @@ def get_loss_fn(loss: Union[str, nn.Module]) -> nn.Module:
 
 
 def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
+    # Extract LoRA config if present
+    lora_config = kwargs.pop("lora_config", None)
+    
     if key == "GPT2":
         config = GPT2Config(**kwargs)
         model = GPT2Model(config)
@@ -111,5 +115,9 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
         model_dim = config.hidden_size
     else:
         raise ValueError(f"Unknown backbone key {key}")
+    
+    # Apply LoRA if config is provided
+    if lora_config is not None:
+        model = prepare_model_for_lora(model, key, lora_config)
 
     return model, model_dim

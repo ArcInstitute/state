@@ -361,8 +361,9 @@ def train(cfg: DictConfig) -> None:
             cfg["data"]["kwargs"]["test_specs"] = parse_dataset_specs([cfg["data"]["kwargs"]["test_task"]])
 
     # Initialize data module. this is backwards compatible with previous configs
+    # dhruv: made changes so qwen works, not 100% about backwards compatibility
     try:
-        sentence_len = cfg["model"]["cell_set_len"]
+        sentence_len = cfg["model"]["kwargs"].get("cell_set_len", 512)
     except KeyError:
         if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
             if "cell_sentence_len" in cfg["model"]["kwargs"] and cfg["model"]["kwargs"]["cell_sentence_len"] > 1:
@@ -371,7 +372,10 @@ def train(cfg: DictConfig) -> None:
             else:
                 sentence_len = 1
         else:
-            sentence_len = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["n_positions"]
+            try:
+                sentence_len = cfg["model"]["kwargs"]["transformer_backbone_kwargs"].get("n_positions", 512)
+            except KeyError:
+                sentence_len = 512  # default value if neither is found
 
     if cfg["model"]["name"].lower().startswith("scgpt"):  # scGPT uses log-normalized expression
         cfg["data"]["kwargs"]["transform"] = "log-normalize"

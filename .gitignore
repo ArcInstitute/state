@@ -9,3 +9,4 @@ slurm-*.out
 
 # Add .gitignore to git
 git add .gitignore
+wandb/

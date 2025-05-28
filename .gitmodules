@@ -1,3 +1,3 @@
 [submodule "vci_pretrain"]
 	path = vci_pretrain
-	url = git@github.com:ArcInstitute/vci_pretrain.git
+	url = https://github.com/ArcInstitute/vci_pretrain.git
