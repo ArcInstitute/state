@@ -248,11 +248,11 @@ def train(cfg: DictConfig) -> None:
         logger.info("Successfully loaded checkpoint into base model")
 
         # Reinitialize and make trainable the encoder and decoder
-        for module in [model.pert_encoder, model.gene_decoder, model.basal_encoder]:
+        for module in [model.pert_encoder, model.gene_decoder]:
             module.apply(lambda m: m.reset_parameters() if hasattr(m, 'reset_parameters') else None)
             for param in module.parameters():
                 param.requires_grad = True
-        logger.info("Reinitialized and made trainable: pert_encoder, gene_decoder, basal_encoder")
+        logger.info("Reinitialized and made trainable: pert_encoder, gene_decoder")
 
     # Apply LoRA to the model ONCE, after all checkpoint loading is complete
     lora_config = None

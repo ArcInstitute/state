@@ -462,15 +462,15 @@ class PertSetsPerturbationModel(PerturbationModel):
         """Validation step logic."""
         confidence_pred = None
         if self.confidence_head is None:
-            pred = self.forward(batch)
+            pred = self.forward(batch, padded=True)
         else:
-            pred, confidence_pred = self(batch)
+            pred, confidence_pred = self.forward(batch, padded=True)
 
         pred = pred.reshape(-1, self.cell_sentence_len, self.output_dim)
         target = batch["X"]
         target = target.reshape(-1, self.cell_sentence_len, self.output_dim)
 
-        loss = self.loss_fn(pred, target).mean()
+        loss = self.loss_fn(pred, target).nanmean()
         self.log("val_loss", loss)
 
         if self.gene_decoder is not None and "X_hvg" in batch:
