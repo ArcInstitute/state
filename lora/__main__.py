@@ -235,11 +235,13 @@ def train(cfg: DictConfig) -> None:
         # Filter out mismatched size parameters
         filtered_state = {}
         for name, param in state_dict.items():
-            if name in model_state:
-                if param.shape == model_state[name].shape:
-                    filtered_state[name] = param
+            # Remove 'model.base_model.model.' prefix if it exists
+            clean_name = name.replace('model.base_model.model.', '')
+            if clean_name in model_state:
+                if param.shape == model_state[clean_name].shape:
+                    filtered_state[clean_name] = param
                 else:
-                    print(f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[name].shape}")
+                    print(f"Skipping parameter {name} due to shape mismatch: checkpoint={param.shape}, model={model_state[clean_name].shape}")
             else:
                 print(f"Skipping parameter {name} as it doesn't exist in the current model")
 
@@ -287,22 +289,36 @@ def train(cfg: DictConfig) -> None:
             return self.model(*args, **kwargs)
 
         def training_step(self, batch, batch_idx):
-            output = self.model.training_step(batch, batch_idx)
-            if isinstance(output, dict):
-                loss = output['loss']
-            else:
-                loss = output
-            self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
-            return output
+            output_dict = self.model.training_step(batch, batch_idx)
+            loss = output_dict['loss'] # This is the total_loss for backpropagation
+            
+            # Log individual components
+            self.log('train_loss', loss.detach(), on_step=True, on_epoch=True, prog_bar=True)
+            if 'main_loss' in output_dict and output_dict['main_loss'] is not None:
+                self.log('train_main_loss', output_dict['main_loss'].detach(), on_step=True, on_epoch=True, prog_bar=False)
+            if 'decoder_loss' in output_dict and output_dict['decoder_loss'] is not None and output_dict['decoder_loss'].item() != 0:
+                self.log('train_decoder_loss', output_dict['decoder_loss'].detach(), on_step=True, on_epoch=True, prog_bar=True)
+            if 'confidence_loss' in output_dict and output_dict['confidence_loss'] is not None and output_dict['confidence_loss'].item() != 0:
+                self.log('train_confidence_loss', output_dict['confidence_loss'].detach(), on_step=True, on_epoch=True, prog_bar=False)
+            
+            # Return the loss for Pytorch Lightning to handle
+            return loss
 
         def validation_step(self, batch, batch_idx):
-            output = self.model.validation_step(batch, batch_idx)
-            if isinstance(output, dict):
-                loss = output['loss']
-            else:
-                loss = output
-            self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
-            return output
+            output_dict = self.model.validation_step(batch, batch_idx)
+            val_loss = output_dict['loss'] # This is the main_val_loss
+
+            # Log individual components
+            self.log('val_loss', val_loss.detach(), on_step=False, on_epoch=True, prog_bar=True)
+            if 'decoder_val_loss' in output_dict and output_dict['decoder_val_loss'] is not None and output_dict['decoder_val_loss'].item() != 0:
+                self.log('val_decoder_loss', output_dict['decoder_val_loss'].detach(), on_step=False, on_epoch=True, prog_bar=True)
+            if 'confidence_val_loss' in output_dict and output_dict['confidence_val_loss'] is not None and output_dict['confidence_val_loss'].item() != 0:
+                self.log('val_confidence_loss', output_dict['confidence_val_loss'].detach(), on_step=False, on_epoch=True, prog_bar=False)
+            
+            # The wrapper should return the main validation loss for checkpointing and other callbacks
+            # or the full dictionary if other callbacks need more info.
+            # For now, let's stick to returning just the loss value if that's what PL expects primarily for `monitor`.
+            return val_loss # Or output_dict, depending on callback needs.
 
         def configure_optimizers(self):
             return self.model.configure_optimizers()

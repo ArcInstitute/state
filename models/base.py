@@ -269,6 +269,8 @@ class PerturbationModel(ABC, LightningModule):
 
         # Process decoder if available
         decoder_loss = None
+        print("self.gene_decoder is not None: ", self.gene_decoder is not None)
+        print("X_hvg in batch: ", "X_hvg" in batch)
         if self.gene_decoder is not None and "X_hvg" in batch:
             # Train decoder to map latent predictions to gene space
             with torch.no_grad():
@@ -279,6 +281,7 @@ class PerturbationModel(ABC, LightningModule):
             decoder_loss = self.loss_fn(gene_preds, gene_targets)
 
             # Log decoder loss
+            print("Decoder loss: ", decoder_loss)
             self.log("decoder_loss", decoder_loss)
 
             total_loss = main_loss + decoder_loss

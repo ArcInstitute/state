@@ -34,8 +34,8 @@ kwargs:
       use_cache: false
       use_lora: true
       lora_config:
-          r: 64
-          lora_alpha: 128
+          r: 490
+          lora_alpha: 980
           lora_dropout: 0.1
           target_modules: ["c_attn", "c_proj"]
           bias: "none"

@@ -3391,3 +3391,1128 @@
 [INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
 [INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
 [INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.60 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 0.94 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.58 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.24 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.28 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.46 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.68 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.18 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.58 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.25 seconds.
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.15 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 0.78 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.31 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.23 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 2.06 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.64 seconds.
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.64 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.20 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.22 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.57 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 0.68 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.28 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.24 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 2.04 seconds.
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.25 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.71 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.47 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.47 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.16 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.57 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.21 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.14 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 0.64 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.84 seconds.
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.76 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.70 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.51 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.49 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.16 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.28 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.74 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.59 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.47 seconds.
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 1.07 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.60 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.57 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 1.24 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.19 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.48 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.22 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.25 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.18 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.71 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.46 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.64 seconds.
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.17 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.17 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.58 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.24 seconds.
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.62 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.22 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 0.99 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.65 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.22 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.17 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.56 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.18 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.70 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.61 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.47 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.60 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.58 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 2.30 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 0.61 seconds.
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.23 seconds.
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.35 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.46 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.82 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.54 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.52 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.22 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.16 seconds.
+[INFO] Using initial checkpoint from init_from: /large_storage/ctc/userspace/aadduri/feb28_conc/cv_norm_vci_1.4.2_samp_ctrl_70m_512/fold2/checkpoints/last.ckpt
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.54 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.17 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.24 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.23 seconds.
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 1.35 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.25 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.62 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.56 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.54 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.55 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.58 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.16 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 2.02 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.29 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.93 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.16 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.58 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.69 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.16 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.24 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.57 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.66 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.53 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.63 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.58 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.56 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 1.34 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.88 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.18 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.40 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.64 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.71 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.55 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.57 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 1.32 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.61 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.25 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 1.14 seconds.
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.43 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.18 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.87 seconds.
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type hepg2: 229 train perts, 2015 test perts in 1.68 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'hepg2'} as test cell types
+[INFO] Using {'hepg2'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Setting up training and test datasets...
+[INFO] Initializing DataModule: batch_size=32, workers=16, few_shot_percent=0.3, random_seed=42
+[INFO] Setting up training and test datasets...
+[INFO] Cell type jurkat: 74 train perts, 2170 test perts in 1.66 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'jurkat'} as test cell types
+[INFO] Using {'jurkat'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type rpe1: 54 train perts, 2190 test perts in 1.59 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'rpe1'} as test cell types
+[INFO] Using {'rpe1'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Cell type k562: 82 train perts, 2162 test perts in 1.68 seconds.
+[INFO] Processing file: /large_storage/ctc/userspace/aadduri/datasets/replogle_hvg/replogle.h5
+[INFO] Finished processing dataset replogle_hvg
+[INFO] Using {'k562'} as test cell types
+[INFO] Using {'k562'} as val cell types
+[INFO] Done! Train / Val / Test splits: 4 / 1 / 1
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold4/checkpoints/last.ckpt !!
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] Initialized gene decoder for embedding X_vci_1.4.2 to gene space
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold2/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 38409. Cell set size mean / std before resampling: 42.68 / 17.93.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 248 were full and 652 were partial.
+[INFO] Sampler created with 29 batches in 0.18 seconds.
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold1/checkpoints/last.ckpt !!
+[INFO] !! Resuming training from /large_storage/ctc/userspace/dhruvgautam/gpt2/lora_finetune/lora_fold3/checkpoints/last.ckpt !!
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 45305. Cell set size mean / std before resampling: 45.72 / 19.57.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 392 were full and 599 were partial.
+[INFO] Sampler created with 31 batches in 0.19 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 111049. Cell set size mean / std before resampling: 42.27 / 18.66.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 672 were full and 1955 were partial.
+[INFO] Sampler created with 83 batches in 0.58 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 63808. Cell set size mean / std before resampling: 47.65 / 19.51.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 617 were full and 722 were partial.
+[INFO] Sampler created with 42 batches in 0.23 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 331168. Cell set size mean / std before resampling: 47.93 / 19.24.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3200 were full and 3709 were partial.
+[INFO] Sampler created with 216 batches in 1.64 seconds.
+[INFO] Total # cells 324272. Cell set size mean / std before resampling: 47.55 / 19.10.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 3057 were full and 3762 were partial.
+[INFO] Sampler created with 214 batches in 1.97 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 258528. Cell set size mean / std before resampling: 49.89 / 18.90.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2776 were full and 2406 were partial.
+[INFO] Sampler created with 162 batches in 2.15 seconds.
+[INFO] Creating perturbation batch sampler with metadata caching (using codes)...
+[INFO] Total # cells 305769. Cell set size mean / std before resampling: 47.26 / 19.09.
+[INFO] Creating meta-batches with cell_sentence_len=64...
+[INFO] Of all batches, 2831 were full and 3639 were partial.
+[INFO] Sampler created with 203 batches in 2.04 seconds.

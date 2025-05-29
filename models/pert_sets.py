@@ -411,12 +411,14 @@ class PertSetsPerturbationModel(PerturbationModel):
             target = target.reshape(1, -1, self.output_dim)
 
         main_loss = self.loss_fn(pred, target).nanmean()
-        self.log("train_loss", main_loss)
+        # self.log("train_loss", main_loss, prog_bar=True) # Will be logged by the wrapper
 
         # Process decoder if available
-        decoder_loss = None
+        decoder_loss = torch.tensor(0.0, device=pred.device) # Initialize
         total_loss = main_loss
 
+        # print("self.gene_decoder is not None: ", self.gene_decoder is not None)
+        # print("X_hvg in batch: ", "X_hvg" in batch)
         if self.gene_decoder is not None and "X_hvg" in batch:
             gene_targets = batch["X_hvg"]
             # Train decoder to map latent predictions to gene space
@@ -427,9 +429,10 @@ class PertSetsPerturbationModel(PerturbationModel):
             if isinstance(self.gene_decoder, NBDecoder):
                 mu, theta = self.gene_decoder(latent_preds)
                 gene_targets = batch["X_hvg"].reshape_as(mu)
-                decoder_loss = nb_nll(gene_targets, mu, theta)
+                current_decoder_loss = nb_nll(gene_targets, mu, theta)
             else:
                 gene_preds = self.gene_decoder(latent_preds)
+                # print("Gene preds shape: ", gene_preds.shape)
                 if self.residual_decoder:
                     basal_hvg = batch["basal_hvg"].reshape(gene_preds.shape)
                     gene_preds = gene_preds + basal_hvg.mean(dim=1, keepdim=True).expand_as(gene_preds)
@@ -438,25 +441,32 @@ class PertSetsPerturbationModel(PerturbationModel):
                 else:
                     gene_targets = gene_targets.reshape(1, -1, self.gene_decoder.gene_dim())
 
-                decoder_loss = self.loss_fn(gene_preds, gene_targets).mean()
+                current_decoder_loss = self.loss_fn(gene_preds, gene_targets).mean()
 
             # Log decoder loss
-            self.log("decoder_loss", decoder_loss)
-
+            # print("Decoder loss: ", current_decoder_loss)
+            # self.log("decoder_loss", current_decoder_loss, prog_bar=True) # Will be logged by wrapper
+            decoder_loss = current_decoder_loss # Store for return
             total_loss = total_loss + 0.1 * decoder_loss
 
+        confidence_loss_val = torch.tensor(0.0, device=pred.device)
         if confidence_pred is not None:
             # Detach main loss to prevent gradients flowing through it
             loss_target = main_loss.detach().clone().unsqueeze(0)
 
             # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred, loss_target)
-            self.log("train/confidence_loss", confidence_loss)
+            confidence_loss_val = self.confidence_loss_fn(confidence_pred, loss_target)
+            # self.log("train/confidence_loss", confidence_loss_val) # Will be logged by wrapper
 
             # Add to total loss
-            total_loss = total_loss + confidence_loss
+            total_loss = total_loss + confidence_loss_val
 
-        return total_loss
+        return {
+            "loss": total_loss,
+            "main_loss": main_loss,
+            "decoder_loss": decoder_loss,
+            "confidence_loss": confidence_loss_val
+        }
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         """Validation step logic."""
@@ -470,9 +480,10 @@ class PertSetsPerturbationModel(PerturbationModel):
         target = batch["X"]
         target = target.reshape(-1, self.cell_sentence_len, self.output_dim)
 
-        loss = self.loss_fn(pred, target).nanmean()
-        self.log("val_loss", loss)
+        main_val_loss = self.loss_fn(pred, target).nanmean()
+        # self.log("val_loss", main_val_loss) # Will be logged by wrapper
 
+        decoder_val_loss = torch.tensor(0.0, device=pred.device) # Initialize
         if self.gene_decoder is not None and "X_hvg" in batch:
             gene_targets = batch["X_hvg"]
 
@@ -483,7 +494,7 @@ class PertSetsPerturbationModel(PerturbationModel):
             if isinstance(self.gene_decoder, NBDecoder):
                 mu, theta = self.gene_decoder(latent_preds)
                 gene_targets = batch["X_hvg"].reshape_as(mu)
-                decoder_loss = nb_nll(gene_targets, mu, theta)
+                decoder_val_loss = nb_nll(gene_targets, mu, theta)
             else:
                 gene_preds = self.gene_decoder(latent_preds)  # verify this is automatically detached
                 if self.residual_decoder:
@@ -493,20 +504,26 @@ class PertSetsPerturbationModel(PerturbationModel):
                 # Get decoder predictions
                 gene_preds = gene_preds.reshape(-1, self.cell_sentence_len, self.gene_dim)
                 gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
-                decoder_loss = self.loss_fn(gene_preds, gene_targets).mean()
+                decoder_val_loss = self.loss_fn(gene_preds, gene_targets).mean()
 
             # Log the validation metric
-            self.log("decoder_val_loss", decoder_loss)
-
+            # self.log("decoder_val_loss", decoder_val_loss, prog_bar=True) # Will be logged by wrapper
+        
+        confidence_val_loss = torch.tensor(0.0, device=pred.device)
         if confidence_pred is not None:
             # Detach main loss to prevent gradients flowing through it
-            loss_target = loss.detach().clone().unsqueeze(0)
+            loss_target = main_val_loss.detach().clone().unsqueeze(0)
 
             # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred, loss_target)
-            self.log("val/confidence_loss", confidence_loss)
+            confidence_val_loss = self.confidence_loss_fn(confidence_pred, loss_target)
+            # self.log("val/confidence_loss", confidence_val_loss) # Will be logged by wrapper
 
-        return {"loss": loss, "predictions": pred}
+        return {
+            "loss": main_val_loss, # The main validation loss monitored by callbacks
+            "decoder_val_loss": decoder_val_loss,
+            "confidence_val_loss": confidence_val_loss,
+            "predictions": pred
+        }
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         confidence_pred = None
@@ -562,3 +579,19 @@ class PertSetsPerturbationModel(PerturbationModel):
             output_dict["gene_preds"] = gene_preds
 
         return output_dict
+
+    # def configure_optimizers(self):
+    #     """
+    #     Configure optimizer with different learning rates for different components.
+    #     pert_encoder gets a higher learning rate to help it catch up.
+    #     """
+    #     print("Configuring optimizers with different learning rates")
+    #     pert_encoder_params = list(self.pert_encoder.parameters())
+    #     other_params = [p for n, p in self.named_parameters() if 'pert_encoder' not in n]
+
+    #     optimizer = torch.optim.Adam([
+    #         {'params': pert_encoder_params, 'lr': self.lr * 5.0},  # 5x higher learning rate for pert_encoder
+    #         {'params': other_params, 'lr': self.lr}
+    #     ])
+    #     print(f"Created optimizer with {len(pert_encoder_params)} pert_encoder params and {len(other_params)} other params")
+    #     return optimizer
