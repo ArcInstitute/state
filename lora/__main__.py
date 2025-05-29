@@ -247,10 +247,26 @@ def train(cfg: DictConfig) -> None:
         model.load_state_dict(filtered_state, strict=False)
         logger.info("Successfully loaded checkpoint into base model")
 
+        # Reinitialize and make trainable the encoder and decoder
+        for module in [model.pert_encoder, model.gene_decoder, model.basal_encoder]:
+            module.apply(lambda m: m.reset_parameters() if hasattr(m, 'reset_parameters') else None)
+            for param in module.parameters():
+                param.requires_grad = True
+        logger.info("Reinitialized and made trainable: pert_encoder, gene_decoder, basal_encoder")
+
     # Apply LoRA to the model ONCE, after all checkpoint loading is complete
     lora_config = None
     if "lora_config" in cfg["model"]["kwargs"]["transformer_backbone_kwargs"]:
         lora_config = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["lora_config"]
+    else:
+        # Default LoRA config with higher rank for more parameters
+        lora_config = {
+            "r": 490,  # Increased to achieve ~30M trainable parameters
+            "lora_alpha": 980,  # Typically 2x the rank
+            "lora_dropout": 0.1,
+            "target_modules": ["c_attn", "c_proj"],  # Target all attention layers
+            "bias": "none"
+        }
     
     # Apply LoRA to the model
     lora_model = prepare_model_for_lora(
@@ -271,10 +287,22 @@ def train(cfg: DictConfig) -> None:
             return self.model(*args, **kwargs)
 
         def training_step(self, batch, batch_idx):
-            return self.model.training_step(batch, batch_idx)
+            output = self.model.training_step(batch, batch_idx)
+            if isinstance(output, dict):
+                loss = output['loss']
+            else:
+                loss = output
+            self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
+            return output
 
         def validation_step(self, batch, batch_idx):
-            return self.model.validation_step(batch, batch_idx)
+            output = self.model.validation_step(batch, batch_idx)
+            if isinstance(output, dict):
+                loss = output['loss']
+            else:
+                loss = output
+            self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
+            return output
 
         def configure_optimizers(self):
             return self.model.configure_optimizers()
