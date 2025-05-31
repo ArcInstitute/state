@@ -336,7 +336,7 @@ def compute_metrics(
                     ctrl_pred_sub = X_ctrl_pred[:, gene_cols]
 
                     # compute the delta‐Pearson
-                    pearson_sig.append(compute_pearson_delta(pred_sub, true_sub, ctrl_true_sub, ctrl_pred_sub))
+                    # pearson_sig.append(compute_pearson_delta(pred_sub, true_sub, ctrl_true_sub, ctrl_pred_sub))
 
                 metrics[celltype]["pearson_delta_cell_type_sig_genes"] = pearson_sig
 

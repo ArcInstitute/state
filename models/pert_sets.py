@@ -331,6 +331,12 @@ class PertSetsPerturbationModel(PerturbationModel):
         The `padded` argument here is set to True if the batch is padded. Otherwise, we
         expect a single batch, so that sentences can vary in length across batches.
         """
+        # # Debug: Print sum of batch['X_hvg'] along the last axis if it exists
+        # print("batch['X_hvg'] in forward: ", 'X_hvg' in batch)
+        # x_hvg_sum = batch['X_hvg'].sum(axis=-1)
+        # print(f"[DEBUG] batch['X_hvg'].sum(axis=-1): {x_hvg_sum}")
+        
+
         if padded:
             pert = batch["pert"].reshape(-1, self.cell_sentence_len, self.pert_dim)
             basal = batch["basal"].reshape(-1, self.cell_sentence_len, self.input_dim)
@@ -411,7 +417,7 @@ class PertSetsPerturbationModel(PerturbationModel):
             target = target.reshape(1, -1, self.output_dim)
 
         main_loss = self.loss_fn(pred, target).nanmean()
-        # self.log("train_loss", main_loss, prog_bar=True) # Will be logged by the wrapper
+        self.log("train_loss", main_loss) #, prog_bar=True) # Will be logged by the wrapper
 
         # Process decoder if available
         decoder_loss = torch.tensor(0.0, device=pred.device) # Initialize
@@ -445,7 +451,7 @@ class PertSetsPerturbationModel(PerturbationModel):
 
             # Log decoder loss
             # print("Decoder loss: ", current_decoder_loss)
-            # self.log("decoder_loss", current_decoder_loss, prog_bar=True) # Will be logged by wrapper
+            self.log("decoder_loss", current_decoder_loss) #, prog_bar=True) # Will be logged by wrapper
             decoder_loss = current_decoder_loss # Store for return
             total_loss = total_loss + 0.1 * decoder_loss
 
@@ -456,7 +462,7 @@ class PertSetsPerturbationModel(PerturbationModel):
 
             # Compute confidence loss
             confidence_loss_val = self.confidence_loss_fn(confidence_pred, loss_target)
-            # self.log("train/confidence_loss", confidence_loss_val) # Will be logged by wrapper
+            self.log("train/confidence_loss", confidence_loss_val) # Will be logged by wrapper
 
             # Add to total loss
             total_loss = total_loss + confidence_loss_val
@@ -481,7 +487,7 @@ class PertSetsPerturbationModel(PerturbationModel):
         target = target.reshape(-1, self.cell_sentence_len, self.output_dim)
 
         main_val_loss = self.loss_fn(pred, target).nanmean()
-        # self.log("val_loss", main_val_loss) # Will be logged by wrapper
+        self.log("val_loss", main_val_loss) # Will be logged by wrapper
 
         decoder_val_loss = torch.tensor(0.0, device=pred.device) # Initialize
         if self.gene_decoder is not None and "X_hvg" in batch:
@@ -507,7 +513,7 @@ class PertSetsPerturbationModel(PerturbationModel):
                 decoder_val_loss = self.loss_fn(gene_preds, gene_targets).mean()
 
             # Log the validation metric
-            # self.log("decoder_val_loss", decoder_val_loss, prog_bar=True) # Will be logged by wrapper
+            self.log("decoder_val_loss", decoder_val_loss) #, prog_bar=True) # Will be logged by wrapper
         
         confidence_val_loss = torch.tensor(0.0, device=pred.device)
         if confidence_pred is not None:
@@ -516,7 +522,7 @@ class PertSetsPerturbationModel(PerturbationModel):
 
             # Compute confidence loss
             confidence_val_loss = self.confidence_loss_fn(confidence_pred, loss_target)
-            # self.log("val/confidence_loss", confidence_val_loss) # Will be logged by wrapper
+            self.log("val/confidence_loss", confidence_val_loss) # Will be logged by wrapper
 
         return {
             "loss": main_val_loss, # The main validation loss monitored by callbacks
