@@ -5,7 +5,7 @@ device: cuda
 kwargs:
   cell_set_len: 512
   blur: 0.05
-  hidden_dim: 328
+  hidden_dim: 696
   loss: energy
   confidence_head: False
   n_encoder_layers: 4
@@ -25,7 +25,7 @@ kwargs:
   transformer_backbone_kwargs:
       n_positions: ${model.kwargs.cell_set_len}
       n_embd: ${model.kwargs.hidden_dim}
-      d_inner: 1024
+      d_inner: 2784
       n_layer: 8
       n_head: 8
       resid_pdrop: 0.0

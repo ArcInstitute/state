@@ -376,6 +376,7 @@ class PertSetsPerturbationModel(PerturbationModel):
             outputs = self.transformer_backbone(inputs_embeds=seq_input, attention_mask=attn_mask)
             res_pred = outputs.last_hidden_state
         else:
+            # Both GPT2 and our BidirectionalQwen3Model now handle bidirectional attention by default
             res_pred = self.transformer_backbone(inputs_embeds=seq_input).last_hidden_state
 
         # add to basal if predicting residual
