@@ -124,6 +124,10 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
         model = LlamaBidirectionalModel(config)
         model_dim = config.hidden_size
         needs_bidirectional_mask = True  # Llama defaults to causal, needs explicit bidirectional mask
+
+        with torch.no_grad():
+            model.embed_tokens.weight.zero_()
+            model.embed_tokens.weight.requires_grad = False
     else:
         raise ValueError(f"Unknown backbone key {key}")
     

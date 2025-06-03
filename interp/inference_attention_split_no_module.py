@@ -55,7 +55,8 @@ FIG_DIR = Path(__file__).resolve().parent / "figures" / "layer0_attention_gpt"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "step=100.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "step=3100.ckpt"
+
 if not checkpoint_path.exists():
     # Try other common checkpoint names
     for ckpt_name in ["best.ckpt", "last.ckpt", "epoch=*.ckpt"]:

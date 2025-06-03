@@ -1,0 +1,34 @@
+name: PertSets
+checkpoint: null
+device: cuda
+
+kwargs:
+  cell_set_len: 512
+  blur: 0.05
+  hidden_dim: 696
+  loss: energy
+  confidence_head: False
+  n_encoder_layers: 4
+  n_decoder_layers: 4
+  predict_residual: True
+  softplus: True
+  freeze_pert: False
+  transformer_decoder: False
+  finetune_vci_decoder: False
+  residual_decoder: False
+  batch_encoder: False
+  nb_decoder: False
+  mask_attn: False
+  distributional_loss: energy
+  init_from: null
+  transformer_backbone_key: GPT2
+  transformer_backbone_kwargs:
+      n_positions: ${model.kwargs.cell_set_len}
+      n_embd: ${model.kwargs.hidden_dim}
+      d_inner: 2784
+      n_layer: 8
+      n_head: 8
+      resid_pdrop: 0.0
+      embd_pdrop: 0.0
+      attn_pdrop: 0.0
+      use_cache: false

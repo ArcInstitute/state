@@ -1,7 +1,7 @@
 wandb_track: false
 weight_decay: 0.0005
 batch_size: 64
-lr: 3e-4
+lr: 1e-4
 max_steps: 250000
 train_seed: 42
 val_freq: 5000
