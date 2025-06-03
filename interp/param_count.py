@@ -111,12 +111,26 @@ print("Total parameters for tahoe gpt hidden_dim=696, intermediate_dim=2784, num
       count_transformer_params(hidden_dim=696, intermediate_dim=2784, num_layers=8))
 print("Total parameters for tahoe gpt hidden_dim=1104, intermediate_dim=4416, num_layers=4 (excluding embeddings):",
       count_transformer_params(hidden_dim=1104, intermediate_dim=4416, num_layers=4))
+print("Total parameters for tahoe gpt hidden_dim=688, intermediate_dim=2752, num_layers=4 (excluding embeddings):",
+      count_transformer_params(hidden_dim=688, intermediate_dim=2752, num_layers=4))
+print("Total parameters for tahoe gpt hidden_dim=688, intermediate_dim=2752, num_layers=8 (excluding embeddings):",
+      count_transformer_params(hidden_dim=688, intermediate_dim=2752, num_layers=8))
+print("Total parameters for tahoe gpt hidden_dim=1104, intermediate_dim=4416, num_layers=8 (excluding embeddings):",
+      count_transformer_params(hidden_dim=1104, intermediate_dim=4416, num_layers=8))
+
+
 print("Total parameters for tahoe llama hidden_dim=576, intermediate_dim=2304, num_layers=8, num_attention_heads=8 (excluding embeddings):",
       count_llama_params(hidden_dim=576, intermediate_dim=2304, num_layers=8, num_attention_heads=8))
 print("Total parameters for tahoe llama hidden_dim=696, intermediate_dim=2784, num_layers=8, num_attention_heads=12 (excluding embeddings):",
       count_llama_params(hidden_dim=696, intermediate_dim=2784, num_layers=8, num_attention_heads=12))
 print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=4, num_attention_heads=12 (excluding embeddings):",
       count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=4, num_attention_heads=12))
+print("Total parameters for tahoe llama hidden_dim=688, intermediate_dim=2752, num_layers=4, num_attention_heads=8 (excluding embeddings):",
+      count_llama_params(hidden_dim=688, intermediate_dim=2752, num_layers=4, num_attention_heads=8))
+print("Total parameters for tahoe llama hidden_dim=688, intermediate_dim=2752, num_layers=8, num_attention_heads=8 (excluding embeddings):",
+      count_llama_params(hidden_dim=688, intermediate_dim=2752, num_layers=8, num_attention_heads=8))
+print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=8, num_attention_heads=12 (excluding embeddings):",
+      count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=8, num_attention_heads=12))
 
 print("Total parameters for replogle gpt hidden_dim=328, intermediate_dim=1024, num_layers=8 (excluding embeddings):",
       count_transformer_params(hidden_dim=328, intermediate_dim=1024, num_layers=8))
