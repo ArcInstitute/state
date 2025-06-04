@@ -1,0 +1,31 @@
+name: PertSets
+checkpoint: null
+device: cuda
+
+kwargs:
+  cell_set_len: 512   # how many cells to group together into a single set of cells
+  extra_tokens: 1     # configurable buffer for confidence/special tokens
+  blur: 0.05
+  hidden_dim: 328   # hidden dimension going into the transformer backbone
+  loss: energy
+  confidence_token: False    # if true, model tries to predict its own confidence
+  n_encoder_layers: 4        # number of MLP layers for pert, basal encoders
+  n_decoder_layers: 4
+  predict_residual: True      # if true, predicts the residual in embedding space to the basal cells
+  freeze_pert_backbone: False # if true, the perturbation model is frozen
+  finetune_vci_decoder: False # if true, the pretrained state decoder is used in finetuning
+  batch_encoder: False        # if true, batch variables are used
+  nb_decoder: False           # if true, use a negative binomial decoder
+  mask_attn: False            # if true, mask the attention
+  distributional_loss: energy
+  init_from: null             # initial checkpoint to start the model
+  transformer_backbone_key: GPT2
+  transformer_backbone_kwargs:
+      n_positions: ${model.kwargs.cell_set_len}
+      n_embd: ${model.kwargs.hidden_dim}
+      n_layer: 4
+      n_head: 8
+      resid_pdrop: 0.0
+      embd_pdrop: 0.0
+      attn_pdrop: 0.0
+      use_cache: false
