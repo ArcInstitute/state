@@ -50,12 +50,12 @@ DATA_PATH = Path(
 )
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
-LAYER_IDX = 0
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "layer0_attention_gpt"
+LAYER_IDX = 7
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "layer7_attention_gpt"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "step=3100.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "step=10000.ckpt"
 
 if not checkpoint_path.exists():
     # Try other common checkpoint names
