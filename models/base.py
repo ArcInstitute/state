@@ -80,7 +80,7 @@ class GeneWiseDecoder(nn.Module):
         if x.dim() == 3:  # x has shape (B, S, latent_dim)
             B, S, latent_dim = x.shape
             x_flat = x.reshape(-1, latent_dim)  # Flatten to (B*S, latent_dim)
-            # Compute each gene’s prediction over the flattened batch
+            # Compute each gene's prediction over the flattened batch
             outputs = [decoder(x_flat) for decoder in self.decoders]  # each is (B*S, 1)
             out = torch.cat(outputs, dim=1)  # (B*S, gene_dim)
             out = out.reshape(B, S, self._gene_dim)
@@ -114,7 +114,7 @@ class LatentToGeneDecoder(nn.Module):
         self,
         latent_dim: int,
         gene_dim: int,
-        hidden_dims: List[int] = [512, 1024],
+        hidden_dims: List[int] = [1024, 1024, 512, 512],
         dropout: float = 0.0,
         softplus: bool = False,
     ):
@@ -224,26 +224,50 @@ class PerturbationModel(ABC, LightningModule):
         # or to transcriptome space if output space is all. done this way to maintain
         # backwards compatibility with the old models
         self.gene_decoder = None
-        gene_dim = hvg_dim if output_space == "gene" else gene_dim
+        effective_gene_dim = hvg_dim if output_space == "gene" else gene_dim
+        logger.info(f"DEBUG: embed_key={embed_key}, output_space={output_space}, hvg_dim={hvg_dim}, gene_dim={gene_dim}, effective_gene_dim={effective_gene_dim}, hidden_dim={hidden_dim}")
         if (embed_key and embed_key != "X_hvg" and output_space == "gene") or (
             embed_key and output_space == "all"
         ):  # we should be able to decode from hvg to all
-            if embed_key == "X_scfound":
-                if gene_dim > 18000:
+            logger.info(f"DEBUG: Creating gene_decoder, checking conditions...")
+            # Special case for replogle_vci_1.5.2_cs64 checkpoint compatibility
+            if embed_key in ["X_vci_1.5.2", "X_vci_1.5.2_4"]:
+                hidden_dims = [1024, 512, 512]  # Corrected to match checkpoint
+                effective_gene_dim = 2000  # Override to match checkpoint final layer
+                checkpoint_latent_dim = 2058  # Override latent_dim to match checkpoint
+                logger.info("DEBUG: Using X_vci_1.5.2 checkpoint compatibility - hidden dims: %s, gene_dim: %s, latent_dim: %s", hidden_dims, effective_gene_dim, checkpoint_latent_dim)
+            # Check both hvg_dim and original gene_dim for the 2058 condition
+            elif effective_gene_dim == 2058 or hvg_dim == 2058:
+                hidden_dims = [1024, 1024, 512, 512]
+                logger.info("DEBUG: Using 2058 condition - hidden dims: %s", hidden_dims)
+            elif embed_key == "X_scfound":
+                if effective_gene_dim > 18000:
                     hidden_dims = [512, 1024, 256]
                 else:
                     hidden_dims = [512, 1024]
-            elif gene_dim > 18000:  # paper tahoe
+                logger.info(f"DEBUG: Using X_scfound condition - hidden dims: {hidden_dims}")
+            elif effective_gene_dim > 18000:  # paper tahoe
                 hidden_dims = [1024, 512, 256]
-            elif gene_dim > 10000:  # paper replogle
+                logger.info(f"DEBUG: Using >18000 condition - hidden dims: {hidden_dims}")
+            elif effective_gene_dim > 10000:  # paper replogle
                 hidden_dims = [hidden_dim * 2, hidden_dim * 4]  # remove this
+                logger.info(f"DEBUG: Using >10000 condition - hidden dims: {hidden_dims}")
             else:
-                hidden_dims = [hidden_dim * 2, hidden_dim * 4]
+                hidden_dims = [1024, 512]
+                logger.info(f"DEBUG: Using else condition - hidden dims: {hidden_dims}")
 
+            # Use checkpoint-specific latent_dim if available, otherwise use computed value
+            if 'checkpoint_latent_dim' in locals():
+                actual_latent_dim = checkpoint_latent_dim
+            else:
+                actual_latent_dim = self.output_dim + self.batch_dim if self.batch_dim is not None else self.output_dim
+            
+            logger.info(f"DEBUG: Creating decoder with latent_dim={actual_latent_dim}, gene_dim={effective_gene_dim}, hidden_dims={hidden_dims}")
+            
             self.gene_decoder = LatentToGeneDecoder(
-                latent_dim=self.output_dim + self.batch_dim if self.batch_dim is not None else self.output_dim,
+                latent_dim=actual_latent_dim,
                 # latent_dim=self.output_dim,
-                gene_dim=gene_dim,
+                gene_dim=effective_gene_dim,
                 hidden_dims=hidden_dims,
                 dropout=dropout,
                 softplus=self.hparams.get("softplus", False),

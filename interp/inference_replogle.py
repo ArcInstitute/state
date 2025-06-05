@@ -40,22 +40,23 @@ sys.path.append(str(project_root))
 sys.path.append(str(project_root / "vci_pretrain"))
 
 # Import model class directly
-from models.pert_sets import PertSetsPerturbationModel
+from models.pertsets import PertSetsPerturbationModel
 
 MODEL_DIR = Path(
-    "/large_storage/ctc/userspace/dhruvgautam/gpt/tahoe_vci_1.4.4_70m/gpt_fold1"
+    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
+    "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
 )
 DATA_PATH = Path(
-    "/large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.2/plate1.h5"
+    "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
 )
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
 LAYER_IDX = 7
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "layer7_attention_gpt"
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_new" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "step=10000.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "last.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
 
 if not checkpoint_path.exists():
     # Try other common checkpoint names
@@ -68,7 +69,7 @@ if not checkpoint_path.exists():
         raise FileNotFoundError(f"Could not find checkpoint in {MODEL_DIR}/checkpoints/")
 
 logger.info(f"Loading model from checkpoint: {checkpoint_path}")
-model = PertSetsPerturbationModel.load_from_checkpoint(str(checkpoint_path))
+model = PertSetsPerturbationModel.load_from_checkpoint(str(checkpoint_path), strict=False)
 model.eval()  # turn off dropout
 
 # Configure attention outputs
@@ -102,8 +103,18 @@ print(f"Model cell_sentence_len: {model.cell_sentence_len}")
 adata_full = sc.read_h5ad(str(DATA_PATH))
 logger.info("Using full dataset shape: %s", adata_full.shape)
 
+# Debug: Explore the AnnData structure
+logger.info("=== AnnData Structure Debug ===")
+logger.info(f"Observation columns (adata.obs.columns): {list(adata_full.obs.columns)}")
+logger.info(f"Variable columns (adata.var.columns): {list(adata_full.var.columns)}")
+logger.info(f"Observation matrices (adata.obsm.keys()): {list(adata_full.obsm.keys())}")
+logger.info(f"Unstructured annotations (adata.uns.keys()): {list(adata_full.uns.keys())}")
+if hasattr(adata_full, 'layers') and adata_full.layers:
+    logger.info(f"Data layers (adata.layers.keys()): {list(adata_full.layers.keys())}")
+logger.info("=== End Debug ===\n")
+
 # Determine embedding key - typically "X_vci" for VCI embeddings or "X_hvg" for HVG expression
-embed_key = "X_vci_1.4.2"  # Try VCI embeddings first
+embed_key = "X_vci_1.5.2_4"  # Try VCI embeddings first
 if embed_key not in adata_full.obsm:
     embed_key = "X_hvg"  # Fallback to HVG
     if embed_key not in adata_full.obsm:
@@ -118,8 +129,8 @@ else:
 
 # Find control perturbation
 control_pert = "DMSO_TF_24h"  # Default control
-if "drugname_drugconc" in adata_full.obs.columns:
-    drugname_counts = adata_full.obs["drugname_drugconc"].value_counts()
+if "gene" in adata_full.obs.columns:
+    drugname_counts = adata_full.obs["gene"].value_counts()
     # Look for common control names
     for potential_control in ["DMSO_TF_24h", "non-targeting", "control", "DMSO"]:
         if potential_control in drugname_counts.index:
@@ -192,43 +203,39 @@ logger.info(
 
 # Direct model forward pass with 512 cells (256 of each cell type)
 # Get available cell types and select the two most abundant ones
-cell_type_counts = adata_full.obs["cell_name"].value_counts()
+cell_type_counts = adata_full.obs["cell_type"].value_counts()
 logger.info("Available cell types: %s", list(cell_type_counts.index))
 
-# Select the two most abundant cell types
-celltype1, celltype2 = cell_type_counts.index[:2]
-logger.info(f"Selected cell types: {celltype1} ({cell_type_counts[celltype1]} available), {celltype2} ({cell_type_counts[celltype2]} available)")
+# Select the most abundant cell type
+celltype1 = cell_type_counts.index[0]
+logger.info(f"Selected cell type: {celltype1} ({cell_type_counts[celltype1]} available)")
 
-# Get control cells for each cell type
-cells_type1 = adata_full[(adata_full.obs["drugname_drugconc"] == control_pert) & 
-                        (adata_full.obs["cell_name"] == celltype1)].copy()
-cells_type2 = adata_full[(adata_full.obs["drugname_drugconc"] == control_pert) & 
-                        (adata_full.obs["cell_name"] == celltype2)].copy()
+# Get control cells for this cell type
+cells_type1 = adata_full[(adata_full.obs["gene"] == control_pert) & 
+                        (adata_full.obs["cell_type"] == celltype1)].copy()
 
-logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}")
+logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}")
 
-# Sample cells - always use 512 total cells (256 per cell type)
-cell_sentence_len = 512  # Hardcoded to always use 512 cells
-logger.info(f"Using fixed cell_sentence_len: {cell_sentence_len}")
+# Use the model's actual cell_sentence_len to avoid position embedding errors
+cell_sentence_len = model.cell_sentence_len  # Use model's trained sequence length
+logger.info(f"Using model's cell_sentence_len: {cell_sentence_len}")
 logger.info(f"Model was trained with cell_sentence_len: {model.cell_sentence_len}")
 
-# Use 512 cells total, split evenly between two cell types  
-n_cells_per_type = 512  # 256 cells per cell type
-total_cells = 512  # 512 total cells
+# Use all cells for the single cell type
+n_cells = cell_sentence_len
+total_cells = cell_sentence_len  # Use model's trained length
 
-if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_type:
+if cells_type1.n_obs >= n_cells:
     # Sample cells
-    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells_per_type, replace=False)
-    idx2 = np.random.choice(cells_type2.n_obs, size=n_cells_per_type, replace=False)
+    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells, replace=False)
     
     sampled_type1 = cells_type1[idx1].copy()
-    sampled_type2 = cells_type2[idx2].copy()
     
-    # Combine into a single batch
-    combined_batch = ad.concat([sampled_type1], axis=0)
+    # Use single cell type batch
+    combined_batch = sampled_type1
     
     logger.info(f"Created combined batch with {combined_batch.n_obs} cells")
-    logger.info(f"Cell type distribution: {combined_batch.obs['cell_name'].value_counts().to_dict()}")
+    logger.info(f"Cell type distribution: {combined_batch.obs['cell_type'].value_counts().to_dict()}")
     
     # Get embeddings and prepare batch manually
     device = next(model.parameters()).device
@@ -254,15 +261,16 @@ if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_ty
     pert_tensor[:, 0] = 1  # Set first dimension to 1 for control perturbation
     pert_names = [control_pert] * n_cells
     
-    # Create batch dictionary - reshape for padded format
+    # Create batch dictionary - use the correct keys expected by the model
     batch = {
-        "basal": X_embed,  # (512, embed_dim)
-        "pert": pert_tensor,  # (512, pert_dim)
-        "pert_name": pert_names
+        "ctrl_cell_emb": X_embed,  # (64, embed_dim) - basal/control cell embeddings
+        "pert_emb": pert_tensor,  # (64, pert_dim) - perturbation embeddings
+        "pert_name": pert_names,
+        "batch": torch.zeros((1, cell_sentence_len), device=device)
     }
     
-    logger.info(f"Batch shapes - basal: {batch['basal'].shape}, pert: {batch['pert'].shape}")
-    logger.info(f"Running single forward pass with {n_cells} cells ({n_cells_per_type} per cell type)")
+    logger.info(f"Batch shapes - ctrl_cell_emb: {batch['ctrl_cell_emb'].shape}, pert_emb: {batch['pert_emb'].shape}")
+    logger.info(f"Running single forward pass with {n_cells} cells of type {celltype1}")
     
     # Single forward pass using padded=True
     with torch.no_grad():
@@ -271,7 +279,7 @@ if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_ty
     logger.info("Forward pass completed successfully")
     
 else:
-    logger.error(f"Insufficient cells: {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}. Need at least {n_cells_per_type} each.")
+    logger.error(f"Insufficient cells: {celltype1}: {cells_type1.n_obs}. Need at least {n_cells}.")
 
 logger.info(
     "Finished inference – accumulated %d sequences", total_sequences
