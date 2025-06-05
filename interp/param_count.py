@@ -119,28 +119,28 @@ def count_llama_params(
 #       count_transformer_params(hidden_dim=1104, intermediate_dim=4416, num_layers=8))
 
 
-print("Total parameters for tahoe llama hidden_dim=576, intermediate_dim=2304, num_layers=8, num_attention_heads=8 (excluding embeddings):",
-      count_llama_params(hidden_dim=576, intermediate_dim=2304, num_layers=8, num_attention_heads=8))
-print("Total parameters for tahoe llama hidden_dim=696, intermediate_dim=2784, num_layers=8, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=696, intermediate_dim=2784, num_layers=8, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=696, intermediate_dim=2784, num_layers=12, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=696, intermediate_dim=2784, num_layers=12, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=4, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=4, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=688, intermediate_dim=2752, num_layers=4, num_attention_heads=8 (excluding embeddings):",
-      count_llama_params(hidden_dim=688, intermediate_dim=2752, num_layers=4, num_attention_heads=8))
-print("Total parameters for tahoe llama hidden_dim=688, intermediate_dim=2752, num_layers=8, num_attention_heads=8 (excluding embeddings):",
-      count_llama_params(hidden_dim=688, intermediate_dim=2752, num_layers=8, num_attention_heads=8))
-print("Total parameters for tahoe llama hidden_dim=1032, intermediate_dim=4128, num_layers=8, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=1032, intermediate_dim=4128, num_layers=8, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=8, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=8, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=10, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=10, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=1488, intermediate_dim=5952, num_layers=6, num_attention_heads=12 (excluding embeddings):",
-      count_llama_params(hidden_dim=1488, intermediate_dim=5952, num_layers=6, num_attention_heads=12))
-print("Total parameters for tahoe llama hidden_dim=1504, intermediate_dim=6016, num_layers=8, num_attention_heads=16 (excluding embeddings):",
-      count_llama_params(hidden_dim=1504, intermediate_dim=6016, num_layers=8, num_attention_heads=16))
+# print("Total parameters for tahoe llama hidden_dim=576, intermediate_dim=2304, num_layers=8, num_attention_heads=8 (excluding embeddings):",
+#       count_llama_params(hidden_dim=576, intermediate_dim=2304, num_layers=8, num_attention_heads=8))
+# print("Total parameters for tahoe llama hidden_dim=696, intermediate_dim=2784, num_layers=8, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=696, intermediate_dim=2784, num_layers=8, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=696, intermediate_dim=2784, num_layers=12, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=696, intermediate_dim=2784, num_layers=12, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=4, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=4, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=688, intermediate_dim=2752, num_layers=4, num_attention_heads=8 (excluding embeddings):",
+#       count_llama_params(hidden_dim=688, intermediate_dim=2752, num_layers=4, num_attention_heads=8))
+# print("Total parameters for tahoe llama hidden_dim=688, intermediate_dim=2752, num_layers=8, num_attention_heads=8 (excluding embeddings):",
+#       count_llama_params(hidden_dim=688, intermediate_dim=2752, num_layers=8, num_attention_heads=8))
+# print("Total parameters for tahoe llama hidden_dim=1032, intermediate_dim=4128, num_layers=8, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=1032, intermediate_dim=4128, num_layers=8, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=8, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=8, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=1104, intermediate_dim=4416, num_layers=10, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=1104, intermediate_dim=4416, num_layers=10, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=1488, intermediate_dim=5952, num_layers=6, num_attention_heads=12 (excluding embeddings):",
+#       count_llama_params(hidden_dim=1488, intermediate_dim=5952, num_layers=6, num_attention_heads=12))
+# print("Total parameters for tahoe llama hidden_dim=1504, intermediate_dim=6016, num_layers=8, num_attention_heads=16 (excluding embeddings):",
+#       count_llama_params(hidden_dim=1504, intermediate_dim=6016, num_layers=8, num_attention_heads=16))
 
 
 # print("Total parameters for replogle gpt hidden_dim=328, intermediate_dim=1024, num_layers=8 (excluding embeddings):",
@@ -156,15 +156,19 @@ print("Total parameters for tahoe llama hidden_dim=1504, intermediate_dim=6016, 
 # print("Total parameters for replogle gpt hidden_dim=492, intermediate_dim=1968, num_layers=4 (excluding embeddings):",
 #       count_transformer_params(hidden_dim=492, intermediate_dim=1968, num_layers=4))
 
-# print("Total parameters for replogle llama hidden_dim=328, intermediate_dim=1024, num_layers=8, num_attention_heads=8 (excluding embeddings):",
-#       count_llama_params(hidden_dim=328, intermediate_dim=1024, num_layers=8, num_attention_heads=8))
-# print("Total parameters for replogle llama hidden_dim=448, intermediate_dim=1792, num_layers=4, num_attention_heads=8 (excluding embeddings):",
-#       count_llama_params(hidden_dim=448, intermediate_dim=1792, num_layers=4, num_attention_heads=8))
-# print("Total parameters for replogle llama hidden_dim=492, intermediate_dim=1968, num_layers=8, num_attention_heads=12 (excluding embeddings):",
-#       count_llama_params(hidden_dim=492, intermediate_dim=1968, num_layers=8, num_attention_heads=12))
-# print("Total parameters for replogle llama hidden_dim=672, intermediate_dim=2688, num_layers=4, num_attention_heads=12 (excluding embeddings):",
-#       count_llama_params(hidden_dim=672, intermediate_dim=2688, num_layers=4, num_attention_heads=12))
-# print("Total parameters for replogle llama hidden_dim=328, intermediate_dim=1024, num_layers=4, num_attention_heads=8 (excluding embeddings):",
-#       count_llama_params(hidden_dim=328, intermediate_dim=1024, num_layers=4, num_attention_heads=8))
-# print("Total parameters for replogle llama hidden_dim=492, intermediate_dim=1968, num_layers=4, num_attention_heads=12 (excluding embeddings):",
-#       count_llama_params(hidden_dim=492, intermediate_dim=1968, num_layers=4, num_attention_heads=12))
+print("Total parameters for replogle llama hidden_dim=328, intermediate_dim=1024, num_layers=8, num_attention_heads=8 (excluding embeddings):",
+      count_llama_params(hidden_dim=328, intermediate_dim=1024, num_layers=8, num_attention_heads=8))
+print("Total parameters for replogle llama hidden_dim=448, intermediate_dim=1792, num_layers=4, num_attention_heads=8 (excluding embeddings):",
+      count_llama_params(hidden_dim=448, intermediate_dim=1792, num_layers=4, num_attention_heads=8))
+print("Total parameters for replogle llama hidden_dim=492, intermediate_dim=1968, num_layers=8, num_attention_heads=12 (excluding embeddings):",
+      count_llama_params(hidden_dim=492, intermediate_dim=1968, num_layers=8, num_attention_heads=12))
+print("Total parameters for replogle llama hidden_dim=672, intermediate_dim=2688, num_layers=4, num_attention_heads=12 (excluding embeddings):",
+      count_llama_params(hidden_dim=672, intermediate_dim=2688, num_layers=4, num_attention_heads=12))
+print("Total parameters for replogle llama hidden_dim=328, intermediate_dim=1024, num_layers=4, num_attention_heads=8 (excluding embeddings):",
+      count_llama_params(hidden_dim=328, intermediate_dim=1024, num_layers=4, num_attention_heads=8))
+print("Total parameters for replogle llama hidden_dim=492, intermediate_dim=1968, num_layers=4, num_attention_heads=12 (excluding embeddings):",
+      count_llama_params(hidden_dim=492, intermediate_dim=1968, num_layers=4, num_attention_heads=12))
+print("Total parameters for replogle llama hidden_dim=656, intermediate_dim=2624, num_layers=8, num_attention_heads=16 (excluding embeddings):",
+      count_llama_params(hidden_dim=656, intermediate_dim=2624, num_layers=8, num_attention_heads=16))
+print("Total parameters for replogle llama hidden_dim=656, intermediate_dim=2624, num_layers=8, num_attention_heads=16 (excluding embeddings):",
+      count_llama_params(hidden_dim=656, intermediate_dim=2624, num_layers=6, num_attention_heads=16))
