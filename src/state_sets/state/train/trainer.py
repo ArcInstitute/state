@@ -12,7 +12,8 @@ from lightning.pytorch.strategies import DDPStrategy
 from zclip import ZClipLightningCallback
 
 from ..nn.model import LitUCEModel
-from ..data import H5adSentenceDataset, VCIDatasetSentenceCollator
+from cell_load.dataset.cell_sentence_dataset import CellSentenceDataset
+from cell_load.dataset.cell_sentence_dataset import CellSentenceCollator
 from ..train.callbacks import LogLR, ProfilerCallback, ResumeCallback, EMACallback, PerfProfilerCallback
 from ..utils import get_latest_checkpoint, get_embedding_cfg, get_dataset_cfg
 
