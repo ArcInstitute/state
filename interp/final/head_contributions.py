@@ -89,52 +89,124 @@ all_ctrl_cells = adata[adata.obs["gene"] == control_pert].copy()
 logger.info(f"Total control cells available: {all_ctrl_cells.n_obs}")
 
 # --- BEGIN INTERPRETABILITY CODE ---
-layer_activations = {}
+head_activations = {}
 
-def get_activation(name):
+def get_head_activation(name):
     def hook(model, input, output):
-        logger.info(f"Hook triggered for {name}")
-        # If output is a tuple, take the first element
+        logger.info(f"Head hook triggered for {name}")
+        # For attention heads, we typically want the output before concatenation
+        # This depends on the specific transformer architecture
         if isinstance(output, tuple):
+            # Some attention modules return (attn_output, attn_weights)
             out = output[0]
         else:
             out = output
-        layer_activations[name] = out.detach().cpu()
+        head_activations[name] = out.detach().cpu()
     return hook
 
-def register_hooks(model):
-    layer_activations.clear()
+def register_head_hooks(model):
+    head_activations.clear()
     # Updated for GPT-2 architecture using .h instead of .layers
     if hasattr(model, 'transformer_backbone') and hasattr(model.transformer_backbone, 'h'):
-        for i, layer in enumerate(model.transformer_backbone.h):
-            layer.register_forward_hook(get_activation(f'layer_{i}'))
+        for layer_idx, layer in enumerate(model.transformer_backbone.h):
+            # Try to hook into multi-head attention
+            if hasattr(layer, 'attn'):
+                # GPT-2 uses 'attn' for attention module
+                layer.attn.register_forward_hook(get_head_activation(f'layer_{layer_idx}_attn'))
+            elif hasattr(layer, 'self_attn') or hasattr(layer, 'attention'):
+                # Common attribute names for attention in different architectures
+                attn_module = getattr(layer, 'self_attn', None) or getattr(layer, 'attention', None)
+                if attn_module is not None:
+                    # Hook the attention module output
+                    attn_module.register_forward_hook(get_head_activation(f'layer_{layer_idx}_attn'))
+            else:
+                logger.info(f"Could not find attention module in layer {layer_idx}")
     else:
         logger.info("Model does not have a transformer_backbone with .h layers to hook.")
 
-def plot_layer_contributions(layer_contributions, perturbation, output_dir):
-    plt.figure(figsize=(10, 6))
-    layers = list(layer_contributions.keys())
-    contributions = list(layer_contributions.values())
-    sns.barplot(x=layers, y=contributions, palette="viridis")
-    plt.title(f'Average Magnitude of Representation Change', fontsize=14)
-    plt.xlabel('Transformer Layer', fontsize=12)
-    plt.ylabel('Change in Representation', fontsize=12)
-    plt.xticks(rotation=45, fontsize=10)
+def calculate_head_contributions(head_activations, num_heads_per_layer=8):
+    """
+    Calculate contributions for each attention head.
+    This assumes the attention output contains concatenated head outputs.
+    """
+    head_contributions = {}
+    
+    for layer_attn_name, activation in head_activations.items():
+        if activation is None:
+            continue
+            
+        layer_idx = layer_attn_name.split('_')[1]
+        
+        # Assuming activation shape is [batch_size, seq_len, hidden_dim]
+        # Split into individual heads
+        batch_size, seq_len, hidden_dim = activation.shape
+        head_dim = hidden_dim // num_heads_per_layer
+        
+        if hidden_dim % num_heads_per_layer != 0:
+            logger.warning(f"Hidden dim {hidden_dim} not divisible by num_heads {num_heads_per_layer}")
+            continue
+            
+        # Reshape to separate heads: [batch_size, seq_len, num_heads, head_dim]
+        head_outputs = activation.view(batch_size, seq_len, num_heads_per_layer, head_dim)
+        
+        # Calculate contribution for each head (mean activation magnitude)
+        for head_idx in range(num_heads_per_layer):
+            head_output = head_outputs[:, :, head_idx, :]  # [batch_size, seq_len, head_dim]
+            # Calculate mean L2 norm across batch and sequence dimensions
+            contribution = torch.norm(head_output, dim=-1).mean().item()
+            head_name = f'L{layer_idx}H{head_idx}'
+            head_contributions[head_name] = contribution
+    
+    return head_contributions
+
+def plot_head_contributions(head_contributions, perturbation, output_dir):
+    if not head_contributions:
+        logger.warning(f"No head contributions to plot for {perturbation}")
+        return
+        
+    plt.figure(figsize=(15, 8))
+    heads = list(head_contributions.keys())
+    contributions = list(head_contributions.values())
+    
+    # Use viridis color map for all heads
+    plt.bar(range(len(heads)), contributions, color='viridis')
+    plt.title(f'Average Attention Head Magnitudes Across All Perturbations', fontsize=14)
+    plt.xlabel('Attention Head', fontsize=12)
+    plt.ylabel('Average Activation Magnitude', fontsize=12)
+    plt.xticks(range(len(heads)), heads, rotation=45, fontsize=8)
     plt.yticks(fontsize=10)
+    
     plt.tight_layout()
-    layer_analysis_dir = os.path.join(output_dir, 'layer_analysis')
-    os.makedirs(layer_analysis_dir, exist_ok=True)
-    plt.savefig(os.path.join(layer_analysis_dir, f'{perturbation}_layer_contributions.png'), dpi=300)
+    head_analysis_dir = os.path.join(output_dir, 'head_analysis')
+    os.makedirs(head_analysis_dir, exist_ok=True)
+    plt.savefig(os.path.join(head_analysis_dir, f'{perturbation}_head_contributions.png'), dpi=300, bbox_inches='tight')
     plt.close()
 
-# Register hooks on the model
-register_hooks(model)
+# Register hooks on the model for attention heads
+register_head_hooks(model)
 
-# Layer analysis for each perturbation
-all_layer_contributions = {}
+# Head analysis for each perturbation
+all_head_contributions = {}
 figures_dir = os.path.join(os.path.dirname(__file__), "figures")
-layer_analysis_dir = os.path.join(figures_dir, "layer_analysis")
-os.makedirs(layer_analysis_dir, exist_ok=True)
+head_analysis_dir = os.path.join(figures_dir, "head_analysis")
+os.makedirs(head_analysis_dir, exist_ok=True)
+
+# Try to determine number of attention heads from model architecture
+num_heads_per_layer = 8  # Default value, will try to detect automatically
+if hasattr(model, 'transformer_backbone'):
+    if hasattr(model.transformer_backbone, 'config') and hasattr(model.transformer_backbone.config, 'num_attention_heads'):
+        num_heads_per_layer = model.transformer_backbone.config.num_attention_heads
+        logger.info(f"Detected {num_heads_per_layer} attention heads per layer from model config")
+    elif hasattr(model.transformer_backbone, 'h') and len(model.transformer_backbone.h) > 0:
+        first_layer = model.transformer_backbone.h[0]
+        # Try to get number of heads from the first layer
+        for attr_name in ['attn', 'self_attn', 'attention']:
+            if hasattr(first_layer, attr_name):
+                attn_module = getattr(first_layer, attr_name)
+                if hasattr(attn_module, 'num_heads'):
+                    num_heads_per_layer = attn_module.num_heads
+                    logger.info(f"Detected {num_heads_per_layer} attention heads per layer")
+                    break
 
 # Helper function for direct model inference
 def run_model_inference(cells_batch, perturbation_name, cell_sentence_len=64):
@@ -217,14 +289,14 @@ for perturbation in pert_counts.index:
     ctrl_subset.obs["gene"] = perturbation
 
     # Clear activations before inference
-    layer_activations.clear()
+    head_activations.clear()
 
     # Run inference
     try:
         pred_subset = run_model_inference(ctrl_subset, perturbation, CELL_SENTENCE_LEN)
 
         # Immediately after inference, copy activations
-        current_activations = layer_activations.copy()
+        current_activations = head_activations.copy()
 
         # Add metadata to track source perturbation
         pred_subset.obs["original_perturbation"] = perturbation
@@ -234,43 +306,34 @@ for perturbation in pert_counts.index:
 
         logger.info(f"Generated {pred_subset.n_obs} predictions for {perturbation}")
 
-        # --- BEGIN LAYER CONTRIBUTION ANALYSIS FOR THIS PERTURBATION ---
-        layer_contributions = {}
-        prev_activation = None
-        for i in range(len(getattr(model.transformer_backbone, 'h', []))):
-            layer_name = f'layer_{i}'
-            if layer_name in current_activations:
-                current_activation = current_activations[layer_name]
-                if prev_activation is not None:
-                    # Calculate mean L2 norm change across all cells
-                    change = torch.norm(current_activation - prev_activation, dim=-1).mean().item()
-                    layer_contributions[f'Layer {i}'] = change
-                prev_activation = current_activation
-        if layer_contributions:
-            all_layer_contributions[perturbation] = layer_contributions
-            # plot_layer_contributions(layer_contributions, perturbation, figures_dir)
-            logger.info(f"Saved layer contribution plot for {perturbation} to {layer_analysis_dir}")
+        # --- BEGIN HEAD CONTRIBUTION ANALYSIS FOR THIS PERTURBATION ---
+        head_contributions = calculate_head_contributions(current_activations, num_heads_per_layer)
+        
+        if head_contributions:
+            all_head_contributions[perturbation] = head_contributions
+            # plot_head_contributions(head_contributions, perturbation, figures_dir)
+            logger.info(f"Calculated head contributions for {perturbation}: {len(head_contributions)} heads")
         else:
-            logger.info(f"No layer activations found for {perturbation}")
-        # --- END LAYER CONTRIBUTION ANALYSIS ---
+            logger.info(f"No head activations found for {perturbation}")
+        # --- END HEAD CONTRIBUTION ANALYSIS ---
     except Exception as e:
         logger.info(f"Error generating predictions for {perturbation}: {str(e)}")
 
-# --- Combine and average layer contributions across all perturbations ---
-if all_layer_contributions:
-    # Get all layer names (assume all perturbations have the same layers)
-    layer_names = list(next(iter(all_layer_contributions.values())).keys())
-    # Collect values for each layer
-    layer_values = {layer: [] for layer in layer_names}
-    for pert, contribs in all_layer_contributions.items():
-        for layer in layer_names:
-            layer_values[layer].append(contribs.get(layer, np.nan))
-    # Compute mean for each layer
-    avg_layer_contributions = {layer: np.nanmean(vals) for layer, vals in layer_values.items()}
-    logger.info("Average layer contributions across all perturbations:")
-    for layer, avg in avg_layer_contributions.items():
-        logger.info(f"{layer}: {avg:.4f}")
-    # Optionally, plot
-    plot_layer_contributions(avg_layer_contributions, "average_across_perturbations", figures_dir)
+# --- Combine and average head contributions across all perturbations ---
+if all_head_contributions:
+    # Get all head names (assume all perturbations have the same heads)
+    head_names = list(next(iter(all_head_contributions.values())).keys())
+    # Collect values for each head
+    head_values = {head: [] for head in head_names}
+    for pert, contribs in all_head_contributions.items():
+        for head in head_names:
+            head_values[head].append(contribs.get(head, np.nan))
+    # Compute mean for each head
+    avg_head_contributions = {head: np.nanmean(vals) for head, vals in head_values.items()}
+    logger.info("Average head contributions across all perturbations:")
+    for head, avg in avg_head_contributions.items():
+        logger.info(f"{head}: {avg:.4f}")
+    # Plot average contributions
+    plot_head_contributions(avg_head_contributions, "average_across_perturbations", figures_dir)
 else:
-    logger.info("No layer contributions to average.")
+    logger.info("No head contributions to average.")

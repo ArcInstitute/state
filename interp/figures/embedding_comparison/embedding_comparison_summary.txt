@@ -1,0 +1,14 @@
+Embedding Comparison Summary
+==============================
+
+cell_types: ('k562', 'jurkat')
+n_cells_per_group: 32
+embedding_dimension: 2058
+centroid_cosine_similarity: 0.8525537848472595
+centroid_euclidean_distance: 0.8052483797073364
+mean_within_group1_distance: 0.6618826985359192
+mean_within_group2_distance: 0.7679280638694763
+mean_between_group_distance: 1.0722627639770508
+significant_dimensions: 1419
+total_dimensions: 2058
+pca_variance_explained_2pc: 0.4625476598739624

@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 """
-calculate_layer3_attention.py – v4
-=================================
-Updated to bypass InferenceModule and data_module.pkl, loading the model directly 
-and using dummy perturbation tensors for attention analysis.
+embedding_visualization.py – v5
+===============================
+Visualizes the differences between cell embeddings for two groups of cells.
+Focuses on embedding analysis rather than attention patterns.
 
 The script now:
-* Loads the PertSetsPerturbationModel directly from checkpoint
-* Uses dummy perturbation tensors instead of relying on data module
-* Collects attention from all sequences regardless of length
-* Uses a dynamic canvas that adapts to the maximum sequence length observed
-* Provides better visualization of the actual attention patterns
-* Shows per-head statistics and sequence length distributions
-* Updated to work with GPT-2 architecture
+* Loads cell data and samples two groups of 32 cells each from different cell types
+* Extracts and compares embeddings between the two groups
+* Creates various visualizations to show embedding differences
+* Performs statistical analysis of embedding distributions
 """
 
 from __future__ import annotations
@@ -31,6 +28,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import scanpy as sc
 import anndata as ad
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
+from scipy import stats
+import umap
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger(__name__)
@@ -39,65 +41,11 @@ project_root = Path(__file__).resolve().parent.parent  # adjust if needed
 sys.path.append(str(project_root))
 sys.path.append(str(project_root / "vci_pretrain"))
 
-# Import model class directly
-from models.pertsets import PertSetsPerturbationModel
-
-MODEL_DIR = Path(
-    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
-    "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
-)
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
 )
-CELL_SET_LEN = 512   
-CONTROL_SAMPLES = 50 
-LAYER_IDX = 0
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle" 
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "embedding_comparison" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
-
-# Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "last.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
-
-if not checkpoint_path.exists():
-    # Try other common checkpoint names
-    for ckpt_name in ["best.ckpt", "last.ckpt", "epoch=*.ckpt"]:
-        ckpt_files = list(MODEL_DIR.glob(f"checkpoints/{ckpt_name}"))
-        if ckpt_files:
-            checkpoint_path = ckpt_files[0]
-            break
-    else:
-        raise FileNotFoundError(f"Could not find checkpoint in {MODEL_DIR}/checkpoints/")
-
-logger.info(f"Loading model from checkpoint: {checkpoint_path}")
-model = PertSetsPerturbationModel.load_from_checkpoint(str(checkpoint_path), strict=False)
-model.eval()  # turn off dropout
-
-# Configure attention outputs
-model.transformer_backbone.config._attn_implementation = "sdpa"
-model.transformer_backbone._attn_implementation        = "sdpa"
-model.transformer_backbone.config.output_attentions = True
-
-if hasattr(model, 'config'):
-    model.config.output_attentions = True
-
-# Updated for GPT-2 architecture using .h instead of .layers
-for layer in model.transformer_backbone.h:
-    if hasattr(layer.attn, 'output_attentions'):
-        layer.attn.output_attentions = True
-
-print(f"Model config output_attentions: {getattr(model.transformer_backbone.config, 'output_attentions', 'Not found')}")
-print(f"Number of transformer layers: {len(model.transformer_backbone.h)}")
-print(f"Target layer index: {LAYER_IDX}")
-print(f"Attention module type: {type(model.transformer_backbone.h[LAYER_IDX].attn)}")
-
-logger.info(
-    "Loaded PertSets model with GPT-2 backbone: %s heads × %s layers",
-    model.transformer_backbone.config.num_attention_heads,
-    model.transformer_backbone.config.num_hidden_layers,
-)
-
-# Add debugging for cell sentence length
-print(f"Model cell_sentence_len: {model.cell_sentence_len}")
 
 # Load data directly
 adata_full = sc.read_h5ad(str(DATA_PATH))
@@ -119,8 +67,7 @@ if embed_key not in adata_full.obsm:
     embed_key = "X_hvg"  # Fallback to HVG
     if embed_key not in adata_full.obsm:
         embed_key = "X"  # Last resort - raw expression
-        logger.warning("Using raw expression data - model may not work properly")
-logger.info(f"embed_key after: {embed_key}")
+        logger.warning("Using raw expression data")
 logger.info(f"Using embedding key: {embed_key}")
 if embed_key in adata_full.obsm:
     logger.info(f"Embedding shape: {adata_full.obsm[embed_key].shape}")
@@ -143,243 +90,285 @@ if "gene" in adata_full.obs.columns:
 
 logger.info("Control perturbation: %s", control_pert)
 
-NUM_HEADS = model.transformer_backbone.config.num_attention_heads  # 8
-
-attention_by_length: Dict[int, Dict[int, List[torch.Tensor]]] = defaultdict(lambda: defaultdict(list))
-sequence_lengths: List[int] = []
-total_sequences: int = 0    
-
-
-
-
-def layer3_hook(_: torch.nn.Module, __, outputs: Tuple[torch.Tensor, torch.Tensor]):
-    """Collect attention matrices organized by sequence length."""
-    global attention_by_length, sequence_lengths, total_sequences
-
-    print(f"Hook called! Number of outputs: {len(outputs)}")
-    print(f"Output shapes: {[o.shape if hasattr(o, 'shape') else type(o) for o in outputs]}")
-    
-    if len(outputs) < 2:
-        print("Warning: Expected at least 2 outputs, but got", len(outputs))
-        return
-    
-    attn_weights = None
-    for i, output in enumerate(outputs):
-        if hasattr(output, 'shape') and len(output.shape) == 4:
-            print(f"Found 4D tensor at outputs[{i}] with shape: {output.shape}")
-            # Check if this looks like attention weights [B, H, S, S]
-            B, H, S1, S2 = output.shape
-            if S1 == S2:  # Square matrix indicates attention weights
-                attn_weights = output.detach().cpu()
-                print(f"Using outputs[{i}] as attention weights: [B={B}, H={H}, S={S1}]")
-                break
-    
-    if attn_weights is None:
-        print("Warning: Could not find attention weights in outputs")
-        return
-
-    batch_sz, H, S, _ = attn_weights.shape
-
-    # Check if attention weights contain meaningful values
-    print(f"Attention stats: min={attn_weights.min():.6f}, max={attn_weights.max():.6f}, mean={attn_weights.mean():.6f}")
-    
-    # Store each sequence in the batch separately by length
-    for b in range(batch_sz):
-        sequence_lengths.append(S)
-        for h in range(H):
-            attention_by_length[S][h].append(attn_weights[b, h])
-    
-    total_sequences += batch_sz
-    print(f"Added {batch_sz} sequences of length {S} to accumulator (total: {total_sequences})")
-
-
-# Attach hook once - Updated for GPT-2 architecture
-hook_handle = (
-    model.transformer_backbone.h[LAYER_IDX].attn.register_forward_hook(layer3_hook)
-)
-logger.info(
-    "Registered hook on transformer_backbone.h[%d].attn", LAYER_IDX
-)
-
-# Direct model forward pass with 512 cells (256 of each cell type)
 # Get available cell types and select the two most abundant ones
 cell_type_counts = adata_full.obs["cell_type"].value_counts()
 logger.info("Available cell types: %s", list(cell_type_counts.index))
 
-# Select the most abundant cell type
-celltype1 = cell_type_counts.index[0]
-logger.info(f"Selected cell type: {celltype1} ({cell_type_counts[celltype1]} available)")
+# Select the two most abundant cell types
+celltype1, celltype2 = cell_type_counts.index[:2]
+logger.info(f"Selected cell types: {celltype1} ({cell_type_counts[celltype1]} available), {celltype2} ({cell_type_counts[celltype2]} available)")
 
-# Get control cells for this cell type
+# Get control cells for each cell type
 cells_type1 = adata_full[(adata_full.obs["gene"] == control_pert) & 
                         (adata_full.obs["cell_type"] == celltype1)].copy()
+cells_type2 = adata_full[(adata_full.obs["gene"] == control_pert) & 
+                        (adata_full.obs["cell_type"] == celltype2)].copy()
 
-logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}")
+logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}")
 
-# Use the model's actual cell_sentence_len to avoid position embedding errors
-cell_sentence_len = model.cell_sentence_len  # Use model's trained sequence length
-logger.info(f"Using model's cell_sentence_len: {cell_sentence_len}")
-logger.info(f"Model was trained with cell_sentence_len: {model.cell_sentence_len}")
+# Sample cells - 32 per cell type
+n_cells_per_type = 32  
 
-# Use all cells for the single cell type
-n_cells = cell_sentence_len
-total_cells = cell_sentence_len  # Use model's trained length
-
-if cells_type1.n_obs >= n_cells:
+if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_type:
     # Sample cells
-    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells, replace=False)
+    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells_per_type, replace=False)
+    idx2 = np.random.choice(cells_type2.n_obs, size=n_cells_per_type, replace=False)
     
     sampled_type1 = cells_type1[idx1].copy()
+    sampled_type2 = cells_type2[idx2].copy()
     
-    # Use single cell type batch
-    combined_batch = sampled_type1
+    logger.info(f"Sampled {sampled_type1.n_obs} cells of type {celltype1}")
+    logger.info(f"Sampled {sampled_type2.n_obs} cells of type {celltype2}")
     
-    logger.info(f"Created combined batch with {combined_batch.n_obs} cells")
-    logger.info(f"Cell type distribution: {combined_batch.obs['cell_type'].value_counts().to_dict()}")
-    
-    # Get embeddings and prepare batch manually
-    device = next(model.parameters()).device
-    
-    # Extract embeddings based on available key
-    if embed_key in combined_batch.obsm:
-        X_embed = torch.tensor(combined_batch.obsm[embed_key], dtype=torch.float32).to(device)
+    # Extract embeddings for each group
+    if embed_key in sampled_type1.obsm:
+        embeddings_group1 = sampled_type1.obsm[embed_key]
+        embeddings_group2 = sampled_type2.obsm[embed_key]
     else:
-        X_embed = torch.tensor(combined_batch.X.toarray() if hasattr(combined_batch.X, 'toarray') else combined_batch.X, 
-                             dtype=torch.float32).to(device)
+        embeddings_group1 = sampled_type1.X.toarray() if hasattr(sampled_type1.X, 'toarray') else sampled_type1.X
+        embeddings_group2 = sampled_type2.X.toarray() if hasattr(sampled_type2.X, 'toarray') else sampled_type2.X
     
-    # Create dummy perturbation tensor
-    # Get pert_dim from model
-    pert_dim = model.pert_dim
-    logger.info(f"Using pert_dim: {pert_dim}")
+    logger.info(f"Group 1 embeddings shape: {embeddings_group1.shape}")
+    logger.info(f"Group 2 embeddings shape: {embeddings_group2.shape}")
     
-    # Get the number of cells we actually have
-    n_cells = X_embed.shape[0]
-    logger.info(f"Number of cells: {n_cells}")
+    # Combine embeddings for joint visualization
+    all_embeddings = np.vstack([embeddings_group1, embeddings_group2])
+    labels = ['Group 1'] * n_cells_per_type + ['Group 2'] * n_cells_per_type
+    cell_types = [celltype1] * n_cells_per_type + [celltype2] * n_cells_per_type
     
-    # Create one-hot tensor for control perturbation  
-    pert_tensor = torch.zeros((n_cells, pert_dim), device=device)
-    pert_tensor[:, 0] = 1  # Set first dimension to 1 for control perturbation
-    pert_names = [control_pert] * n_cells
+    # === 1. Basic Statistics ===
+    logger.info("=== Computing Basic Statistics ===")
     
-    # Create batch dictionary - use the correct keys expected by the model
-    batch = {
-        "ctrl_cell_emb": X_embed,  # (512, embed_dim) - basal/control cell embeddings
-        "pert_emb": pert_tensor,  # (512, pert_dim) - perturbation embeddings
-        "pert_name": pert_names
-    }
+    # Compute basic stats
+    mean_group1 = np.mean(embeddings_group1, axis=0)
+    mean_group2 = np.mean(embeddings_group2, axis=0)
+    std_group1 = np.std(embeddings_group1, axis=0)
+    std_group2 = np.std(embeddings_group2, axis=0)
     
-    logger.info(f"Batch shapes - ctrl_cell_emb: {batch['ctrl_cell_emb'].shape}, pert_emb: {batch['pert_emb'].shape}")
-    logger.info(f"Running single forward pass with {n_cells} cells of type {celltype1}")
+    # Statistical tests
+    t_stats, p_values = stats.ttest_ind(embeddings_group1, embeddings_group2, axis=0)
+    significant_dims = np.sum(p_values < 0.05)
     
-    # Single forward pass using padded=True
-    with torch.no_grad():
-        batch_pred = model.forward(batch, padded=False)
+    logger.info(f"Mean embedding magnitude - Group 1: {np.linalg.norm(mean_group1):.4f}, Group 2: {np.linalg.norm(mean_group2):.4f}")
+    logger.info(f"Significant dimensions (p < 0.05): {significant_dims} out of {embeddings_group1.shape[1]}")
     
-    logger.info("Forward pass completed successfully")
+    # === 2. Distance Analysis ===
+    logger.info("=== Computing Distance Metrics ===")
     
-else:
-    logger.error(f"Insufficient cells: {celltype1}: {cells_type1.n_obs}. Need at least {n_cells}.")
-
-logger.info(
-    "Finished inference – accumulated %d sequences", total_sequences
-)
-assert total_sequences > 0, "Hook did not run – check layer index or data"
-
-# Print statistics about sequence lengths
-print(f"\nSequence length distribution:")
-from collections import Counter
-length_counts = Counter(sequence_lengths)
-for length in sorted(length_counts.keys()):
-    print(f"  Length {length}: {length_counts[length]} sequences")
-
-# Compute average attention for each sequence length and head
-max_length = max(sequence_lengths) if sequence_lengths else 1
-print(f"Maximum sequence length observed: {max_length}")
-
-# Create separate plots for each sequence length
-for seq_len in sorted(attention_by_length.keys()):
-    if seq_len == 1:
-        continue  # Skip single-token sequences (they're just identity)
+    # Cosine similarity between group centroids
+    centroid_cosine_sim = cosine_similarity([mean_group1], [mean_group2])[0, 0]
     
-    n_sequences = sum(len(attention_by_length[seq_len][h]) for h in range(NUM_HEADS))
-    if n_sequences == 0:
-        continue
-        
-    print(f"\nProcessing {n_sequences} attention matrices of length {seq_len}")
+    # Euclidean distance between group centroids
+    centroid_euclidean_dist = euclidean_distances([mean_group1], [mean_group2])[0, 0]
     
-    # Average attention across all sequences of this length
-    avg_attn_by_head = {}
-    for h in range(NUM_HEADS):
-        if len(attention_by_length[seq_len][h]) > 0:
-            # Stack and average all attention matrices for this head and sequence length
-            stacked = torch.stack(attention_by_length[seq_len][h])
-            avg_attn_by_head[h] = stacked.mean(0)  # [S, S]
-        else:
-            avg_attn_by_head[h] = torch.zeros(seq_len, seq_len)
+    # Within-group and between-group distances
+    within_group1_dists = euclidean_distances(embeddings_group1)
+    within_group2_dists = euclidean_distances(embeddings_group2)
+    between_group_dists = euclidean_distances(embeddings_group1, embeddings_group2)
     
-    # Plot this sequence length
-    cols = 4
-    rows = math.ceil(NUM_HEADS / cols)
-    plt.figure(figsize=(3 * cols, 3 * rows))
+    mean_within_group1 = np.mean(within_group1_dists[np.triu_indices_from(within_group1_dists, k=1)])
+    mean_within_group2 = np.mean(within_group2_dists[np.triu_indices_from(within_group2_dists, k=1)])
+    mean_between_groups = np.mean(between_group_dists)
     
-    for h in range(NUM_HEADS):
-        plt.subplot(rows, cols, h + 1)
-        attn_head = avg_attn_by_head[h].numpy()
-        
-        if len(attention_by_length[seq_len][h]) > 0:
-            sns.heatmap(
-                attn_head, square=True, cbar=True, cmap='viridis', 
-                xticklabels=range(seq_len), yticklabels=range(seq_len),
-                vmin=0, vmax=1
-            )
-            plt.xlabel("Key position")
-            plt.ylabel("Query position")
-            n_matrices = len(attention_by_length[seq_len][h])
-            plt.title(f"Head {h} (n={n_matrices})", fontsize=10)
-        else:
-            plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
-                    transform=plt.gca().transAxes, fontsize=12)
-            plt.title(f"Head {h} (Empty)", fontsize=10)
+    logger.info(f"Centroid cosine similarity: {centroid_cosine_sim:.4f}")
+    logger.info(f"Centroid Euclidean distance: {centroid_euclidean_dist:.4f}")
+    logger.info(f"Mean within-group distance - Group 1: {mean_within_group1:.4f}, Group 2: {mean_within_group2:.4f}")
+    logger.info(f"Mean between-group distance: {mean_between_groups:.4f}")
     
-    plt.suptitle(f"Layer {LAYER_IDX} Attention - Sequence Length {seq_len}", fontsize=14)
+    # === 3. Visualization - PCA ===
+    logger.info("=== Performing PCA ===")
+    
+    pca = PCA(n_components=min(10, all_embeddings.shape[1]))
+    embeddings_pca = pca.fit_transform(all_embeddings)
+    
+    plt.figure(figsize=(15, 5))
+    
+    # PCA scatter plot
+    plt.subplot(1, 3, 1)
+    colors = ['red', 'blue']
+    for i, (label, color) in enumerate(zip(['Group 1', 'Group 2'], colors)):
+        mask = np.array(labels) == label
+        plt.scatter(embeddings_pca[mask, 0], embeddings_pca[mask, 1], 
+                   c=color, label=f'{label} ({cell_types[i*n_cells_per_type]})', alpha=0.7)
+    plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.2%} variance)')
+    plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.2%} variance)')
+    plt.title('PCA - First Two Components')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # PCA explained variance
+    plt.subplot(1, 3, 2)
+    plt.plot(range(1, len(pca.explained_variance_ratio_) + 1), 
+             np.cumsum(pca.explained_variance_ratio_), 'bo-')
+    plt.xlabel('Principal Component')
+    plt.ylabel('Cumulative Explained Variance')
+    plt.title('PCA Explained Variance')
+    plt.grid(True, alpha=0.3)
+    
+    # Distance distribution
+    plt.subplot(1, 3, 3)
+    plt.hist(within_group1_dists[np.triu_indices_from(within_group1_dists, k=1)], 
+             bins=20, alpha=0.5, label=f'Within {celltype1}', color='red')
+    plt.hist(within_group2_dists[np.triu_indices_from(within_group2_dists, k=1)], 
+             bins=20, alpha=0.5, label=f'Within {celltype2}', color='blue')
+    plt.hist(between_group_dists.flatten(), bins=20, alpha=0.5, 
+             label='Between groups', color='green')
+    plt.xlabel('Euclidean Distance')
+    plt.ylabel('Frequency')
+    plt.title('Distance Distributions')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
     plt.tight_layout()
-    fig_path = FIG_DIR / f"no_split_layer{LAYER_IDX}_attention_length{seq_len}.png"
+    fig_path = FIG_DIR / "embedding_comparison_pca.png"
     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.close()
-    logger.info("Saved attention heatmaps for length %d → %s", seq_len, fig_path)
+    logger.info("Saved PCA analysis → %s", fig_path)
+    
+    # === 4. Visualization - t-SNE ===
+    logger.info("=== Performing t-SNE ===")
+    
+    # Use PCA embeddings for t-SNE to reduce computation time
+    tsne = TSNE(n_components=2, random_state=42, perplexity=min(30, len(all_embeddings)//2))
+    embeddings_tsne = tsne.fit_transform(embeddings_pca[:, :10])  # Use first 10 PCs
+    
+    plt.figure(figsize=(10, 5))
+    
+    plt.subplot(1, 2, 1)
+    for i, (label, color) in enumerate(zip(['Group 1', 'Group 2'], colors)):
+        mask = np.array(labels) == label
+        plt.scatter(embeddings_tsne[mask, 0], embeddings_tsne[mask, 1], 
+                   c=color, label=f'{label} ({cell_types[i*n_cells_per_type]})', alpha=0.7)
+    plt.xlabel('t-SNE 1')
+    plt.ylabel('t-SNE 2')
+    plt.title('t-SNE Visualization')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # === 5. Visualization - UMAP ===
+    logger.info("=== Performing UMAP ===")
+    
+    reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=min(15, len(all_embeddings)//2))
+    embeddings_umap = reducer.fit_transform(embeddings_pca[:, :10])  # Use first 10 PCs
+    
+    plt.subplot(1, 2, 2)
+    for i, (label, color) in enumerate(zip(['Group 1', 'Group 2'], colors)):
+        mask = np.array(labels) == label
+        plt.scatter(embeddings_umap[mask, 0], embeddings_umap[mask, 1], 
+                   c=color, label=f'{label} ({cell_types[i*n_cells_per_type]})', alpha=0.7)
+    plt.xlabel('UMAP 1')
+    plt.ylabel('UMAP 2')
+    plt.title('UMAP Visualization')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    fig_path = FIG_DIR / "embedding_comparison_tsne_umap.png"
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    logger.info("Saved t-SNE and UMAP analysis → %s", fig_path)
+    
+    # === 6. Feature Importance Analysis ===
+    logger.info("=== Analyzing Feature Importance ===")
+    
+    # Find most discriminative dimensions
+    abs_t_stats = np.abs(t_stats)
+    top_discriminative_dims = np.argsort(abs_t_stats)[-20:]  # Top 20 most discriminative
+    
+    plt.figure(figsize=(15, 10))
+    
+    # Heatmap of top discriminative dimensions
+    plt.subplot(2, 2, 1)
+    discriminative_data = np.vstack([
+        embeddings_group1[:, top_discriminative_dims],
+        embeddings_group2[:, top_discriminative_dims]
+    ])
+    group_labels = [f'G1_{i}' for i in range(n_cells_per_type)] + [f'G2_{i}' for i in range(n_cells_per_type)]
+    
+    sns.heatmap(discriminative_data.T, cmap='viridis', 
+                xticklabels=False, yticklabels=[f'Dim_{d}' for d in top_discriminative_dims])
+    plt.title('Top 20 Discriminative Dimensions')
+    plt.xlabel('Cells (G1: Group 1, G2: Group 2)')
+    
+    # t-statistic distribution
+    plt.subplot(2, 2, 2)
+    plt.hist(t_stats, bins=50, alpha=0.7, edgecolor='black')
+    plt.axvline(0, color='red', linestyle='--', alpha=0.7)
+    plt.xlabel('t-statistic')
+    plt.ylabel('Frequency')
+    plt.title('Distribution of t-statistics')
+    plt.grid(True, alpha=0.3)
+    
+    # p-value distribution
+    plt.subplot(2, 2, 3)
+    plt.hist(p_values, bins=50, alpha=0.7, edgecolor='black')
+    plt.axvline(0.05, color='red', linestyle='--', alpha=0.7, label='p = 0.05')
+    plt.xlabel('p-value')
+    plt.ylabel('Frequency')
+    plt.title('Distribution of p-values')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Mean difference per dimension
+    plt.subplot(2, 2, 4)
+    mean_diff = mean_group2 - mean_group1
+    plt.scatter(range(len(mean_diff)), mean_diff, alpha=0.6, s=10)
+    plt.axhline(0, color='red', linestyle='--', alpha=0.7)
+    plt.xlabel('Dimension')
+    plt.ylabel('Mean Difference (Group 2 - Group 1)')
+    plt.title('Mean Embedding Differences')
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    fig_path = FIG_DIR / "embedding_feature_analysis.png"
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    logger.info("Saved feature analysis → %s", fig_path)
+    
+    # === 7. Summary Statistics ===
+    logger.info("=== Summary Statistics ===")
+    
+    summary_stats = {
+        'cell_types': (celltype1, celltype2),
+        'n_cells_per_group': n_cells_per_type,
+        'embedding_dimension': embeddings_group1.shape[1],
+        'centroid_cosine_similarity': centroid_cosine_sim,
+        'centroid_euclidean_distance': centroid_euclidean_dist,
+        'mean_within_group1_distance': mean_within_group1,
+        'mean_within_group2_distance': mean_within_group2,
+        'mean_between_group_distance': mean_between_groups,
+        'significant_dimensions': significant_dims,
+        'total_dimensions': embeddings_group1.shape[1],
+        'pca_variance_explained_2pc': np.sum(pca.explained_variance_ratio_[:2]),
+    }
+    
+    # Save summary to file
+    summary_path = FIG_DIR / "embedding_comparison_summary.txt"
+    with open(summary_path, 'w') as f:
+        f.write("Embedding Comparison Summary\n")
+        f.write("="*30 + "\n\n")
+        for key, value in summary_stats.items():
+            f.write(f"{key}: {value}\n")
+    
+    logger.info("Saved summary statistics → %s", summary_path)
+    
+    # Print summary
+    print("\n" + "="*50)
+    print("EMBEDDING COMPARISON SUMMARY")
+    print("="*50)
+    print(f"Cell types compared: {celltype1} vs {celltype2}")
+    print(f"Cells per group: {n_cells_per_type}")
+    print(f"Embedding dimension: {embeddings_group1.shape[1]}")
+    print(f"Centroid cosine similarity: {centroid_cosine_sim:.4f}")
+    print(f"Centroid Euclidean distance: {centroid_euclidean_dist:.4f}")
+    print(f"Mean within-group distances: {mean_within_group1:.4f} vs {mean_within_group2:.4f}")
+    print(f"Mean between-group distance: {mean_between_groups:.4f}")
+    print(f"Significant dimensions: {significant_dims}/{embeddings_group1.shape[1]} ({100*significant_dims/embeddings_group1.shape[1]:.1f}%)")
+    print(f"PCA variance explained (2 PCs): {100*np.sum(pca.explained_variance_ratio_[:2]):.1f}%")
+    print("="*50)
+    
+else:
+    logger.error(f"Insufficient cells: {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}. Need at least {n_cells_per_type} each.")
 
-# Create a summary plot showing attention patterns across all lengths
-if len(attention_by_length) > 1:
-    # Find the most common non-trivial sequence length for the summary
-    non_trivial_lengths = [l for l in sequence_lengths if l > 1]
-    if non_trivial_lengths:
-        most_common_length = Counter(non_trivial_lengths).most_common(1)[0][0]
-        
-        # Create summary using the most common length
-        plt.figure(figsize=(15, 12))
-        for h in range(NUM_HEADS):
-            plt.subplot(3, 4, h + 1)
-            if len(attention_by_length[most_common_length][h]) > 0:
-                stacked = torch.stack(attention_by_length[most_common_length][h])
-                avg_attn = stacked.mean(0).numpy()
-                sns.heatmap(
-                    avg_attn, square=True, cbar=True, cmap='viridis',
-                    xticklabels=False, yticklabels=False, vmin=0, vmax=1
-                )
-                n_matrices = len(attention_by_length[most_common_length][h])
-                plt.title(f"Head {h} (len={most_common_length}, n={n_matrices})", fontsize=10)
-            else:
-                plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
-                        transform=plt.gca().transAxes, fontsize=12)
-                plt.title(f"Head {h} (No Data)", fontsize=10)
-        
-        plt.suptitle(f"Layer {LAYER_IDX} Average Attention Patterns - Most Common Length ({most_common_length})", fontsize=16)
-        plt.tight_layout()
-        fig_path = FIG_DIR / f"no_split_layer{LAYER_IDX}_attention_summary.png"
-        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        logger.info("Saved summary attention heatmap → %s", fig_path)
-
-hook_handle.remove()
-logger.info("Hook removed; script completed successfully.")
-logger.info(f"Generated attention visualizations in {FIG_DIR}")
+logger.info("Script completed successfully.")
+logger.info(f"Generated embedding visualizations in {FIG_DIR}")
