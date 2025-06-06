@@ -257,7 +257,7 @@ class PertSetsPerturbationModel(PerturbationModel):
 
         self.project_out = build_mlp(
             in_dim=self.hidden_dim,
-            out_dim=self.output_dim,
+            out_dim=self.output_dim, # maybe raise this
             hidden_dim=self.hidden_dim,
             n_layers=self.n_decoder_layers,
             dropout=self.dropout,

@@ -98,6 +98,7 @@ class PerturbationModel(ABC, LightningModule):
         batch_dim: int = None,
         dropout: float = 0.1,
         lr: float = 3e-4,
+        gene_decoder_lr: float = 1e-5,
         loss_fn: nn.Module = nn.MSELoss(),
         control_pert: str = "non-targeting",
         embed_key: Optional[str] = None,
@@ -130,8 +131,9 @@ class PerturbationModel(ABC, LightningModule):
 
         # Training settings
         self.gene_names = gene_names  # store the gene names that this model output for gene expression space
-        self.dropout = dropout
+        self.dropout = dropout # change it here if changing for the gene decoder because it would change it everywhere else if you change it in the pertsets class
         self.lr = lr
+        self.gene_decoder_lr = gene_decoder_lr
         self.loss_fn = get_loss_fn(loss_fn)
 
         # this will either decode to hvg space if output space is a gene,
@@ -146,7 +148,8 @@ class PerturbationModel(ABC, LightningModule):
                 hidden_dims = [1024, 512, 256]
             else:
                 if "DMSO_TF" in self.control_pert:
-                    hidden_dims = [2048, 1024, 1024]
+                    hidden_dims = [4096, 2048, 2048]
+                    # hidden_dims = [2048, 1024, 1024]
                 else:
                     hidden_dims = [1024, 1024, 512]  # make this config
 
@@ -271,8 +274,27 @@ class PerturbationModel(ABC, LightningModule):
 
     def configure_optimizers(self):
         """
-        Configure a single optimizer for both the main model and the gene decoder.
+        Configure optimizer with different learning rates for main model and gene decoder.
         """
-        # Use a single optimizer for all parameters
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        if self.gene_decoder is not None:
+            # Get gene decoder parameters
+            gene_decoder_params = list(self.gene_decoder.parameters())
+            
+            # Get all other parameters (main model)
+            main_model_params = [
+                param for name, param in self.named_parameters()
+                if not name.startswith('gene_decoder.')
+            ]
+            
+            # Create parameter groups with different learning rates
+            param_groups = [
+                {'params': main_model_params, 'lr': self.lr},
+                {'params': gene_decoder_params, 'lr': self.gene_decoder_lr}
+            ]
+            
+            optimizer = torch.optim.Adam(param_groups)
+        else:
+            # Use single learning rate if no gene decoder
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        
         return optimizer
