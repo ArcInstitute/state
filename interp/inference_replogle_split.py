@@ -51,7 +51,7 @@ DATA_PATH = Path(
 )
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
-LAYER_IDX = 0
+LAYER_IDX = 7
 FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_split" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -333,14 +333,14 @@ for seq_len in sorted(attention_by_length.keys()):
         
         if len(attention_by_length[seq_len][h]) > 0:
             sns.heatmap(
-                attn_head, square=True, cbar=True, cmap='viridis',
+                attn_head, square=True, cbar=True, cmap='Greens',
                 xticklabels=False, yticklabels=False,
                 vmin=0, vmax=1
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
-            n_matrices = len(attention_by_length[seq_len][h])
-            plt.title(f"Head {h} (n={n_matrices})", fontsize=10)
+            head_min, head_max = attn_head.min(), attn_head.max()
+            plt.title(f"Head {h}\n[{head_min:.3f}, {head_max:.3f}]", fontsize=9)
         else:
             plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                     transform=plt.gca().transAxes, fontsize=12)
@@ -361,17 +361,20 @@ if len(attention_by_length) > 1:
         
         # Create summary using the most common length
         plt.figure(figsize=(15, 12))
+        
         for h in range(NUM_HEADS):
             plt.subplot(3, 4, h + 1)
             if len(attention_by_length[most_common_length][h]) > 0:
                 stacked = torch.stack(attention_by_length[most_common_length][h])
                 avg_attn = stacked.mean(0).numpy()
+                
                 sns.heatmap(
-                    avg_attn, square=True, cbar=True, cmap='viridis',
-                    xticklabels=[''], yticklabels=[''], vmin=0, vmax=1
+                    avg_attn, square=True, cbar=True, cmap='Greens',
+                    xticklabels=False, yticklabels=False, 
+                    vmin=0, vmax=1
                 )
-                n_matrices = len(attention_by_length[most_common_length][h])
-                plt.title(f"Head {h} (len={most_common_length}, n={n_matrices})", fontsize=10)
+                head_min, head_max = avg_attn.min(), avg_attn.max()
+                plt.title(f"Head {h}\n[{head_min:.3f}, {head_max:.3f}]", fontsize=9)
             else:
                 plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                         transform=plt.gca().transAxes, fontsize=12)

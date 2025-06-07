@@ -1,0 +1,36 @@
+Embedding Analysis - All Cell Types Summary
+==================================================
+
+BASIC STATISTICS:
+Cell types analyzed: 4
+Cell types: k562, jurkat, rpe1, hepg2
+Cells per type: 20
+Total cells: 80
+Embedding dimension: 2058
+
+STATISTICAL ANALYSIS:
+Significant dimensions (ANOVA p < 0.05): 1930/2058 (93.8%)
+PCA variance explained (3 PCs): 70.2%
+
+DISTANCE ANALYSIS:
+Mean within-group distance: 0.7202
+Mean between-group distance: 1.4078
+Separation ratio (between/within): 1.95
+
+CENTROID MAGNITUDES:
+k562: 1.4791
+jurkat: 1.4557
+rpe1: 1.6033
+hepg2: 1.4660
+
+EMBEDDING VARIANCES:
+k562: 0.0001
+jurkat: 0.0002
+rpe1: 0.0001
+hepg2: 0.0001
+
+SEPARATION SCORES (between/within ratio):
+k562: 2.01
+jurkat: 1.75
+rpe1: 2.02
+hepg2: 2.07
