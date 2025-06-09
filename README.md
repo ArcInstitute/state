@@ -124,3 +124,7 @@ state-sets state embed \
   --output "/home/aadduri/vci_pretrain/test_output.h5ad" \
   --embed-key "X_vci_1.5.2"
 ```
+
+Here is the architecture digram of state
+![State architecture diagram](assets/state.png)
+
