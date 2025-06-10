@@ -46,19 +46,18 @@ MODEL_DIR = Path(
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
     # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
     "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
-    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_fig2_cs64/hepg2"
 )
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
 )
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
-LAYER_IDX = 1
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_llama" 
+LAYER_IDX = 2
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_old" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "step=56000.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "last.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
 
 if not checkpoint_path.exists():
     # Try other common checkpoint names
@@ -70,53 +69,19 @@ if not checkpoint_path.exists():
     else:
         raise FileNotFoundError(f"Could not find checkpoint in {MODEL_DIR}/checkpoints/")
 
-# # Monkey patch RoPE BEFORE loading the model
-# def dummy_apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
-#     """Dummy function that returns q and k unchanged (disables RoPE)"""
-#     return q, k
-
-# # Patch the function in multiple places to ensure it's disabled
-# import transformers.models.llama.modeling_llama as llama_modeling
-# import sys
-
-# # Patch in the module
-# llama_modeling.apply_rotary_pos_emb = dummy_apply_rotary_pos_emb
-
-# # Also patch in sys.modules in case it was imported elsewhere
-# if 'transformers.models.llama.modeling_llama' in sys.modules:
-#     sys.modules['transformers.models.llama.modeling_llama'].apply_rotary_pos_emb = dummy_apply_rotary_pos_emb
-
-# print("RoPE has been disabled via monkey patching BEFORE model loading")
-
 logger.info(f"Loading model from checkpoint: {checkpoint_path}")
 model = PertSetsPerturbationModel.load_from_checkpoint(str(checkpoint_path), strict=False)
 model.eval()  # turn off dropout
 
 # Configure attention outputs
-model.transformer_backbone.config._attn_implementation = "eager"  # Use eager instead of sdpa
-model.transformer_backbone._attn_implementation        = "eager"
+model.transformer_backbone.config._attn_implementation = "sdpa"
+model.transformer_backbone._attn_implementation        = "sdpa"
 model.transformer_backbone.config.output_attentions = True
-
-# # Double-check RoPE is disabled by patching it on the actual model layers
-# for layer in model.transformer_backbone.layers:
-#     if hasattr(layer.self_attn, 'rotary_emb'):
-#         # If the layer has a rotary embedding, replace its apply function
-#         original_forward = layer.self_attn.rotary_emb.forward
-#         def dummy_rotary_forward(x, position_ids):
-#             # Return cos and sin as identity (no rotation)
-#             batch_size, seq_len = position_ids.shape
-#             dim = x.shape[-1]
-#             cos = torch.ones(batch_size, seq_len, dim, device=x.device, dtype=x.dtype)
-#             sin = torch.zeros(batch_size, seq_len, dim, device=x.device, dtype=x.dtype)
-#             return cos, sin
-#         layer.self_attn.rotary_emb.forward = dummy_rotary_forward
-
-# print("RoPE patching completed on model layers")
 
 if hasattr(model, 'config'):
     model.config.output_attentions = True
 
-# Updated for llama architecture using .layers instead of .h
+# Updated for GPT-2 architecture using .layers instead of .h
 for layer in model.transformer_backbone.layers:
     if hasattr(layer.self_attn, 'output_attentions'):
         layer.self_attn.output_attentions = True
@@ -127,7 +92,7 @@ print(f"Target layer index: {LAYER_IDX}")
 print(f"Attention module type: {type(model.transformer_backbone.layers[LAYER_IDX].self_attn)}")
 
 logger.info(
-    "Loaded PertSets model with llama backbone: %s heads × %s layers",
+    "Loaded PertSets model with GPT-2 backbone: %s heads × %s layers",
     model.transformer_backbone.config.num_attention_heads,
     model.transformer_backbone.config.num_hidden_layers,
 )
@@ -185,6 +150,9 @@ attention_by_length: Dict[int, Dict[int, List[torch.Tensor]]] = defaultdict(lamb
 sequence_lengths: List[int] = []
 total_sequences: int = 0    
 
+
+
+
 def layer3_hook(_: torch.nn.Module, __, outputs: Tuple[torch.Tensor, torch.Tensor]):
     """Collect attention matrices organized by sequence length."""
     global attention_by_length, sequence_lengths, total_sequences
@@ -226,7 +194,7 @@ def layer3_hook(_: torch.nn.Module, __, outputs: Tuple[torch.Tensor, torch.Tenso
     print(f"Added {batch_sz} sequences of length {S} to accumulator (total: {total_sequences})")
 
 
-# Attach hook once - Updated for Llama architecture
+# Attach hook once - Updated for GPT-2 architecture
 hook_handle = (
     model.transformer_backbone.layers[LAYER_IDX].self_attn.register_forward_hook(layer3_hook)
 )
@@ -361,15 +329,15 @@ for seq_len in sorted(attention_by_length.keys()):
         attn_head = avg_attn_by_head[h].numpy()
         
         if len(attention_by_length[seq_len][h]) > 0:
-            head_min, head_max = attn_head.min(), attn_head.max()
             sns.heatmap(
-                attn_head, square=True, cbar=True, cmap='Greens',
-                xticklabels=False, yticklabels=False,
+                attn_head, square=True, cbar=True, cmap='viridis', 
+                xticklabels=range(seq_len), yticklabels=range(seq_len),
                 vmin=0, vmax=1
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
-            plt.title(f"Head {h}\n[{head_min:.3f}, {head_max:.3f}]", fontsize=9)
+            n_matrices = len(attention_by_length[seq_len][h])
+            plt.title(f"Head {h} (n={n_matrices})", fontsize=10)
         else:
             plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                     transform=plt.gca().transAxes, fontsize=12)
@@ -391,20 +359,17 @@ if len(attention_by_length) > 1:
         
         # Create summary using the most common length
         plt.figure(figsize=(15, 12))
-        
         for h in range(NUM_HEADS):
             plt.subplot(3, 4, h + 1)
             if len(attention_by_length[most_common_length][h]) > 0:
                 stacked = torch.stack(attention_by_length[most_common_length][h])
                 avg_attn = stacked.mean(0).numpy()
-                head_min, head_max = avg_attn.min(), avg_attn.max()
-                
                 sns.heatmap(
-                    avg_attn, square=True, cbar=True, cmap='Greens',
-                    xticklabels=False, yticklabels=False,
-                    vmin=0, vmax=1
+                    avg_attn, square=True, cbar=True, cmap='viridis',
+                    xticklabels=False, yticklabels=False, vmin=0, vmax=1
                 )
-                plt.title(f"Head {h}\n[{head_min:.3f}, {head_max:.3f}]", fontsize=9)
+                n_matrices = len(attention_by_length[most_common_length][h])
+                plt.title(f"Head {h} (len={most_common_length}, n={n_matrices})", fontsize=10)
             else:
                 plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                         transform=plt.gca().transAxes, fontsize=12)

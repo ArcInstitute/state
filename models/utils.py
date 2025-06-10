@@ -137,7 +137,27 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
 
     return model, model_dim
 
+class NoRoPE(nn.Module):
+    """
+    A drop-in replacement for LlamaRotaryEmbedding that always returns:
+      cos = all ones, sin = all zeros
+    of shape (batch_size, seq_len, head_dim), so rotary has no effect.
+    """
 
+    def __init__(self, num_attention_heads: int, hidden_size: int):
+        super().__init__()
+        self.num_heads = num_attention_heads
+        self.hidden_size = hidden_size
+
+    def forward(self, hidden_states: torch.Tensor, position_ids: torch.LongTensor):
+        # hidden_states: (batch_size, seq_len, hidden_dim)
+        batch_size, seq_len, hidden_dim = hidden_states.shape
+
+        # Create cos = ones, sin = zeros
+        #   shape --> (batch_size, seq_len, head_dim)
+        cos = hidden_states.new_ones(batch_size, seq_len, self.num_heads)
+        sin = hidden_states.new_zeros(batch_size, seq_len, self.num_heads)
+        return cos, sin
 
 class LlamaBidirectionalModel(LlamaModel):
     """
@@ -145,8 +165,18 @@ class LlamaBidirectionalModel(LlamaModel):
     By overriding _update_causal_mask to return None, all tokens attend to each other.
     """
 
-    def __init__(self, config: Qwen3Config):
+    def __init__(self, config: LlamaConfig):
         super().__init__(config)
+        # import transformers.models.llama.modeling_llama as _llama_mod
+
+        # def _no_rope(q, k, cos, sin, position_ids=None):
+        #     return q, k
+
+        # _llama_mod.apply_rotary_pos_emb = _no_rope
+        self.rotary_emb = NoRoPE(
+            num_attention_heads=config.head_dim,
+            hidden_size=config.hidden_size,
+        )
 
     def _update_causal_mask(
         self,

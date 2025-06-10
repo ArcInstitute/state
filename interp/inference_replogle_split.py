@@ -44,7 +44,9 @@ from models.pertsets import PertSetsPerturbationModel
 
 MODEL_DIR = Path(
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
-    "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
+    # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
+    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
+    "/large_storage/ctc/userspace/rohankshah"
 )
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
@@ -52,11 +54,11 @@ DATA_PATH = Path(
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
 LAYER_IDX = 7
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_split" 
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_old_split" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "last.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
+checkpoint_path = MODEL_DIR / "step=148000.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
 
 if not checkpoint_path.exists():
     # Try other common checkpoint names
@@ -80,15 +82,15 @@ model.transformer_backbone.config.output_attentions = True
 if hasattr(model, 'config'):
     model.config.output_attentions = True
 
-# Updated for GPT-2 architecture using .h instead of .layers
-for layer in model.transformer_backbone.h:
-    if hasattr(layer.attn, 'output_attentions'):
-        layer.attn.output_attentions = True
+# Updated for GPT-2 architecture using .layers instead of .h
+for layer in model.transformer_backbone.layers:
+    if hasattr(layer.self_attn, 'output_attentions'):
+        layer.self_attn.output_attentions = True
 
 print(f"Model config output_attentions: {getattr(model.transformer_backbone.config, 'output_attentions', 'Not found')}")
-print(f"Number of transformer layers: {len(model.transformer_backbone.h)}")
+print(f"Number of transformer layers: {len(model.transformer_backbone.layers)}")
 print(f"Target layer index: {LAYER_IDX}")
-print(f"Attention module type: {type(model.transformer_backbone.h[LAYER_IDX].attn)}")
+print(f"Attention module type: {type(model.transformer_backbone.layers[LAYER_IDX].self_attn)}")
 
 logger.info(
     "Loaded PertSets model with GPT-2 backbone: %s heads × %s layers",
@@ -195,10 +197,10 @@ def layer3_hook(_: torch.nn.Module, __, outputs: Tuple[torch.Tensor, torch.Tenso
 
 # Attach hook once - Updated for GPT-2 architecture
 hook_handle = (
-    model.transformer_backbone.h[LAYER_IDX].attn.register_forward_hook(layer3_hook)
+    model.transformer_backbone.layers[LAYER_IDX].self_attn.register_forward_hook(layer3_hook)
 )
 logger.info(
-    "Registered hook on transformer_backbone.h[%d].attn", LAYER_IDX
+    "Registered hook on transformer_backbone.layers[%d].self_attn", LAYER_IDX
 )
 
 # Direct model forward pass with 512 cells (256 of each cell type)
@@ -207,7 +209,7 @@ cell_type_counts = adata_full.obs["cell_type"].value_counts()
 logger.info("Available cell types: %s", list(cell_type_counts.index))
 
 # Select the two most abundant cell types
-celltype1, celltype2 = cell_type_counts.index[:2]
+celltype1, celltype2 = cell_type_counts.index[0:2]
 logger.info(f"Selected cell types: {celltype1} ({cell_type_counts[celltype1]} available), {celltype2} ({cell_type_counts[celltype2]} available)")
 
 # Get control cells for each cell type
@@ -218,14 +220,14 @@ cells_type2 = adata_full[(adata_full.obs["gene"] == control_pert) &
 
 logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}")
 
-# Sample cells - always use 64 total cells (32 per cell type)
-cell_sentence_len = 64  # Hardcoded to always use 64 cells
-logger.info(f"Using fixed cell_sentence_len: {cell_sentence_len}")
+# Use the model's actual cell_sentence_len to avoid position embedding errors
+cell_sentence_len = model.cell_sentence_len  # Use model's trained sequence length
+logger.info(f"Using model's cell_sentence_len: {cell_sentence_len}")
 logger.info(f"Model was trained with cell_sentence_len: {model.cell_sentence_len}")
 
-# Use 64 cells total, split evenly between two cell types  
-n_cells_per_type = 32  # 32 cells per cell type
-total_cells = 64  # 64 total cells
+# Use half the cells for each cell type
+n_cells_per_type = cell_sentence_len // 2
+total_cells = cell_sentence_len  # Use model's trained length
 
 if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_type:
     # Sample cells
@@ -265,7 +267,7 @@ if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_ty
     pert_tensor[:, 0] = 1  # Set first dimension to 1 for control perturbation
     pert_names = [control_pert] * n_cells
     
-    # Create batch dictionary - reshape for padded format
+    # Create batch dictionary - use the correct keys expected by the model
     batch = {
         "ctrl_cell_emb": X_embed,  # (64, embed_dim) - basal/control cell embeddings
         "pert_emb": pert_tensor,  # (64, pert_dim) - perturbation embeddings
@@ -274,9 +276,9 @@ if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_ty
     }
     
     logger.info(f"Batch shapes - ctrl_cell_emb: {batch['ctrl_cell_emb'].shape}, pert_emb: {batch['pert_emb'].shape}")
-    logger.info(f"Running single forward pass with {n_cells} cells of type {celltype1}")
+    logger.info(f"Running single forward pass with {n_cells} cells ({celltype1} and {celltype2})")
     
-    # Single forward pass using padded=True
+    # Single forward pass using padded=False
     with torch.no_grad():
         batch_pred = model.forward(batch, padded=False)
     
@@ -332,15 +334,16 @@ for seq_len in sorted(attention_by_length.keys()):
         attn_head = avg_attn_by_head[h].numpy()
         
         if len(attention_by_length[seq_len][h]) > 0:
+            head_min, head_max = attn_head.min(), attn_head.max()
             sns.heatmap(
-                attn_head, square=True, cbar=True, cmap='Greens',
-                xticklabels=False, yticklabels=False,
-                vmin=0, vmax=1
+                attn_head, square=True, cbar=True, cmap='viridis', 
+                xticklabels=range(seq_len), yticklabels=range(seq_len),
+                vmin=head_min, vmax=head_max
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
-            head_min, head_max = attn_head.min(), attn_head.max()
-            plt.title(f"Head {h}\n[{head_min:.3f}, {head_max:.3f}]", fontsize=9)
+            n_matrices = len(attention_by_length[seq_len][h])
+            plt.title(f"Head {h} (n={n_matrices}) [{head_min:.3f}, {head_max:.3f}]", fontsize=10)
         else:
             plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                     transform=plt.gca().transAxes, fontsize=12)
@@ -352,6 +355,7 @@ for seq_len in sorted(attention_by_length.keys()):
     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.close()
     logger.info("Saved attention heatmaps for length %d → %s", seq_len, fig_path)
+
 # Create a summary plot showing attention patterns across all lengths
 if len(attention_by_length) > 1:
     # Find the most common non-trivial sequence length for the summary
@@ -361,20 +365,22 @@ if len(attention_by_length) > 1:
         
         # Create summary using the most common length
         plt.figure(figsize=(15, 12))
-        
         for h in range(NUM_HEADS):
             plt.subplot(3, 4, h + 1)
             if len(attention_by_length[most_common_length][h]) > 0:
                 stacked = torch.stack(attention_by_length[most_common_length][h])
                 avg_attn = stacked.mean(0).numpy()
-                
+                max_attn = avg_attn.max()
+                min_attn = avg_attn.min()
+                mean_attn = avg_attn.mean()
+                std_attn = avg_attn.std()
+                print(f"Head {h} - Max: {max_attn}, Min: {min_attn}, Mean: {mean_attn}, Std: {std_attn}")
                 sns.heatmap(
-                    avg_attn, square=True, cbar=True, cmap='Greens',
-                    xticklabels=False, yticklabels=False, 
-                    vmin=0, vmax=1
+                    avg_attn, square=True, cbar=True, cmap='viridis',
+                    xticklabels=False, yticklabels=False, vmin=min_attn, vmax=max_attn
                 )
-                head_min, head_max = avg_attn.min(), avg_attn.max()
-                plt.title(f"Head {h}\n[{head_min:.3f}, {head_max:.3f}]", fontsize=9)
+                n_matrices = len(attention_by_length[most_common_length][h])
+                plt.title(f"Head {h} (len={most_common_length}, n={n_matrices})", fontsize=10)
             else:
                 plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                         transform=plt.gca().transAxes, fontsize=12)

@@ -38,7 +38,8 @@ from models.pertsets import PertSetsPerturbationModel
 
 MODEL_DIR = Path(
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
-    "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
+    # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
+    "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
 )
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
