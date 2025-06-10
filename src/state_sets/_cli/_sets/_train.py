@@ -7,7 +7,6 @@ def add_arguments_train(parser: ap.ArgumentParser):
     # Allow remaining args to be passed through to Hydra
     parser.add_argument("hydra_overrides", nargs="*", help="Hydra configuration overrides (e.g., data.batch_size=32)")
 
-
 def run_sets_train(cfg: DictConfig):
     import json
     import os
@@ -59,7 +58,7 @@ def run_sets_train(cfg: DictConfig):
 
     # Initialize data module. this is backwards compatible with previous configs
     try:
-        sentence_len = cfg["model"]["cell_set_len"]
+        sentence_len = cfg["model"]["kwargs"]["cell_set_len"]
     except KeyError:
         if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
             if "cell_sentence_len" in cfg["model"]["kwargs"] and cfg["model"]["kwargs"]["cell_sentence_len"] > 1:

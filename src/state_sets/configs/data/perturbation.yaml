@@ -16,7 +16,7 @@ kwargs:
   control_pert: DMSO_TF
   map_controls: true # for a control cell, should we use it as the target (learn identity) or sample a control?
   perturbation_features_file: null
-  store_raw_basal: false
+  store_raw_basal: ${model.kwargs.use_effect_gating_token}
   int_counts: false
 output_dir: null
 debug: true

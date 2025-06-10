@@ -17,35 +17,31 @@ from .utils import build_mlp, get_activation_class, get_transformer_backbone
 
 logger = logging.getLogger(__name__)
 
-
-class ConfidenceToken(nn.Module):
+class EffectGatingToken(nn.Module):
     """
-    Learnable confidence token that gets appended to the input sequence
-    and learns to predict the expected loss value.
+    Learnable token that gets appended to the input sequence.
+    Its output from the transformer is used to predict a gating scalar (0-1)
+    that modulates the perturbation effect.
     """
 
     def __init__(self, hidden_dim: int, dropout: float = 0.1):
         super().__init__()
-        # Learnable confidence token embedding
-        self.confidence_token = nn.Parameter(torch.randn(1, 1, hidden_dim))
+        # Learnable gating token embedding
+        self.gating_token_embed = nn.Parameter(torch.randn(1, 1, hidden_dim))
 
-        # Projection head to map confidence token output to scalar loss prediction
-        self.confidence_projection = nn.Sequential(
+        # Projection head to map gating token output to a pre-sigmoid scalar
+        self.gating_projection = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.LayerNorm(hidden_dim // 2),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),
-            nn.LayerNorm(hidden_dim // 4),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 4, 1),
-            nn.ReLU(),  # Ensure positive loss prediction
+            nn.Linear(hidden_dim // 2, 1), # Output one scalar for the gate
         )
+        # Sigmoid will be applied after projection to get value in (0,1)
 
-    def append_confidence_token(self, seq_input: torch.Tensor) -> torch.Tensor:
+    def append_token(self, seq_input: torch.Tensor) -> torch.Tensor:
         """
-        Append confidence token to the sequence input.
+        Append gating token to the sequence input.
 
         Args:
             seq_input: Input tensor of shape [B, S, E]
@@ -54,31 +50,33 @@ class ConfidenceToken(nn.Module):
             Extended tensor of shape [B, S+1, E]
         """
         batch_size = seq_input.size(0)
-        # Expand confidence token to batch size
-        confidence_tokens = self.confidence_token.expand(batch_size, -1, -1)
+        # Expand gating token to batch size
+        gating_tokens = self.gating_token_embed.expand(batch_size, -1, -1).to(seq_input.device)
         # Concatenate along sequence dimension
-        return torch.cat([seq_input, confidence_tokens], dim=1)
+        return torch.cat([seq_input, gating_tokens], dim=1)
 
-    def extract_confidence_prediction(self, transformer_output: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def extract_gating_value_and_main_output(
+        self, transformer_output: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Extract main output and confidence prediction from transformer output.
+        Extract main output and gating value from transformer output.
 
         Args:
             transformer_output: Output tensor of shape [B, S+1, E]
 
         Returns:
-            main_output: Tensor of shape [B, S, E]
-            confidence_pred: Tensor of shape [B, 1]
+            main_output: Tensor of shape [B, S, E] (transformer output for original sequence)
+            gating_value: Tensor of shape [B, 1] (sigmoid-activated gate value)
         """
         # Split the output
         main_output = transformer_output[:, :-1, :]  # [B, S, E]
-        confidence_output = transformer_output[:, -1:, :]  # [B, 1, E]
+        gating_token_hidden_state = transformer_output[:, -1:, :]  # [B, 1, E]
 
-        # Project confidence token output to scalar
-        confidence_pred = self.confidence_projection(confidence_output).squeeze(-1)  # [B, 1]
+        # Project gating token output to pre-sigmoid scalar and apply sigmoid
+        pre_sigmoid_gate = self.gating_projection(gating_token_hidden_state) # [B, 1, 1]
+        gating_value = torch.sigmoid(pre_sigmoid_gate.squeeze(-1))  # [B, 1]
 
-        return main_output, confidence_pred
-
+        return main_output, gating_value
 
 class PertSetsPerturbationModel(PerturbationModel):
     """
@@ -141,6 +139,16 @@ class PertSetsPerturbationModel(PerturbationModel):
         self.transformer_backbone_kwargs = transformer_backbone_kwargs
         self.transformer_backbone_kwargs["n_positions"] = self.cell_sentence_len + kwargs.get("extra_tokens", 0)
 
+        self.effect_gating_token = None
+        self.gating_loss_fn = None # e.g., MSELoss for the gate
+        if kwargs.get("use_effect_gating_token", False):
+            # Ensure extra_tokens in transformer_backbone_kwargs is >= 1 if using this token
+            if self.transformer_backbone_kwargs.get("n_positions", self.cell_sentence_len) <= self.cell_sentence_len:
+                 logger.warning("use_effect_gating_token is True, but transformer n_positions might not account for the extra token. Ensure n_positions = cell_set_len + num_extra_tokens.")
+
+            self.effect_gating_token = EffectGatingToken(hidden_dim=self.hidden_dim, dropout=self.dropout)
+            self.gating_loss_fn = nn.MSELoss()
+
         self.distributional_loss = distributional_loss
         self.gene_dim = gene_dim
 
@@ -172,13 +180,6 @@ class PertSetsPerturbationModel(PerturbationModel):
         is_gene_space = kwargs["embed_key"] == "X_hvg" or kwargs["embed_key"] is None
         if is_gene_space or self.gene_decoder is None:
             self.relu = torch.nn.ReLU()
-
-        # initialize a confidence token
-        self.confidence_token = None
-        self.confidence_loss_fn = None
-        if kwargs.get("confidence_token", False):
-            self.confidence_token = ConfidenceToken(hidden_dim=self.hidden_dim, dropout=self.dropout)
-            self.confidence_loss_fn = nn.MSELoss()
 
         self.freeze_pert_backbone = kwargs.get("freeze_pert_backbone", False)
         if self.freeze_pert_backbone:
@@ -320,10 +321,9 @@ class PertSetsPerturbationModel(PerturbationModel):
             batch_embeddings = self.batch_encoder(batch_indices.long())  # Shape: [B, S, hidden_dim]
             seq_input = seq_input + batch_embeddings
 
-        confidence_pred = None
-        if self.confidence_token is not None:
-            # Append confidence token: [B, S, E] -> [B, S+1, E]
-            seq_input = self.confidence_token.append_confidence_token(seq_input)
+        if self.effect_gating_token is not None:
+            # Append gating token: [B, S, E] -> [B, S+1, E]
+            seq_input = self.effect_gating_token.append_token(seq_input)
 
         # forward pass + extract CLS last hidden state
         if self.hparams.get("mask_attn", False):
@@ -344,17 +344,35 @@ class PertSetsPerturbationModel(PerturbationModel):
             transformer_output = self.transformer_backbone(inputs_embeds=seq_input).last_hidden_state
 
         # Extract confidence prediction if confidence token was used
-        if self.confidence_token is not None:
-            res_pred, confidence_pred = self.confidence_token.extract_confidence_prediction(transformer_output)
+        if self.effect_gating_token is not None:
+            res_pred, gating_value_alpha = self.effect_gating_token.extract_gating_value_and_main_output(transformer_output)
         else:
-            res_pred = transformer_output
+            res_pred, gating_value_alpha = transformer_output, None
 
-        # add to basal if predicting residual
         if self.predict_residual:
-            # treat the actual prediction as a residual sum to basal
-            out_pred = self.project_out(res_pred + control_cells)
-        else:
-            out_pred = self.project_out(res_pred)
+            # transformer_output_main is h_delta_pred (latent delta)
+            latent_delta_pred = res_pred
+            if gating_value_alpha is not None:
+                # gating_value_alpha is [B, 1], latent_delta_pred is [B, S, E]
+                # We want to scale the delta for the whole set based on one gate value per set.
+                # So, average latent_delta_pred over S, or take CLS-like token if transformer was designed for that.
+                # Current transformer backbone processes sequence and `project_out` is applied to each token's output.
+                # If we assume the gate applies uniformly to all cells in the set, broadcast:
+                gated_latent_delta = gating_value_alpha.unsqueeze(1) * latent_delta_pred # [B,1,1] * [B,S,E] -> [B,S,E]
+            else:
+                gated_latent_delta = latent_delta_pred
+            
+            final_latent_representation = control_cells + gated_latent_delta
+        else: # Model predicts full state, so we derive delta, gate it, and add back to basal
+            latent_full_pred = res_pred
+            latent_delta_derived = latent_full_pred - control_cells
+            if gating_value_alpha is not None:
+                gated_latent_delta = gating_value_alpha.unsqueeze(1) * latent_delta_derived
+            else:
+                gated_latent_delta = latent_delta_derived
+            final_latent_representation = control_cells + gated_latent_delta
+
+        out_pred = self.project_out(final_latent_representation)
 
         # apply relu if specified and we output to HVG space
         is_gene_space = self.hparams["embed_key"] == "X_hvg" or self.hparams["embed_key"] is None
@@ -363,17 +381,17 @@ class PertSetsPerturbationModel(PerturbationModel):
 
         output = out_pred.reshape(-1, self.output_dim)
 
-        if confidence_pred is not None:
-            return output, confidence_pred
+        if self.effect_gating_token is not None:
+            return output, gating_value_alpha
         else:
             return output
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, padded=True) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
         # Get model predictions (in latent space)
-        confidence_pred = None
-        if self.confidence_token is not None:
-            pred, confidence_pred = self.forward(batch, padded=padded)
+        gating_value_pred = None
+        if self.effect_gating_token is not None:
+            pred, gating_value_pred = self.forward(batch, padded=padded)
         else:
             pred = self.forward(batch, padded=padded)
 
@@ -424,27 +442,36 @@ class PertSetsPerturbationModel(PerturbationModel):
 
             total_loss = total_loss + self.decoder_loss_weight * decoder_loss
 
-        if confidence_pred is not None:
-            # Detach main loss to prevent gradients flowing through it
-            loss_target = total_loss.detach().clone().unsqueeze(0) * 10
+        if gating_value_pred is not None and self.gating_loss_fn is not None and "ctrl_cell_counts" in batch:
+            pert_counts = batch["pert_cell_counts"] # Shape [B*S, gene dim]
+            ctrl_counts = batch["ctrl_cell_counts"] # Shape [B*S, gene dim]
+            
+            num_genes_for_norm = pert_counts.shape[-1]
 
-            # Ensure proper shapes for confidence loss computation
-            if confidence_pred.dim() == 2:  # [B, 1]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0), 1)
-            else:  # confidence_pred is [B,]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0))
+            # Reshape counts to [B, S, gene dim] to calculate per-set effect norm
+            pert_counts_reshaped = pert_counts.reshape(-1, self.cell_sentence_len, num_genes_for_norm)
+            ctrl_counts_reshaped = ctrl_counts.reshape(-1, self.cell_sentence_len, num_genes_for_norm)
 
-            # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred.squeeze(), loss_target.squeeze())
-            self.log("train/confidence_loss", confidence_loss)
-            self.log("train/actual_loss", loss_target.mean())
+            # Mean expression for each set in the batch
+            mean_pert_counts = pert_counts_reshaped.mean(dim=1) # [B, GeneDim]
+            mean_ctrl_counts = ctrl_counts_reshaped.mean(dim=1) # [B, GeneDim]
+            
+            effect_diff = mean_pert_counts - mean_ctrl_counts # [B, GeneDim]
+            effect_norm = torch.linalg.norm(effect_diff, dim=1, ord=2) # [B]
 
-            # Add to total loss with weighting
-            confidence_weight = 0.1  # You can make this configurable
-            total_loss = total_loss + confidence_weight * confidence_loss
+            # Scale effect_norm to target for sigmoid output (0-1)
+            target_gating_value = torch.clamp(
+                effect_norm, 0.0, 1.0
+            ) # Target is [B]
 
-            # Add to total loss
-            total_loss = total_loss + confidence_loss
+            # gating_value_pred is [B, 1]. Squeeze to [B] for MSELoss.
+            gating_value_pred_squeezed = gating_value_pred.squeeze()
+
+            gating_loss = self.gating_loss_fn(gating_value_pred_squeezed, target_gating_value)
+            self.log("train/gating_loss", gating_loss)
+            self.log("train/effect_norm_mean", effect_norm.mean())
+
+            total_loss = total_loss + 1.0 * gating_loss
 
         if self.regularization > 0.0:
             ctrl_cell_emb = batch["ctrl_cell_emb"].reshape_as(pred)
@@ -463,10 +490,10 @@ class PertSetsPerturbationModel(PerturbationModel):
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         """Validation step logic."""
-        if self.confidence_token is None:
-            pred, confidence_pred = self.forward(batch), None
+        if self.effect_gating_token is None:
+            pred, gating_value_pred = self.forward(batch), None
         else:
-            pred, confidence_pred = self.forward(batch)
+            pred, gating_value_pred = self.forward(batch)
 
         pred = pred.reshape(-1, self.cell_sentence_len, self.output_dim)
         target = batch["pert_cell_emb"]
@@ -498,28 +525,33 @@ class PertSetsPerturbationModel(PerturbationModel):
             self.log("val/decoder_loss", decoder_loss)
             loss = loss + self.decoder_loss_weight * decoder_loss
 
-        if confidence_pred is not None:
-            # Detach main loss to prevent gradients flowing through it
-            loss_target = loss.detach().clone() * 10
+        if gating_value_pred is not None and self.gating_loss_fn is not None and "ctrl_cell_counts" in batch:
+            pert_counts = batch["pert_cell_counts"]
+            ctrl_counts = batch["ctrl_cell_counts"]
+            num_genes_for_norm = pert_counts.shape[-1]
 
-            # Ensure proper shapes for confidence loss computation
-            if confidence_pred.dim() == 2:  # [B, 1]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0), 1)
-            else:  # confidence_pred is [B,]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0))
-
-            # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred.squeeze(), loss_target.squeeze())
-            self.log("val/confidence_loss", confidence_loss)
-            self.log("val/actual_loss", loss_target.mean())
+            pert_counts_reshaped = pert_counts.reshape(-1, self.cell_sentence_len, num_genes_for_norm)
+            ctrl_counts_reshaped = ctrl_counts.reshape(-1, self.cell_sentence_len, num_genes_for_norm)
+            mean_pert_counts = pert_counts_reshaped.mean(dim=1)
+            mean_ctrl_counts = ctrl_counts_reshaped.mean(dim=1)
+            effect_diff = mean_pert_counts - mean_ctrl_counts
+            effect_norm = torch.linalg.norm(effect_diff, dim=1, ord=2)
+            target_gating_value = torch.clamp(
+                effect_norm / 10.0, 0.0, 1.0
+            )
+            gating_value_pred_squeezed = gating_value_pred.squeeze()
+            gating_loss = self.gating_loss_fn(gating_value_pred_squeezed, target_gating_value)
+            self.log("val/gating_loss", gating_loss)
+            self.log("val/effect_norm_mean", effect_norm.mean())
+            loss = loss + 1.0 * gating_loss
 
         return {"loss": loss, "predictions": pred}
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
-        if self.confidence_token is None:
-            pred, confidence_pred = self.forward(batch, padded=False)
+        if self.effect_gating_token is None:
+            pred, gating_value_pred = self.forward(batch), None
         else:
-            pred, confidence_pred = self.forward(batch, padded=False)
+            pred, gating_value_pred = self.forward(batch)
 
         target = batch["pert_cell_emb"]
         pred = pred.reshape(1, -1, self.output_dim)
@@ -527,30 +559,37 @@ class PertSetsPerturbationModel(PerturbationModel):
         loss = self.loss_fn(pred, target).mean()
         self.log("test_loss", loss)
 
-        if confidence_pred is not None:
-            # Detach main loss to prevent gradients flowing through it
-            loss_target = loss.detach().clone() * 10.0
+        if gating_value_pred is not None and self.gating_loss_fn is not None and "ctrl_cell_counts" in batch:
+            pert_counts = batch["pert_cell_counts"]
+            ctrl_counts = batch["ctrl_cell_counts"]
+            num_genes_for_norm = pert_counts.shape[-1]
 
-            # Ensure proper shapes for confidence loss computation
-            if confidence_pred.dim() == 2:  # [B, 1]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0), 1)
-            else:  # confidence_pred is [B,]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0))
-
-            # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred.squeeze(), loss_target.squeeze())
-            self.log("test/confidence_loss", confidence_loss)
+            pert_counts_reshaped = pert_counts.reshape(-1, self.cell_sentence_len, num_genes_for_norm)
+            ctrl_counts_reshaped = ctrl_counts.reshape(-1, self.cell_sentence_len, num_genes_for_norm)
+            mean_pert_counts = pert_counts_reshaped.mean(dim=1)
+            mean_ctrl_counts = ctrl_counts_reshaped.mean(dim=1)
+            effect_diff = mean_pert_counts - mean_ctrl_counts
+            effect_norm = torch.linalg.norm(effect_diff, dim=1, ord=2)
+            target_gating_value = torch.clamp(
+                effect_norm / 10.0, 0.0, 1.0
+            )
+            gating_value_pred_squeezed = gating_value_pred.squeeze()
+            gating_loss = self.gating_loss_fn(gating_value_pred_squeezed, target_gating_value)
+            self.log("val/gating_loss", gating_loss)
+            self.log("val/effect_norm_mean", effect_norm.mean())
+            loss = loss + 1.0 * gating_loss
 
     def predict_step(self, batch, batch_idx, padded=True, **kwargs):
         """
         Typically used for final inference. We'll replicate old logic:s
          returning 'preds', 'X', 'pert_name', etc.
         """
-        if self.confidence_token is None:
-            latent_output = self.forward(batch, padded=padded)  # shape [B, ...]
-            confidence_pred = None
+        gating_value_alpha = None
+        model_output = self.forward(batch, padded=padded)
+        if self.effect_gating_token is not None:
+            latent_output, gating_value_alpha = model_output
         else:
-            latent_output, confidence_pred = self.forward(batch, padded=padded)
+            latent_output = model_output
 
         output_dict = {
             "preds": latent_output,
@@ -560,11 +599,13 @@ class PertSetsPerturbationModel(PerturbationModel):
             "celltype_name": batch.get("cell_type", None),
             "batch": batch.get("batch", None),
             "ctrl_cell_emb": batch.get("ctrl_cell_emb", None),
+            "ctrl_cell_counts": batch.get("ctrl_cell_counts", None),
         }
 
-        # Add confidence prediction to output if available
-        if confidence_pred is not None:
-            output_dict["confidence_pred"] = confidence_pred
+        if gating_value_alpha is not None:
+            # gating_value_alpha is [B,1]. If output is flattened [B*S, D], we might want to repeat/expand it.
+            # For predict_step, it's probably best to return it as [B,1] and let downstream handle.
+            output_dict["gating_value_pred"] = gating_value_alpha.reshape(-1,1)
 
         if self.gene_decoder is not None:
             if isinstance(self.gene_decoder, NBDecoder):

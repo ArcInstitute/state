@@ -1,6 +1,6 @@
 import argparse as ap
 from hydra import initialize, compose
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from ._cli import (
     add_arguments_sets,
     add_arguments_state,
@@ -10,6 +10,26 @@ from ._cli import (
     run_state_train,
 )
 
+# Add this function and registration at the top of the file or inside run_sets_train before OmegaConf.to_container
+def eval_resolver(expression_string: str):
+    """
+    A simple resolver that evaluates a Python expression string.
+    WARNING: Use with caution if the expression_string can come from untrusted sources.
+    """
+    # The inner interpolations like '${model.kwargs.cell_set_len}'
+    # should already be resolved by OmegaConf into their string values
+    # before this resolver is called.
+    # For example, if cell_set_len=512 and extra_tokens=1,
+    # expression_string will be '512 + 1'.
+    try:
+        return eval(expression_string)
+    except Exception as e:
+        # Log or handle the error if evaluation fails
+        print(f"Error evaluating expression string '{expression_string}': {e}")
+        raise
+
+if not OmegaConf.has_resolver("eval"): # Register only if not already registered
+    OmegaConf.register_new_resolver("eval", eval_resolver, replace=True)
 
 def get_args() -> tuple[ap.Namespace, list[str]]:
     """Parse known args and return remaining args for Hydra overrides"""

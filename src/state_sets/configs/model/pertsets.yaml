@@ -8,7 +8,7 @@ kwargs:
   blur: 0.05
   hidden_dim: 328 # hidden dimension going into the transformer backbone
   loss: energy
-  confidence_token: False # if true, model tries to predict its own confidence
+  use_effect_gating_token: False # if true, model tries to predict its own confidence
   n_encoder_layers: 4 # number of MLP layers for pert, basal encoders
   n_decoder_layers: 4
   predict_residual: True # if true, predicts the residual in embedding space to the basal cells
