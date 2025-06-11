@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 import torch
 import torch.nn as nn
 from lightning.pytorch import LightningModule
+import typing as tp
 
 from .utils import get_loss_fn
 
@@ -147,9 +148,11 @@ class PerturbationModel(ABC, LightningModule):
         batch_size: int = 64,
         gene_dim: int = 5000,
         hvg_dim: int = 2001,
+        decoder_cfg: dict | None = None,
         **kwargs,
     ):
         super().__init__()
+        self.decoder_cfg = decoder_cfg
         self.save_hyperparameters()
 
         # Core architecture settings
@@ -180,30 +183,31 @@ class PerturbationModel(ABC, LightningModule):
         # this will either decode to hvg space if output space is a gene,
         # or to transcriptome space if output space is all. done this way to maintain
         # backwards compatibility with the old models
-        self.gene_decoder = None
-        gene_dim = hvg_dim if output_space == "gene" else gene_dim
-        if (embed_key and embed_key != "X_hvg" and output_space == "gene") or (
-            embed_key and output_space == "all"
-        ):  # we should be able to decode from hvg to all
-            if gene_dim > 10000:
-                hidden_dims = [1024, 512, 256]
-            else:
-                if "DMSO_TF" in self.control_pert:
-                    if self.residual_decoder:
-                        hidden_dims = [2058, 2058, 2058, 2058, 2058]
-                    else:
-                        hidden_dims = [4096, 2048, 2048]
+        self._build_decoder()
+        if self.gene_decoder is None:
+            gene_dim = hvg_dim if output_space == "gene" else gene_dim
+            if (embed_key and embed_key != "X_hvg" and output_space == "gene") or (
+                embed_key and output_space == "all"
+            ):  # we should be able to decode from hvg to all
+                if gene_dim > 10000:
+                    hidden_dims = [1024, 512, 256]
                 else:
-                    hidden_dims = [1024, 1024, 512]  # make this config
+                    if "DMSO_TF" in self.control_pert:
+                        if self.residual_decoder:
+                            hidden_dims = [2058, 2058, 2058, 2058, 2058]
+                        else:
+                            hidden_dims = [4096, 2048, 2048]
+                    else:
+                        hidden_dims = [1024, 1024, 512]  # make this config
 
-            self.gene_decoder = LatentToGeneDecoder(
-                latent_dim=self.output_dim,
-                gene_dim=gene_dim,
-                hidden_dims=hidden_dims,
-                dropout=dropout,
-                residual_decoder=self.residual_decoder,
-            )
-            logger.info(f"Initialized gene decoder for embedding {embed_key} to gene space")
+                self.gene_decoder = LatentToGeneDecoder(
+                    latent_dim=self.output_dim,
+                    gene_dim=gene_dim,
+                    hidden_dims=hidden_dims,
+                    dropout=dropout,
+                    residual_decoder=self.residual_decoder,
+                )
+                logger.info(f"Initialized gene decoder for embedding {embed_key} to gene space")
 
     def transfer_batch_to_device(self, batch, device, dataloader_idx: int):
         return {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
@@ -212,6 +216,23 @@ class PerturbationModel(ABC, LightningModule):
     def _build_networks(self):
         """Build the core neural network components."""
         pass
+
+    def _build_decoder(self):
+        """Create self.gene_decoder from self.decoder_cfg (or leave None)."""
+        if self.decoder_cfg is None:
+            self.gene_decoder = None
+            return
+        self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)
+
+    def on_load_checkpoint(self, checkpoint: dict[str, tp.Any]) -> None:
+        """
+        Lightning calls this *before* the checkpoint's state_dict is loaded.
+        Re-create the decoder using the exact hyper-parameters saved in the ckpt,
+        so that parameter shapes match and load_state_dict succeeds.
+        """
+        self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
+        self._build_decoder() 
+
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
