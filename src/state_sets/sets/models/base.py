@@ -126,6 +126,7 @@ class PerturbationModel(ABC, LightningModule):
         pert_dim: Dimension of perturbation embeddings
         dropout: Dropout rate
         lr: Learning rate for optimizer
+        gene_decoder_lr: Learning rate for gene decoder
         loss_fn: Loss function ('mse' or custom nn.Module)
         output_space: 'gene' or 'latent'
     """
@@ -138,8 +139,8 @@ class PerturbationModel(ABC, LightningModule):
         pert_dim: int,
         batch_dim: int = None,
         dropout: float = 0.1,
-        lr: float = 3e-4,
-        gene_decoder_lr: float = 3e-4,
+        lr: float = 1e-4,
+        gene_decoder_lr: float = 1e-5,
         loss_fn: nn.Module = nn.MSELoss(),
         control_pert: str = "non-targeting",
         embed_key: Optional[str] = None,
@@ -330,13 +331,13 @@ class PerturbationModel(ABC, LightningModule):
             # Get all other parameters (main model)
             main_model_params = [
                 param for name, param in self.named_parameters()
-                if not name.startswith('gene_decoder.')
+                if not name.startswith("gene_decoder.")
             ]
 
             # Create parameter groups with different learning rates
             param_groups = [
-                {'params': main_model_params, 'lr': self.lr},
-                {'params': gene_decoder_params, 'lr': self.gene_decoder_lr}
+                {"params": main_model_params, "lr": self.lr},
+                {"params": gene_decoder_params, "lr": self.gene_decoder_lr},
             ]
 
             optimizer = torch.optim.Adam(param_groups)
