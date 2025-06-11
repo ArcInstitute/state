@@ -109,6 +109,17 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
 
         model.embed_tokens.weight.requires_grad = False
         model.embed_tokens.weight.zero_()
+    elif key == "GPT2Causal":
+        config = GPT2Config(**kwargs)
+        model = GPT2Model(config)
+
+        # Zero out position embeddings and freeze them
+        model.wpe.weight.requires_grad = False
+        model.wte.weight.requires_grad = False
+        model.wpe.weight.zero_()
+        model.wte.weight.zero_()
+
+        model_dim = config.n_embd
     else:
         raise ValueError(f"Unknown backbone key {key}")
 

@@ -22,7 +22,7 @@ kwargs:
   distributional_loss: energy
   regularization: 0.0
   init_from: null # initial checkpoint to start the model
-  transformer_backbone_key: GPT2
+  transformer_backbone_key: GPT2Causal
   transformer_backbone_kwargs:
       max_position_embeddings: ${model.kwargs.cell_set_len} # llama
       n_positions: ${model.kwargs.cell_set_len} # gpt2
