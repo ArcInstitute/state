@@ -1,20 +1,3 @@
-#!/usr/bin/env python
-"""
-calculate_layer3_attention.py – v4
-=================================
-Updated to bypass InferenceModule and data_module.pkl, loading the model directly 
-and using dummy perturbation tensors for attention analysis.
-
-The script now:
-* Loads the PertSetsPerturbationModel directly from checkpoint
-* Uses dummy perturbation tensors instead of relying on data module
-* Collects attention from all sequences regardless of length
-* Uses a dynamic canvas that adapts to the maximum sequence length observed
-* Provides better visualization of the actual attention patterns
-* Shows per-head statistics and sequence length distributions
-* Updated to work with GPT-2 architecture
-"""
-
 from __future__ import annotations
 
 import os
@@ -43,22 +26,21 @@ sys.path.append(str(project_root / "vci_pretrain"))
 from models.pertsets import PertSetsPerturbationModel
 
 MODEL_DIR = Path(
-    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
-    # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
-    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
-    #"/large_storage/ctc/userspace/rohankshah"
-    "/large_storage/ctc/userspace/aadduri/preprint/tahoe_llama_212693232_cs512_4096/holdout"
+    #"/large_storage/ctc/userspace/aadduri/preprint/tahoe_llama_58562784/holdout"
+    "/large_storage/ctc/userspace/aadduri/preprint/tahoe_llama_212693232_cs256_4096_0.1/holdout"
+    #"/large_storage/ctc/userspace/aadduri/preprint/tahoe_llama_212693232_cs512_4096/holdout"
 )
 DATA_PATH = Path(
-    "/large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct_vci_1.4.4/plate1.h5"
+    "/large_storage/ctc/userspace/aadduri/datasets/tahoe_45_ct/plate1.h5"
 )
-CELL_SET_LEN = 512   
+CELL_SET_LEN = 256   
 CONTROL_SAMPLES = 50 
-LAYER_IDX = 7
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_tahoe_old_split_512" 
+LAYER_IDX = 5
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "tahoe_21_256" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
+#checkpoint_path = MODEL_DIR / "step=148000.ckpt"
 checkpoint_path = MODEL_DIR / "checkpoints" / "step=124000.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
 
 if not checkpoint_path.exists():
@@ -94,7 +76,7 @@ print(f"Target layer index: {LAYER_IDX}")
 print(f"Attention module type: {type(model.transformer_backbone.layers[LAYER_IDX].self_attn)}")
 
 logger.info(
-    "Loaded PertSets model with GPT-2 backbone: %s heads × %s layers",
+    "Loaded PertSets model with llama backbone: %s heads × %s layers",
     model.transformer_backbone.config.num_attention_heads,
     model.transformer_backbone.config.num_hidden_layers,
 )
@@ -132,8 +114,8 @@ else:
 
 # Find control perturbation
 control_pert = "DMSO_TF_24h"  # Default control
-if "gene" in adata_full.obs.columns:
-    drugname_counts = adata_full.obs["gene"].value_counts()
+if "drugname_drugconc" in adata_full.obs.columns:
+    drugname_counts = adata_full.obs["drugname_drugconc"].value_counts()
     # Look for common control names
     for potential_control in ["DMSO_TF_24h", "non-targeting", "control", "DMSO"]:
         if potential_control in drugname_counts.index:
@@ -206,43 +188,39 @@ logger.info(
 
 # Direct model forward pass with 512 cells (256 of each cell type)
 # Get available cell types and select the two most abundant ones
-cell_type_counts = adata_full.obs["cell_type"].value_counts()
+cell_type_counts = adata_full.obs["cell_name"].value_counts()
 logger.info("Available cell types: %s", list(cell_type_counts.index))
 
-# Select the two most abundant cell types
-celltype1, celltype2 = cell_type_counts.index[0:2]
-logger.info(f"Selected cell types: {celltype1} ({cell_type_counts[celltype1]} available), {celltype2} ({cell_type_counts[celltype2]} available)")
+# Select the most abundant cell type
+celltype1 = cell_type_counts.index[0]
+logger.info(f"Selected cell type: {celltype1} ({cell_type_counts[celltype1]} available)")
 
-# Get control cells for each cell type
-cells_type1 = adata_full[(adata_full.obs["gene"] == control_pert) & 
-                        (adata_full.obs["cell_type"] == celltype1)].copy()
-cells_type2 = adata_full[(adata_full.obs["gene"] == control_pert) & 
-                        (adata_full.obs["cell_type"] == celltype2)].copy()
+# Get control cells for this cell type
+cells_type1 = adata_full[(adata_full.obs["drugname_drugconc"] == control_pert) & 
+                        (adata_full.obs["cell_name"] == celltype1)].copy()
 
-logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}")
+logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}")
 
 # Use the model's actual cell_sentence_len to avoid position embedding errors
 cell_sentence_len = model.cell_sentence_len  # Use model's trained sequence length
 logger.info(f"Using model's cell_sentence_len: {cell_sentence_len}")
 logger.info(f"Model was trained with cell_sentence_len: {model.cell_sentence_len}")
 
-# Use half the cells for each cell type
-n_cells_per_type = cell_sentence_len // 2
+# Use all cells for the single cell type
+n_cells = cell_sentence_len
 total_cells = cell_sentence_len  # Use model's trained length
 
-if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_type:
+if cells_type1.n_obs >= n_cells:
     # Sample cells
-    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells_per_type, replace=False)
-    idx2 = np.random.choice(cells_type2.n_obs, size=n_cells_per_type, replace=False)
+    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells, replace=False)
     
     sampled_type1 = cells_type1[idx1].copy()
-    sampled_type2 = cells_type2[idx2].copy()
     
-    # Combine into a single batch
-    combined_batch = ad.concat([sampled_type1, sampled_type2], axis=0)
+    # Use single cell type batch
+    combined_batch = sampled_type1
     
     logger.info(f"Created combined batch with {combined_batch.n_obs} cells")
-    logger.info(f"Cell type distribution: {combined_batch.obs['cell_type'].value_counts().to_dict()}")
+    logger.info(f"Cell type distribution: {combined_batch.obs['cell_name'].value_counts().to_dict()}")
     
     # Get embeddings and prepare batch manually
     device = next(model.parameters()).device
@@ -273,20 +251,20 @@ if cells_type1.n_obs >= n_cells_per_type and cells_type2.n_obs >= n_cells_per_ty
         "ctrl_cell_emb": X_embed,  # (64, embed_dim) - basal/control cell embeddings
         "pert_emb": pert_tensor,  # (64, pert_dim) - perturbation embeddings
         "pert_name": pert_names,
-        "batch": torch.zeros((1, cell_sentence_len), device=device)
+        # "batch": torch.zeros((1, cell_sentence_len), device=device)
     }
     
     logger.info(f"Batch shapes - ctrl_cell_emb: {batch['ctrl_cell_emb'].shape}, pert_emb: {batch['pert_emb'].shape}")
-    logger.info(f"Running single forward pass with {n_cells} cells ({celltype1} and {celltype2})")
+    logger.info(f"Running single forward pass with {n_cells} cells of type {celltype1}")
     
-    # Single forward pass using padded=False
+    # Single forward pass using padded=True
     with torch.no_grad():
         batch_pred = model.forward(batch, padded=False)
     
     logger.info("Forward pass completed successfully")
     
 else:
-    logger.error(f"Insufficient cells: {celltype1}: {cells_type1.n_obs}, {celltype2}: {cells_type2.n_obs}. Need at least {n_cells_per_type} each.")
+    logger.error(f"Insufficient cells: {celltype1}: {cells_type1.n_obs}. Need at least {n_cells}.")
 
 logger.info(
     "Finished inference – accumulated %d sequences", total_sequences
@@ -333,18 +311,18 @@ for seq_len in sorted(attention_by_length.keys()):
     for h in range(NUM_HEADS):
         plt.subplot(rows, cols, h + 1)
         attn_head = avg_attn_by_head[h].numpy()
-        
+        max_attn = attn_head.max()
+        min_attn = attn_head.min()
         if len(attention_by_length[seq_len][h]) > 0:
-            head_min, head_max = attn_head.min(), attn_head.max()
             sns.heatmap(
                 attn_head, square=True, cbar=True, cmap='viridis', 
                 xticklabels=range(seq_len), yticklabels=range(seq_len),
-                vmin=head_min, vmax=head_max
+                vmin=min_attn, vmax=max_attn
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
             n_matrices = len(attention_by_length[seq_len][h])
-            plt.title(f"Head {h} (n={n_matrices}) [{head_min:.3f}, {head_max:.3f}]", fontsize=10)
+            plt.title(f"Head {h} (n={n_matrices})", fontsize=10)
         else:
             plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                     transform=plt.gca().transAxes, fontsize=12)
@@ -371,14 +349,9 @@ if len(attention_by_length) > 1:
             if len(attention_by_length[most_common_length][h]) > 0:
                 stacked = torch.stack(attention_by_length[most_common_length][h])
                 avg_attn = stacked.mean(0).numpy()
-                max_attn = avg_attn.max()
-                min_attn = avg_attn.min()
-                mean_attn = avg_attn.mean()
-                std_attn = avg_attn.std()
-                print(f"Head {h} - Max: {max_attn}, Min: {min_attn}, Mean: {mean_attn}, Std: {std_attn}")
                 sns.heatmap(
                     avg_attn, square=True, cbar=True, cmap='viridis',
-                    xticklabels=False, yticklabels=False, vmin=min_attn, vmax=max_attn
+                    xticklabels=False, yticklabels=False, vmin=0, vmax=1
                 )
                 n_matrices = len(attention_by_length[most_common_length][h])
                 plt.title(f"Head {h} (len={most_common_length}, n={n_matrices})", fontsize=10)

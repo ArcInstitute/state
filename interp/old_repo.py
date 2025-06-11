@@ -45,19 +45,21 @@ from models.pertsets import PertSetsPerturbationModel
 MODEL_DIR = Path(
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
     # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
-    "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
+    # "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
+    "/large_storage/ctc/userspace/rohankshah"
 )
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
 )
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
-LAYER_IDX = 2
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_old" 
+LAYER_IDX = 3
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_tahoe_llama_21_256" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "checkpoints" / "last.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
+#checkpoint_path = MODEL_DIR / "step=148000.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "step=124000.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
 
 if not checkpoint_path.exists():
     # Try other common checkpoint names
@@ -327,12 +329,13 @@ for seq_len in sorted(attention_by_length.keys()):
     for h in range(NUM_HEADS):
         plt.subplot(rows, cols, h + 1)
         attn_head = avg_attn_by_head[h].numpy()
-        
+        max_attn = attn_head.max()
+        min_attn = attn_head.min()
         if len(attention_by_length[seq_len][h]) > 0:
             sns.heatmap(
                 attn_head, square=True, cbar=True, cmap='viridis', 
                 xticklabels=range(seq_len), yticklabels=range(seq_len),
-                vmin=0, vmax=1
+                vmin=min_attn, vmax=max_attn
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
