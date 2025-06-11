@@ -1,0 +1,43 @@
+name: PertSets
+checkpoint: null
+device: cuda
+
+kwargs:
+  cell_set_len: 512
+  blur: 0.05
+  hidden_dim: 1440      # hidden dimension going into the transformer backbone
+  loss: energy
+  confidence_head: False
+  n_encoder_layers: 4
+  n_decoder_layers: 4
+  predict_residual: True
+  softplus: True
+  freeze_pert: False
+  transformer_decoder: False
+  finetune_vci_decoder: False
+  residual_decoder: False
+  batch_encoder: False
+  nb_decoder: False
+  mask_attn: False
+  use_effect_gating_token: False
+  distributional_loss: energy
+  init_from: null
+  transformer_backbone_key: llama
+  transformer_backbone_kwargs:
+      max_position_embeddings: ${model.kwargs.cell_set_len}
+      hidden_size: ${model.kwargs.hidden_dim}
+      intermediate_size: 4416
+      num_hidden_layers: 4
+      num_attention_heads: 12
+      num_key_value_heads: 12
+      head_dim: 120
+      use_cache: false
+      attention_dropout: 0.0
+      hidden_dropout: 0.0
+      layer_norm_eps: 1e-6
+      pad_token_id: 0
+      bos_token_id: 1
+      eos_token_id: 2
+      tie_word_embeddings: false
+      rotary_dim: 0
+      use_rotary_embeddings: false

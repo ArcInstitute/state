@@ -1,0 +1,42 @@
+name: PertSets
+checkpoint: null
+device: cuda
+
+kwargs:
+  cell_set_len: 64 # how many cells to group together into a single set of cells
+  extra_tokens: 1  # configurable buffer for confidence/special tokens
+  blur: 0.05
+  hidden_dim: 672 # hidden dimension going into the transformer backbone
+  loss: energy
+  confidence_token: False # if true, model tries to predict its own confidence
+  n_encoder_layers: 4 # number of MLP layers for pert, basal encoders
+  n_decoder_layers: 4
+  predict_residual: True # if true, predicts the residual in embedding space to the basal cells
+  freeze_pert_backbone: False # if true, the perturbation model is frozen
+  finetune_vci_decoder: False # if true, the pretrained state decoder is used in finetuning
+  batch_encoder: False # if true, batch variables are used
+  nb_decoder: False # if true, use a negative binomial decoder
+  mask_attn: False # if true, mask the attention
+  distributional_loss: energy
+  regularization: 0.0
+  detach_decoder: False
+  init_from: null # initial checkpoint to start the model
+  transformer_backbone_key: llama
+  transformer_backbone_kwargs:
+      max_position_embeddings: ${model.kwargs.cell_set_len}
+      hidden_size: ${model.kwargs.hidden_dim}
+      intermediate_size: 2688
+      num_hidden_layers: 4
+      num_attention_heads: 8
+      num_key_value_heads: 8
+      head_dim: 84
+      use_cache: false
+      attention_dropout: 0.0
+      hidden_dropout: 0.0
+      layer_norm_eps: 1e-6
+      pad_token_id: 0
+      bos_token_id: 1
+      eos_token_id: 2
+      tie_word_embeddings: false
+      rotary_dim: 0
+      use_rotary_embeddings: false
