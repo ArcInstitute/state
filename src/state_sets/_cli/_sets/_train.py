@@ -119,7 +119,6 @@ def run_sets_train(cfg: DictConfig):
     var_dims   = data_module.get_var_dims()          # {"gene_dim": …, "hvg_dim": …}
     gene_dim   = var_dims.get("gene_dim", 5000)      # fallback if key missing
     latent_dim = cfg["model"]["kwargs"]["output_dim"]   # same as model.output_dim
-    # optional: let user override from CLI/YAML
     hidden_dims = cfg["model"]["kwargs"].get("decoder_hidden_dims", [1024, 1024, 512])
 
     decoder_cfg = dict(
@@ -132,6 +131,9 @@ def run_sets_train(cfg: DictConfig):
 
     # tuck it into the kwargs that will reach the LightningModule
     cfg["model"]["kwargs"]["decoder_cfg"] = decoder_cfg
+
+    cfg["data"]["kwargs"]["n_perts"] = len(data_module.pert_onehot_map)
+    cfg["model"]["kwargs"]["pert_onehot_map"] = data_module.pert_onehot_map
 
     if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
         cfg["model"]["kwargs"]["n_cell_types"] = len(data_module.celltype_onehot_map)
