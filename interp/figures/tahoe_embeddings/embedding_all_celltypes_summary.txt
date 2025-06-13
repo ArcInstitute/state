@@ -1,0 +1,48 @@
+Embedding Analysis - All Cell Types Summary
+==================================================
+
+BASIC STATISTICS:
+Cell types analyzed: 8
+Cell types: SW480, NCI-H460, LoVo, HEC-1-A, AsPC-1, NCI-H2030, HT-29, KATO III
+Cells per type: 20
+Total cells: 160
+Embedding dimension: 2058
+
+STATISTICAL ANALYSIS:
+Significant dimensions (ANOVA p < 0.05): 1959/2058 (95.2%)
+PCA variance explained (3 PCs): 19.0%
+
+DISTANCE ANALYSIS:
+Mean within-group distance: 23.1660
+Mean between-group distance: 26.5057
+Separation ratio (between/within): 1.14
+
+CENTROID MAGNITUDES:
+SW480: 18.5145
+NCI-H460: 18.2617
+LoVo: 18.9404
+HEC-1-A: 17.9256
+AsPC-1: 18.9594
+NCI-H2030: 18.3409
+HT-29: 17.7928
+KATO III: 18.5763
+
+EMBEDDING VARIANCES:
+SW480: 0.1358
+NCI-H460: 0.1301
+LoVo: 0.1265
+HEC-1-A: 0.1256
+AsPC-1: 0.1153
+NCI-H2030: 0.1260
+HT-29: 0.1244
+KATO III: 0.1155
+
+SEPARATION SCORES (between/within ratio):
+SW480: 1.10
+NCI-H460: 1.12
+LoVo: 1.13
+HEC-1-A: 1.13
+AsPC-1: 1.19
+NCI-H2030: 1.19
+HT-29: 1.12
+KATO III: 1.18

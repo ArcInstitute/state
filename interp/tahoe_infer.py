@@ -315,14 +315,14 @@ for seq_len in sorted(attention_by_length.keys()):
         min_attn = attn_head.min()
         if len(attention_by_length[seq_len][h]) > 0:
             sns.heatmap(
-                attn_head, square=True, cbar=True, cmap='viridis', 
-                xticklabels=range(seq_len), yticklabels=range(seq_len),
+                attn_head, square=True, cbar=True, cmap='Greens', 
+                xticklabels=False, yticklabels=False,
                 vmin=min_attn, vmax=max_attn
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
             n_matrices = len(attention_by_length[seq_len][h])
-            plt.title(f"Head {h} (n={n_matrices})", fontsize=10)
+            plt.title(f"Head {h}", fontsize=10)
         else:
             plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                     transform=plt.gca().transAxes, fontsize=12)
@@ -350,7 +350,7 @@ if len(attention_by_length) > 1:
                 stacked = torch.stack(attention_by_length[most_common_length][h])
                 avg_attn = stacked.mean(0).numpy()
                 sns.heatmap(
-                    avg_attn, square=True, cbar=True, cmap='viridis',
+                    avg_attn, square=True, cbar=True, cmap='Greens',
                     xticklabels=False, yticklabels=False, vmin=0, vmax=1
                 )
                 n_matrices = len(attention_by_length[most_common_length][h])
