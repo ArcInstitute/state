@@ -5,7 +5,6 @@ import numpy as np
 import os
 import pandas as pd
 
-# Adjust this import to your project structure
 from ...sets.models.pert_sets import PertSetsPerturbationModel
 
 def add_arguments_infer(parser: argparse.ArgumentParser):
@@ -14,6 +13,8 @@ def add_arguments_infer(parser: argparse.ArgumentParser):
     parser.add_argument("--embed_key", type=str, default="X_hvg", help="Key in adata.obsm for input features")
     parser.add_argument("--pert_col", type=str, default="drugname_drugconc", help="Column in adata.obs for perturbation labels")
     parser.add_argument("--output", type=str, default=None, help="Path to output AnnData file (.h5ad)")
+    parser.add_argument("--celltype_col", type=str, default=None, help="Column in adata.obs for cell type labels (optional)")
+    parser.add_argument("--celltypes", type=str, default=None, help="Comma-separated list of cell types to include (optional)")
 
 
 def run_sets_infer(args):
@@ -25,6 +26,7 @@ def run_sets_infer(args):
     logger.info(f"Loading model from checkpoint: {args.checkpoint}")
     model = PertSetsPerturbationModel.load_from_checkpoint(args.checkpoint)
     model.eval()
+    cell_sentence_len = model.cell_sentence_len
     device = next(model.parameters()).device
 
     # Use model's config for batch prep
@@ -34,6 +36,19 @@ def run_sets_infer(args):
     # Load AnnData
     logger.info(f"Loading AnnData from: {args.adata}")
     adata = sc.read_h5ad(args.adata)
+
+    # Optionally filter by cell type
+    if args.celltype_col is not None and args.celltypes is not None:
+        celltypes = [ct.strip() for ct in args.celltypes.split(",")]
+        if args.celltype_col not in adata.obs:
+            raise ValueError(f"Column '{args.celltype_col}' not found in adata.obs.")
+        initial_n = adata.n_obs
+        adata = adata[adata.obs[args.celltype_col].isin(celltypes)].copy()
+        logger.info(f"Filtered AnnData to {adata.n_obs} cells of types {celltypes} (from {initial_n} cells)")
+    elif args.celltype_col is not None:
+        if args.celltype_col not in adata.obs:
+            raise ValueError(f"Column '{args.celltype_col}' not found in adata.obs.")
+        logger.info(f"No cell type filtering applied, but cell type column '{args.celltype_col}' is available.")
 
     # Get input features
     if args.embed_key in adata.obsm:
@@ -66,11 +81,10 @@ def run_sets_infer(args):
         "ctrl_cell_emb": X,
         "pert_emb": pert_tensor,
         "pert_name": pert_names.tolist(),
-        # "batch": torch.zeros((1, cell_sentence_len), device=device)
+        "batch": torch.zeros((1, cell_sentence_len), device=device)
     }
     # when do we need the batch num things
 
-    # Inference
     logger.info("Running inference...")
     with torch.no_grad():
         preds = model.forward(batch)
