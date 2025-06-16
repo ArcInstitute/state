@@ -46,7 +46,8 @@ MODEL_DIR = Path(
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
     # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
-    "/large_storage/ctc/userspace/rohankshah"
+    #"/large_storage/ctc/userspace/rohankshah"
+    "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered_cs32_pretrained/hepg2"
 )
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
@@ -54,13 +55,13 @@ DATA_PATH = Path(
 CELL_SET_LEN = 512   
 CONTROL_SAMPLES = 50 
 LAYER_IDX = 3
-FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_tahoe_llama_21_256" 
+FIG_DIR = Path(__file__).resolve().parent / "figures" / "replogle_llama_21_new_cs32_split" 
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load model directly from checkpoint
 #checkpoint_path = MODEL_DIR / "step=148000.ckpt"
-checkpoint_path = MODEL_DIR / "checkpoints" / "step=124000.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
-
+#checkpoint_path = MODEL_DIR / "checkpoints" / "step=124000.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "step=44000.ckpt"
 if not checkpoint_path.exists():
     # Try other common checkpoint names
     for ckpt_name in ["best.ckpt", "last.ckpt", "epoch=*.ckpt"]:
@@ -211,11 +212,14 @@ logger.info("Available cell types: %s", list(cell_type_counts.index))
 
 # Select the most abundant cell type
 celltype1 = cell_type_counts.index[0]
+celltype2 = cell_type_counts.index[1]
 logger.info(f"Selected cell type: {celltype1} ({cell_type_counts[celltype1]} available)")
 
 # Get control cells for this cell type
 cells_type1 = adata_full[(adata_full.obs["gene"] == control_pert) & 
                         (adata_full.obs["cell_type"] == celltype1)].copy()
+cells_type2 = adata_full[(adata_full.obs["gene"] == control_pert) & 
+                        (adata_full.obs["cell_type"] == celltype2)].copy()
 
 logger.info(f"Available cells - {celltype1}: {cells_type1.n_obs}")
 
@@ -228,14 +232,16 @@ logger.info(f"Model was trained with cell_sentence_len: {model.cell_sentence_len
 n_cells = cell_sentence_len
 total_cells = cell_sentence_len  # Use model's trained length
 
-if cells_type1.n_obs >= n_cells:
+if cells_type2.n_obs >= n_cells // 2:
     # Sample cells
-    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells, replace=False)
+    idx1 = np.random.choice(cells_type1.n_obs, size=n_cells // 2, replace=False)
+    idx2 = np.random.choice(cells_type2.n_obs, size=n_cells // 2, replace=False)
     
     sampled_type1 = cells_type1[idx1].copy()
+    sampled_type2 = cells_type2[idx2].copy()
     
     # Use single cell type batch
-    combined_batch = sampled_type1
+    combined_batch = ad.concat([sampled_type1, sampled_type2], axis=0)
     
     logger.info(f"Created combined batch with {combined_batch.n_obs} cells")
     logger.info(f"Cell type distribution: {combined_batch.obs['cell_type'].value_counts().to_dict()}")
@@ -333,20 +339,20 @@ for seq_len in sorted(attention_by_length.keys()):
         min_attn = attn_head.min()
         if len(attention_by_length[seq_len][h]) > 0:
             sns.heatmap(
-                attn_head, square=True, cbar=True, cmap='viridis', 
-                xticklabels=range(seq_len), yticklabels=range(seq_len),
+                attn_head, square=True, cbar=True, cmap='Greens', 
+                xticklabels=False, yticklabels=False,
                 vmin=min_attn, vmax=max_attn
             )
             plt.xlabel("Key position")
             plt.ylabel("Query position")
             n_matrices = len(attention_by_length[seq_len][h])
-            plt.title(f"Head {h} (n={n_matrices})", fontsize=10)
+            plt.title(f"Head {h}", fontsize=10)
         else:
             plt.text(0.5, 0.5, f"Head {h}\n(No Data)", ha='center', va='center', 
                     transform=plt.gca().transAxes, fontsize=12)
             plt.title(f"Head {h} (Empty)", fontsize=10)
     
-    plt.suptitle(f"Layer {LAYER_IDX} Attention - Sequence Length {seq_len}", fontsize=14)
+    plt.suptitle(f"Layer {LAYER_IDX} Attention - Cell Set Size {seq_len}", fontsize=14)
     plt.tight_layout()
     fig_path = FIG_DIR / f"no_split_layer{LAYER_IDX}_attention_length{seq_len}.png"
     plt.savefig(fig_path, dpi=300, bbox_inches='tight')
@@ -368,7 +374,7 @@ if len(attention_by_length) > 1:
                 stacked = torch.stack(attention_by_length[most_common_length][h])
                 avg_attn = stacked.mean(0).numpy()
                 sns.heatmap(
-                    avg_attn, square=True, cbar=True, cmap='viridis',
+                    avg_attn, square=True, cbar=True, cmap='Greens',
                     xticklabels=False, yticklabels=False, vmin=0, vmax=1
                 )
                 n_matrices = len(attention_by_length[most_common_length][h])

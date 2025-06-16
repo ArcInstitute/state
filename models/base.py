@@ -231,10 +231,15 @@ class PerturbationModel(ABC, LightningModule):
         ):  # we should be able to decode from hvg to all
             logger.info(f"DEBUG: Creating gene_decoder, checking conditions...")
             # Special case for replogle_vci_1.5.2_cs64 checkpoint compatibility
-            if embed_key in ["X_vci_1.5.2", "X_vci_1.5.2_4"]:
-                # hidden_dims = [1024, 1024, 512]  # Corrected to match checkpoint dimensions
-                # hidden_dims = [2048,1024,1024]
-                hidden_dims = [4096,2048,2048]
+            if "PBS" in self.control_pert:                                                                                                                                                                                        
+                hidden_dims = [2048, 1024, 1024]     
+                effective_gene_dim = 2000  # Override to match checkpoint final layer
+                checkpoint_latent_dim = 2058
+            elif embed_key in ["X_vci_1.5.2", "X_vci_1.5.2_4"]:
+                hidden_dims = [1024, 1024, 512]  # Corrected to match checkpoint dimensions
+                #hidden_dims = [2048,1024,1024]
+                # hidden_dims = [4096,2048,2048]
+
                 effective_gene_dim = 2000  # Override to match checkpoint final layer
                 checkpoint_latent_dim = 2058  # Override latent_dim to match checkpoint
                 logger.info("DEBUG: Using X_vci_1.5.2 checkpoint compatibility - hidden dims: %s, gene_dim: %s, latent_dim: %s", hidden_dims, effective_gene_dim, checkpoint_latent_dim)
