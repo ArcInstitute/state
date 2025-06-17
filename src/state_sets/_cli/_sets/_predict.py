@@ -373,9 +373,19 @@ def run_sets_predict(args: ap.ArgumentParser):
                 metric_configs={
                     "discrimination_score": {
                         "embed_key": data_module.embed_key,
+                    }
+                    if data_module.embed_key and data_module.embed_key != "X_hvg"
+                    else {},
+                    "pearson_edistance": {
+                        "embed_key": data_module.embed_key,
+                        "n_jobs": -1,  # set to all available cores
+                    }
+                    if data_module.embed_key and data_module.embed_key != "X_hvg"
+                    else {
+                        "n_jobs": -1,
                     },
                 }
                 if data_module.embed_key and data_module.embed_key != "X_hvg"
                 else {},
-                skip_metrics=["clustering_agreement", "pearson_edistance"],
+                skip_metrics=["clustering_agreement"],
             )
