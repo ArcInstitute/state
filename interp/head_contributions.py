@@ -29,7 +29,7 @@ MODEL_DIR = Path(
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_vci_1.5.2_cs64/fold1"
     # "/large_storage/ctc/userspace/rohankshah/preprint/replogle_gpt_31043724/hepg2"
     # "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered/hepg2"
-    "/large_storage/ctc/userspace/rohankshah"
+    "/large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered_cs32_pretrained/hepg2"
 )
 DATA_PATH = Path(
     "/large_storage/ctc/ML/state_sets/replogle/processed.h5"
@@ -40,7 +40,8 @@ FIG_DIR = Path(__file__).resolve().parent / "figures" / "head_contributions"
 FIG_DIR.mkdir(parents=True, exist_ok=True) 
 
 # Load model directly from checkpoint
-checkpoint_path = MODEL_DIR / "step=148000.ckpt"
+checkpoint_path = MODEL_DIR / "checkpoints" / "step=44000.ckpt"
+#checkpoint_path = MODEL_DIR / "step=148000.ckpt"
 # checkpoint_path = MODEL_DIR / "checkpoints" / "last.ckpt" # "step=step=104000-val_loss=val_loss=0.0472.ckpt"
 
 if not checkpoint_path.exists():
