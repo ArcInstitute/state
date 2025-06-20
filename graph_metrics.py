@@ -306,7 +306,7 @@ plt.ylabel('Vector Index')
 plt.subplot(3, 4, 6)
 mask_dist = ~np.eye(euclidean_dist_real_sample.shape[0], dtype=bool)
 off_diagonal_euclidean = euclidean_dist_real_sample[mask_dist]
-plt.hist(off_diagonal_euclidean, bins=50, alpha=0.7, edgecolor='black', color='orange')
+plt.hist(off_diagonal_euclidean, bins=50, alpha=0.7, edgecolor='black', color='green')
 plt.axvline(off_diagonal_euclidean.mean(), color='red', linestyle='--', 
             label=f'Mean: {off_diagonal_euclidean.mean():.3f}')
 plt.axvline(off_diagonal_euclidean.mean() + off_diagonal_euclidean.std(), color='blue', linestyle='-', 
@@ -329,7 +329,7 @@ plt.grid(True, alpha=0.3)
 # 8. Euclidean Distance Percentile Plot
 plt.subplot(3, 4, 8)
 percentile_values_euc = [np.percentile(off_diagonal_euclidean, p) for p in percentiles_range]
-plt.plot(percentiles_range, percentile_values_euc, linewidth=2, color='orange')
+plt.plot(percentiles_range, percentile_values_euc, linewidth=2, color='green')
 plt.xlabel('Percentile')
 plt.ylabel('Euclidean Distance')
 plt.title('Euclidean Distance\nPercentile Curve')
@@ -347,7 +347,7 @@ plt.ylabel('Vector Index')
 # 10. Distribution of Manhattan Distances (off-diagonal)
 plt.subplot(3, 4, 10)
 off_diagonal_manhattan = manhattan_dist_real_sample[mask_dist]
-plt.hist(off_diagonal_manhattan, bins=50, alpha=0.7, edgecolor='black', color='green')
+plt.hist(off_diagonal_manhattan, bins=50, alpha=0.7, edgecolor='black', color='orange')
 plt.axvline(off_diagonal_manhattan.mean(), color='red', linestyle='--', 
             label=f'Mean: {off_diagonal_manhattan.mean():.3f}')
 plt.axvline(off_diagonal_manhattan.mean() + off_diagonal_manhattan.std(), color='purple', linestyle='-', 
@@ -370,14 +370,14 @@ plt.grid(True, alpha=0.3)
 # 12. Manhattan Distance Percentile Plot
 plt.subplot(3, 4, 12)
 percentile_values_man = [np.percentile(off_diagonal_manhattan, p) for p in percentiles_range]
-plt.plot(percentiles_range, percentile_values_man, linewidth=2, color='green')
+plt.plot(percentiles_range, percentile_values_man, linewidth=2, color='orange')
 plt.xlabel('Percentile')
 plt.ylabel('Manhattan Distance')
 plt.title('Manhattan Distance\nPercentile Curve')
 plt.grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('similarity_distance_analysis.png', dpi=300, bbox_inches='tight')
+plt.savefig('similarity_distance_analysis.pdf', dpi=300, bbox_inches='tight')
 plt.show()
 
 # Create a comparative analysis figure
@@ -443,7 +443,7 @@ for i in range(3):
 plt.colorbar(im, ax=ax4, label='Correlation Coefficient')
 
 plt.tight_layout()
-plt.savefig('comparative_analysis.png', dpi=300, bbox_inches='tight')
+plt.savefig('comparative_analysis.pdf', dpi=300, bbox_inches='tight')
 plt.show()
 
 # Print summary statistics table
@@ -455,5 +455,5 @@ print(f"{'Euclidean Distance':<20} {off_diagonal_euclidean.mean():<12.6f} {off_d
 print(f"{'Manhattan Distance':<20} {off_diagonal_manhattan.mean():<12.6f} {off_diagonal_manhattan.std():<12.6f} {off_diagonal_manhattan.min():<12.6f} {off_diagonal_manhattan.max():<12.6f} {np.median(off_diagonal_manhattan):<12.6f}")
 
 print("\n=== VISUALIZATION FILES SAVED ===")
-print("- similarity_distance_analysis.png: Comprehensive analysis of all three metrics")
-print("- comparative_analysis.png: Side-by-side comparison of the metrics")
+print("- similarity_distance_analysis.pdf: Comprehensive analysis of all three metrics")
+print("- comparative_analysis.pdf: Side-by-side comparison of the metrics")
