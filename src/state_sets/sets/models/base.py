@@ -181,6 +181,7 @@ class PerturbationModel(ABC, LightningModule):
         self.dropout = dropout
         self.lr = lr
         self.loss_fn = get_loss_fn(loss_fn)
+        self._build_decoder()
 
     def transfer_batch_to_device(self, batch, device, dataloader_idx: int):
         return {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
@@ -205,7 +206,7 @@ class PerturbationModel(ABC, LightningModule):
         """
         if "decoder_cfg" in checkpoint["hyper_parameters"]:
             self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
-            self._build_decoder()
+            self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)
             logger.info(f"Loaded decoder from checkpoint decoder_cfg: {self.decoder_cfg}")
         else:
             # Only fall back to old logic if no decoder_cfg was saved
