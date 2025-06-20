@@ -2,6 +2,15 @@ wandb_track: false
 weight_decay: 0.0005
 batch_size: 64
 lr: 1e-4
+gene_decoder_lr: 1e-5
+scheduler_type: None
+scheduler_step_size: 50
+scheduler_gamma: 0.1
+scheduler_T_max: 100
+scheduler_patience: 10
+scheduler_factor: 0.5
+scheduler_monitor: val_loss
+warmup_epochs: 0
 max_steps: 250000
 train_seed: 42
 val_freq: 5000
