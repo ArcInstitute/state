@@ -182,42 +182,6 @@ class PerturbationModel(ABC, LightningModule):
         self.lr = lr
         self.loss_fn = get_loss_fn(loss_fn)
 
-        # this will either decode to hvg space if output space is a gene,
-        # or to transcriptome space if output space is all. done this way to maintain
-        # backwards compatibility with the old models
-        self.gene_decoder = None
-        gene_dim = hvg_dim if output_space == "gene" else gene_dim
-        if (embed_key and embed_key != "X_hvg" and output_space == "gene") or (
-            embed_key and output_space == "all"
-        ):  # we should be able to decode from hvg to all
-            if gene_dim > 10000:
-                hidden_dims = [1024, 512, 256]
-            else:
-                if "DMSO_TF" in self.control_pert:
-                    if self.residual_decoder:
-                        hidden_dims = [2058, 2058, 2058, 2058, 2058]
-                    else:
-                        hidden_dims = [4096, 2048, 2048]
-                elif "PBS" in self.control_pert:
-                    hidden_dims = [2048, 1024, 1024]
-                else:
-                    if "DMSO_TF" in self.control_pert:
-                        if self.residual_decoder:
-                            hidden_dims = [2058, 2058, 2058, 2058, 2058]
-                        else:
-                            hidden_dims = [4096, 2048, 2048]
-                    else:
-                        hidden_dims = [1024, 1024, 512]  # make this config
-
-                self.gene_decoder = LatentToGeneDecoder(
-                    latent_dim=self.output_dim,
-                    gene_dim=gene_dim,
-                    hidden_dims=hidden_dims,
-                    dropout=dropout,
-                    residual_decoder=self.residual_decoder,
-                )
-                logger.info(f"Initialized gene decoder for embedding {embed_key} to gene space")
-
     def transfer_batch_to_device(self, batch, device, dataloader_idx: int):
         return {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
 
