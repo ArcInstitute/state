@@ -241,38 +241,41 @@ class PerturbationModel(ABC, LightningModule):
         """
         if "decoder_cfg" in checkpoint["hyper_parameters"]:
             self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
+            self._build_decoder()
+            logger.info(f"Loaded decoder from checkpoint decoder_cfg: {self.decoder_cfg}")
         else:
-            self.decoder_cfg = None
-        self._build_decoder() 
-        logger.info(f"DEBUG: output_space: {self.output_space}")
-        if self.gene_decoder is None:
-            gene_dim = self.hvg_dim if self.output_space == "gene" else self.gene_dim
-            logger.info(f"DEBUG: gene_dim: {gene_dim}")
-            if (self.embed_key and self.embed_key != "X_hvg" and self.output_space == "gene") or (
-                self.embed_key and self.output_space == "all"
-            ):  # we should be able to decode from hvg to all
-                logger.info(f"DEBUG: Creating gene_decoder, checking conditions...")
-                if gene_dim > 10000:
-                    hidden_dims = [1024, 512, 256]
-                elif self.embed_key in ["X_vci_1.5.2", "X_vci_1.5.2_4"]:
-                    hidden_dims = [1024, 1024, 512]
-                else:
-                    if "DMSO_TF" in self.control_pert:
-                        if self.residual_decoder:
-                            hidden_dims = [2058, 2058, 2058, 2058, 2058]
-                        else:
-                            hidden_dims = [4096, 2048, 2048]
+            # Only fall back to old logic if no decoder_cfg was saved
+            self.decoder_cfg = None 
+            self._build_decoder()
+            logger.info(f"DEBUG: output_space: {self.output_space}")
+            if self.gene_decoder is None:
+                gene_dim = self.hvg_dim if self.output_space == "gene" else self.gene_dim
+                logger.info(f"DEBUG: gene_dim: {gene_dim}")
+                if (self.embed_key and self.embed_key != "X_hvg" and self.output_space == "gene") or (
+                    self.embed_key and self.output_space == "all"
+                ):  # we should be able to decode from hvg to all
+                    logger.info(f"DEBUG: Creating gene_decoder, checking conditions...")
+                    if gene_dim > 10000:
+                        hidden_dims = [1024, 512, 256]
+                    elif self.embed_key in ["X_vci_1.5.2", "X_vci_1.5.2_4"]:
+                        hidden_dims = [1024, 1024, 512]
                     else:
-                        hidden_dims = [1024, 1024, 512]  # make this config
+                        if "DMSO_TF" in self.control_pert:
+                            if self.residual_decoder:
+                                hidden_dims = [2058, 2058, 2058, 2058, 2058]
+                            else:
+                                hidden_dims = [4096, 2048, 2048]
+                        else:
+                            hidden_dims = [1024, 1024, 512]  # make this config
 
-                self.gene_decoder = LatentToGeneDecoder(
-                    latent_dim=self.output_dim,
-                    gene_dim=gene_dim,
-                    hidden_dims=hidden_dims,
-                    dropout=self.dropout,
-                    residual_decoder=self.residual_decoder,
-                )
-                logger.info(f"Initialized gene decoder for embedding {self.embed_key} to gene space")
+                    self.gene_decoder = LatentToGeneDecoder(
+                        latent_dim=self.output_dim,
+                        gene_dim=gene_dim,
+                        hidden_dims=hidden_dims,
+                        dropout=self.dropout,
+                        residual_decoder=self.residual_decoder,
+                    )
+                    logger.info(f"Initialized gene decoder for embedding {self.embed_key} to gene space")
 
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
