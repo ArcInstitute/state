@@ -117,8 +117,11 @@ def run_sets_train(cfg: DictConfig):
     data_module.setup(stage="fit")
     
     var_dims   = data_module.get_var_dims()          # {"gene_dim": …, "hvg_dim": …}
-    gene_dim   = var_dims.get("gene_dim", 5000)      # fallback if key missing
-    latent_dim = cfg["model"]["kwargs"]["output_dim"]   # same as model.output_dim
+    if cfg["data"]["kwargs"]["output_space"] == "gene":
+        gene_dim   = var_dims.get("hvg_dim", 2000)      # fallback if key missing
+    else:
+        gene_dim   = var_dims.get("gene_dim", 2000)      # fallback if key missing
+    latent_dim = var_dims["output_dim"]   # same as model.output_dim
     hidden_dims = cfg["model"]["kwargs"].get("decoder_hidden_dims", [1024, 1024, 512])
 
     decoder_cfg = dict(
