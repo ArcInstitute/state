@@ -161,6 +161,8 @@ class PerturbationModel(ABC, LightningModule):
         self.output_dim = output_dim
         self.pert_dim = pert_dim
         self.batch_dim = batch_dim
+        self.gene_dim = gene_dim
+        self.hvg_dim = hvg_dim
 
         if kwargs.get("batch_encoder", False):
             self.batch_dim = batch_dim
@@ -237,8 +239,40 @@ class PerturbationModel(ABC, LightningModule):
         Re-create the decoder using the exact hyper-parameters saved in the ckpt,
         so that parameter shapes match and load_state_dict succeeds.
         """
-        self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
+        if "decoder_cfg" in checkpoint["hyper_parameters"]:
+            self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
+        else:
+            self.decoder_cfg = None
         self._build_decoder() 
+        logger.info(f"DEBUG: output_space: {self.output_space}")
+        if self.gene_decoder is None:
+            gene_dim = self.hvg_dim if self.output_space == "gene" else self.gene_dim
+            logger.info(f"DEBUG: gene_dim: {gene_dim}")
+            if (self.embed_key and self.embed_key != "X_hvg" and self.output_space == "gene") or (
+                self.embed_key and self.output_space == "all"
+            ):  # we should be able to decode from hvg to all
+                logger.info(f"DEBUG: Creating gene_decoder, checking conditions...")
+                if gene_dim > 10000:
+                    hidden_dims = [1024, 512, 256]
+                elif self.embed_key in ["X_vci_1.5.2", "X_vci_1.5.2_4"]:
+                    hidden_dims = [1024, 1024, 512]
+                else:
+                    if "DMSO_TF" in self.control_pert:
+                        if self.residual_decoder:
+                            hidden_dims = [2058, 2058, 2058, 2058, 2058]
+                        else:
+                            hidden_dims = [4096, 2048, 2048]
+                    else:
+                        hidden_dims = [1024, 1024, 512]  # make this config
+
+                self.gene_decoder = LatentToGeneDecoder(
+                    latent_dim=self.output_dim,
+                    gene_dim=gene_dim,
+                    hidden_dims=hidden_dims,
+                    dropout=self.dropout,
+                    residual_decoder=self.residual_decoder,
+                )
+                logger.info(f"Initialized gene decoder for embedding {self.embed_key} to gene space")
 
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
