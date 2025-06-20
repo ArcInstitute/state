@@ -10,11 +10,6 @@ import yaml
 from ...sets.models.pert_sets import PertSetsPerturbationModel
 from cell_load.data_modules import PerturbationDataModule
 
-# state-sets sets infer --output_dir /home/aadduri/state-sets/test/ --checkpoint last.ckpt --adata /home/aadduri/state-sets/test/adata.h5ad --pert_col gene 
-# state-sets sets infer --output_dir /home/dhruvgautam/state-sets/test/ --checkpoint /large_storage/ctc/userspace/aadduri/preprint/replogle_llama_21712320_filtered_cs32_pretrained/hepg2/checkpoints/step=44000.ckpt --adata /large_storage/ctc/ML/state_sets/replogle/processed.h5 --pert_col gene 
-
-# state-sets sets infer --output /home/dhruvgautam/state-sets/test/ --output_dir /large_storage/ctc/userspace/aadduri/preprint/replogle_state_proper_cs32_sm/hepg2 --checkpoint /large_storage/ctc/userspace/aadduri/preprint/replogle_state_proper_cs32_sm/hepg2/checkpoints/step=48000.ckpt --adata /large_storage/ctc/ML/state_sets/replogle/processed.h5 --pert_col gene --embed_key X_vci_1.5.2_4
-
 def add_arguments_infer(parser: argparse.ArgumentParser):
     parser.add_argument("--checkpoint", type=str, required=True, help="Path to model checkpoint (.ckpt)")
     parser.add_argument("--adata", type=str, required=True, help="Path to input AnnData file (.h5ad)")

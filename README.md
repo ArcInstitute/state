@@ -60,6 +60,11 @@ An example evaluation command for a sets model:
 state-sets sets predict --output_dir /home/aadduri/state-sets/test/ --checkpoint last.ckpt
 ```
 
+An example inference command for a sets model:
+```bash
+state-sets sets infer --output /home/dhruvgautam/state-sets/test/ --output_dir /path/to/model/ --checkpoint /path/to/model/checkpoints/last.ckpt --adata /path/to/anndata/processed.h5 --pert_col gene --embed_key X_hvg
+```
+
 The toml files should be setup to define perturbation splits, if running fewshot experiments. Here are some examples:
 
 ```toml
