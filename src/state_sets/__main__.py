@@ -6,6 +6,7 @@ from ._cli import (
     add_arguments_state,
     run_sets_predict,
     run_sets_train,
+    run_sets_infer,
     run_state_embed,
     run_state_train,
 )
@@ -60,6 +61,9 @@ def main():
                 case "predict":
                     # For now, predict uses argparse and not hydra
                     run_sets_predict(args)
+                case "infer":
+                    # Run inference using argparse, similar to predict
+                    run_sets_infer(args)
 
 
 if __name__ == "__main__":

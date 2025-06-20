@@ -358,6 +358,8 @@ class PertSetsPerturbationModel(PerturbationModel):
 
         # apply relu if specified and we output to HVG space
         is_gene_space = self.hparams["embed_key"] == "X_hvg" or self.hparams["embed_key"] is None
+        # logger.info(f"DEBUG: is_gene_space: {is_gene_space}")
+        # logger.info(f"DEBUG: self.gene_decoder: {self.gene_decoder}")
         if is_gene_space or self.gene_decoder is None:
             out_pred = self.relu(out_pred)
 
