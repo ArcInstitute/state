@@ -210,7 +210,7 @@ class PerturbationModel(ABC, LightningModule):
             logger.info(f"Loaded decoder from checkpoint decoder_cfg: {self.decoder_cfg}")
         else:
             # Only fall back to old logic if no decoder_cfg was saved
-            self.decoder_cfg = None 
+            self.decoder_cfg = None
             self._build_decoder()
             logger.info(f"DEBUG: output_space: {self.output_space}")
             if self.gene_decoder is None:
@@ -241,7 +241,6 @@ class PerturbationModel(ABC, LightningModule):
                         residual_decoder=self.residual_decoder,
                     )
                     logger.info(f"Initialized gene decoder for embedding {self.embed_key} to gene space")
-
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step logic for both main model and decoder."""

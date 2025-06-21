@@ -109,7 +109,6 @@ def run_sets_train(cfg: DictConfig):
         batch_size=cfg["training"]["batch_size"],
         cell_sentence_len=sentence_len,
     )
-    
 
     with open(join(run_output_dir, "data_module.torch"), "wb") as f:
         # TODO-Abhi: only save necessary data
@@ -119,34 +118,21 @@ def run_sets_train(cfg: DictConfig):
     dl = data_module.train_dataloader()
     print("num_workers:", dl.num_workers)
     print("batch size:", dl.batch_size)
-    # # Test loading a single batch to identify potential data loading issues
-    # try:
-    #     print("DEBUG: Testing data loading with one batch...")
-    #     train_loader = data_module.train_dataloader()
-    #     first_batch = next(iter(train_loader))
-    #     print(f"DEBUG: Successfully loaded first batch. Batch keys: {list(first_batch.keys()) if isinstance(first_batch, dict) else 'Not a dict'}")
-    #     if isinstance(first_batch, dict):
-    #         for key, value in first_batch.items():
-    #             if hasattr(value, 'shape'):
-    #                 print(f"DEBUG: {key} shape: {value.shape}")
-    # except Exception as e:
-    #     print(f"DEBUG: Error loading first batch: {e}")
-    #     print("DEBUG: This might be the source of the hanging issue")
-    
-    var_dims   = data_module.get_var_dims()          # {"gene_dim": …, "hvg_dim": …}
+
+    var_dims = data_module.get_var_dims()  # {"gene_dim": …, "hvg_dim": …}
     if cfg["data"]["kwargs"]["output_space"] == "gene":
-        gene_dim   = var_dims.get("hvg_dim", 2000)      # fallback if key missing
+        gene_dim = var_dims.get("hvg_dim", 2000)  # fallback if key missing
     else:
-        gene_dim   = var_dims.get("gene_dim", 2000)      # fallback if key missing
-    latent_dim = var_dims["output_dim"]   # same as model.output_dim
+        gene_dim = var_dims.get("gene_dim", 2000)  # fallback if key missing
+    latent_dim = var_dims["output_dim"]  # same as model.output_dim
     hidden_dims = cfg["model"]["kwargs"].get("decoder_hidden_dims", [1024, 1024, 512])
 
     decoder_cfg = dict(
-        latent_dim       = latent_dim,
-        gene_dim         = gene_dim,
-        hidden_dims      = hidden_dims,
-        dropout          = cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
-        residual_decoder = cfg["model"]["kwargs"].get("residual_decoder", False),
+        latent_dim=latent_dim,
+        gene_dim=gene_dim,
+        hidden_dims=hidden_dims,
+        dropout=cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
+        residual_decoder=cfg["model"]["kwargs"].get("residual_decoder", False),
     )
 
     # tuck it into the kwargs that will reach the LightningModule
@@ -166,9 +152,9 @@ def run_sets_train(cfg: DictConfig):
         data_module.get_var_dims(),
     )
 
-    print(f"DEBUG: Model created. Estimated params size: {sum(p.numel() * p.element_size() for p in model.parameters()) / 1024**3:.2f} GB")
-    # print(f"DEBUG: Num workers: {data_module.train_dataloader().num_workers}")
-    # Set up logging
+    print(
+        f"Model created. Estimated params size: {sum(p.numel() * p.element_size() for p in model.parameters()) / 1024**3:.2f} GB"
+    )
     loggers = get_loggers(
         output_dir=cfg["output_dir"],
         name=cfg["name"],
@@ -236,9 +222,9 @@ def run_sets_train(cfg: DictConfig):
         del trainer_kwargs["max_steps"]
 
     # Build trainer
-    print(f"DEBUG: Building trainer with kwargs: {trainer_kwargs}")
+    print(f"Building trainer with kwargs: {trainer_kwargs}")
     trainer = pl.Trainer(**trainer_kwargs)
-    print("DEBUG: Trainer built successfully")
+    print("Trainer built successfully")
 
     # Load checkpoint if exists
     checkpoint_path = join(ckpt_callbacks[0].dirpath, "last.ckpt")
@@ -247,9 +233,9 @@ def run_sets_train(cfg: DictConfig):
     else:
         logging.info(f"!! Resuming training from {checkpoint_path} !!")
 
-    print(f"DEBUG: Model device: {next(model.parameters()).device}")
-    print(f"DEBUG: CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-    print(f"DEBUG: CUDA memory reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+    print(f"Model device: {next(model.parameters()).device}")
+    print(f"CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    print(f"CUDA memory reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
 
     logger.info("Starting trainer fit.")
 
@@ -257,7 +243,7 @@ def run_sets_train(cfg: DictConfig):
     # this is mainly used for pretrain -> finetune workflows
     manual_init = cfg["model"]["kwargs"].get("init_from", None)
     if checkpoint_path is None and manual_init is not None:
-        print(f"DEBUG: Loading manual checkpoint from {manual_init}")
+        print(f"Loading manual checkpoint from {manual_init}")
         checkpoint_path = manual_init
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -298,7 +284,7 @@ def run_sets_train(cfg: DictConfig):
 
         # Load the filtered state dict
         model.load_state_dict(filtered_state, strict=False)
-        print("DEBUG: About to call trainer.fit() with manual checkpoint...")
+        print("About to call trainer.fit() with manual checkpoint...")
 
         # Train - for clarity we pass None
         trainer.fit(
@@ -306,18 +292,18 @@ def run_sets_train(cfg: DictConfig):
             datamodule=data_module,
             ckpt_path=None,
         )
-        print("DEBUG: trainer.fit() completed with manual checkpoint")
+        print("trainer.fit() completed with manual checkpoint")
     else:
-        print(f"DEBUG: About to call trainer.fit() with checkpoint_path={checkpoint_path}")
+        print(f"About to call trainer.fit() with checkpoint_path={checkpoint_path}")
         # Train
         trainer.fit(
             model,
             datamodule=data_module,
             ckpt_path=checkpoint_path,
         )
-        print("DEBUG: trainer.fit() completed")
+        print("trainer.fit() completed")
 
-    print("DEBUG: Training completed, saving final checkpoint...")
+    print("Training completed, saving final checkpoint...")
 
     # at this point if checkpoint_path does not exist, manually create one
     checkpoint_path = join(ckpt_callbacks[0].dirpath, "final.ckpt")
