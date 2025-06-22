@@ -96,7 +96,7 @@ def run_sets_infer(args):
     pert_tensor = torch.zeros((len(pert_names), pert_dim), device="cpu")  # Keep on CPU initially
     logger.info(f"Perturbation tensor shape: {pert_tensor.shape}")
 
-    # Load perturbation mapping from torch file    
+    # Load perturbation mapping from torch file
     pert_onehot_map_path = os.path.join(args.output_dir, "pert_onehot_map.pt")
     pert_onehot_map = torch.load(pert_onehot_map_path, weights_only=False)
 
