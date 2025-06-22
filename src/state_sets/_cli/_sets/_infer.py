@@ -23,7 +23,7 @@ def add_arguments_infer(parser: argparse.ArgumentParser):
         "--output_dir",
         type=str,
         required=True,
-        help="Path to the output_dir containing the config.yaml file that was saved during training.",
+        help="Path to the output_dir containing the config.yaml file and the pert_onehot_map.pt file that was saved during training.",
     )
     parser.add_argument(
         "--celltype_col", type=str, default=None, help="Column in adata.obs for cell type labels (optional)"
