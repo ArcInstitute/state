@@ -11,7 +11,7 @@ def build_mlp(
     hidden_dim: int,
     n_layers: int,
     dropout: float = 0.0,
-    activation: nn.Module = nn.ReLU,  # default to nn.ReLU class
+    activation: nn.Module = nn.ReLU,  
 ) -> nn.Sequential:
     """
     Build an MLP of `n_layers` from `in_dim` to `out_dim`.
@@ -24,18 +24,15 @@ def build_mlp(
     if n_layers == 1:
         layers.append(nn.Linear(in_dim, out_dim))
     else:
-        # First layer
         layers.append(nn.Linear(in_dim, hidden_dim))
-        layers.append(activation())  # instantiate the class
+        layers.append(activation())
         layers.append(nn.Dropout(dropout))
 
-        # Intermediate layers
         for _ in range(n_layers - 2):
             layers.append(nn.Linear(hidden_dim, hidden_dim))
-            layers.append(activation())  # instantiate again
+            layers.append(activation())
             layers.append(nn.Dropout(dropout))
 
-        # Final layer
         layers.append(nn.Linear(hidden_dim, out_dim))
 
     return nn.Sequential(*layers)
@@ -64,7 +61,6 @@ def get_activation_class(name: str) -> nn.Module:
         return nn.SELU
     elif name == "gelu":
         return nn.GELU
-    # Add more as needed...
     else:
         raise ValueError(f"Unsupported activation function: {name}")
 
@@ -85,7 +81,6 @@ def get_loss_fn(loss: Union[str, nn.Module]) -> nn.Module:
 
     if loss == "mse":
         return nn.MSELoss()
-    # Add more as needed...
     else:
         raise ValueError(f"Unsupported loss function: {loss}")
 
@@ -95,7 +90,6 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
         config = GPT2Config(**kwargs)
         model = GPT2BidirectionalModel(config)
 
-        # Zero out position embeddings and freeze them
         model.wpe.weight.requires_grad = False
         model.wte.weight.requires_grad = False
         model.wpe.weight.zero_()
@@ -128,11 +122,8 @@ class NoRoPE(nn.Module):
         self.hidden_size = hidden_size
 
     def forward(self, hidden_states: torch.Tensor, position_ids: torch.LongTensor):
-        # hidden_states: (batch_size, seq_len, hidden_dim)
         batch_size, seq_len, hidden_dim = hidden_states.shape
 
-        # Create cos = ones, sin = zeros
-        #   shape --> (batch_size, seq_len, head_dim)
         cos = hidden_states.new_ones(batch_size, seq_len, self.num_heads)
         sin = hidden_states.new_zeros(batch_size, seq_len, self.num_heads)
         return cos, sin
@@ -160,9 +151,9 @@ class LlamaBidirectionalModel(LlamaModel):
         past_key_values,
         output_attentions: bool = False,
     ):
-        # By returning None, we disable any causal‐(look‐ahead) masking.
+        # By returning None, we disable any causal (look-ahead) masking.
         # The only mask that remains is whatever “attention_mask” the user has passed
-        # (e.g. padding‐mask), which will be handled by Flash/SDPA internally as non‐causal.
+        # (e.g. padding mask), which will be handled by Flash/SDPA internally as non-causal.
         return None
 
     def forward(
@@ -197,17 +188,14 @@ class LlamaBidirectionalModel(LlamaModel):
 class GPT2BidirectionalModel(GPT2Model):
     """
     A thin wrapper around GPT2Model that disables the causal (unidirectional) mask,
-    allowing full bidirectional attention—and prints the internal bias mask each forward pass.
+    allowing full bidirectional attention.
     """
 
     def __init__(self, config: GPT2Config):
-        # Mark as not‐a‐decoder (for downstream utilities).
         config.is_decoder = False
         super().__init__(config)
 
-        # Overwrite each attention's bias so no triangular masking occurs.
         for block in self.h:
-            # block.attn.bias is a bool‐tensor of shape (1, 1, max_pos, max_pos).
             block.attn.bias.data.fill_(True)
             block.attn.is_causal = False
 
@@ -241,34 +229,13 @@ class GPT2BidirectionalModel(GPT2Model):
         return_dict=None,
         **kwargs,
     ):
-        # Determine sequence length for printing the relevant slice of bias
-        if input_ids is not None:
-            seq_len = input_ids.size(1)
-        elif inputs_embeds is not None:
-            seq_len = inputs_embeds.size(1)
-        else:
-            seq_len = None  # If neither is given, we can’t infer seq_len
 
-        if seq_len is not None:
-            # Print the (1, 1, seq_len, seq_len) slice of the bias for the first block
-            bias_mask = self.h[0].attn.bias[0, 0, :seq_len, :seq_len]
-        #     print("Bias mask (block 0) slice [0,0,:seq_len,:seq_len]:")
-        #     print(bias_mask)
-        # else:
-        #     print("Cannot infer sequence length to print bias mask.")
-
-        # If a 2D attention_mask was provided, print its expanded 4D version:
         if attention_mask is not None:
-            # Expand to (batch_size, 1, seq_len, seq_len)
             B, S = attention_mask.size()
             expanded = attention_mask.unsqueeze(1).unsqueeze(2).expand(B, 1, S, S)
-            # Convert to float mask (1→0.0, 0→-inf) just like GPT2 does internally
             neg_inf = torch.finfo(self.dtype).min
             float_mask = (1.0 - expanded.to(self.dtype)) * neg_inf
-            # print(f"Expanded attention_mask (shape {expanded.shape}) → float mask:")
-            # print(float_mask)
 
-        # Finally, call the parent forward method
         return super().forward(
             input_ids=input_ids,
             past_key_values=past_key_values,

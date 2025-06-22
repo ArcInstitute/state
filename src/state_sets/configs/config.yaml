@@ -4,7 +4,7 @@ defaults:
   - data: perturbation
   - model: pertsets
   - training: default
-  - wandb: abhinav # Change this as needed
+  - wandb: dhruv-gautam # Change this as needed
   - _self_
   
 

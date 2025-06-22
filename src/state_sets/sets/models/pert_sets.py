@@ -1,7 +1,6 @@
 import logging
 from typing import Dict, Optional
 
-import anndata as ad
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,8 +9,6 @@ from geomloss import SamplesLoss
 from typing import Tuple
 
 from .base import PerturbationModel
-from .decoders import FinetuneVCICountsDecoder
-from .decoders_nb import NBDecoder, nb_nll
 from .utils import build_mlp, get_activation_class, get_transformer_backbone
 
 
@@ -154,7 +151,7 @@ class PertSetsPerturbationModel(PerturbationModel):
         else:
             raise ValueError(f"Unknown loss function: {loss_name}")
 
-        # Build the underlying neural OT network
+        # Build the underlying transition network
         self._build_networks()
 
         # Add an optional encoder that introduces a batch variable
@@ -189,45 +186,6 @@ class PertSetsPerturbationModel(PerturbationModel):
             for module in modules_to_freeze:
                 for param in module.parameters():
                     param.requires_grad = False
-
-        if kwargs.get("nb_decoder", False):
-            self.gene_decoder = NBDecoder(
-                latent_dim=self.output_dim + (self.batch_dim or 0),
-                gene_dim=gene_dim,
-                hidden_dims=[512, 512, 512],
-                dropout=self.dropout,
-            )
-
-        control_pert = kwargs.get("control_pert", "non-targeting")
-        if kwargs.get("finetune_vci_decoder", False):  # TODO: This will go very soon
-            gene_names = []
-
-            if output_space == "gene":
-                # hvg's but for which dataset?
-                if "DMSO_TF" in control_pert:
-                    gene_names = np.load(
-                        "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_to_2k_names.npy", allow_pickle=True
-                    )
-                elif "non-targeting" in control_pert:
-                    temp = ad.read_h5ad("/large_storage/ctc/userspace/aadduri/datasets/hvg/replogle/jurkat.h5")
-                    # gene_names = temp.var.index.values
-            else:
-                assert output_space == "all"
-                if "DMSO_TF" in control_pert:
-                    gene_names = np.load(
-                        "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_names.npy", allow_pickle=True
-                    )
-                elif "non-targeting" in control_pert:
-                    # temp = ad.read_h5ad('/scratch/ctc/ML/vci/paper_replogle/jurkat.h5')
-                    # gene_names = temp.var.index.values
-                    temp = ad.read_h5ad("/large_storage/ctc/userspace/aadduri/cross_dataset/replogle/jurkat.h5")
-                    gene_names = temp.var.index.values
-
-            self.gene_decoder = FinetuneVCICountsDecoder(
-                genes=gene_names,
-                # latent_dim=self.output_dim + (self.batch_dim or 0),
-            )
-
         print(self)
 
     def _build_networks(self):
@@ -358,6 +316,8 @@ class PertSetsPerturbationModel(PerturbationModel):
 
         # apply relu if specified and we output to HVG space
         is_gene_space = self.hparams["embed_key"] == "X_hvg" or self.hparams["embed_key"] is None
+        # logger.info(f"DEBUG: is_gene_space: {is_gene_space}")
+        # logger.info(f"DEBUG: self.gene_decoder: {self.gene_decoder}")
         if is_gene_space or self.gene_decoder is None:
             out_pred = self.relu(out_pred)
 
@@ -406,18 +366,13 @@ class PertSetsPerturbationModel(PerturbationModel):
             else:
                 latent_preds = pred
 
-            if isinstance(self.gene_decoder, NBDecoder):
-                mu, theta = self.gene_decoder(latent_preds)
-                gene_targets = batch["pert_cell_counts"].reshape_as(mu)
-                decoder_loss = nb_nll(gene_targets, mu, theta)
+            pert_cell_counts_preds = self.gene_decoder(latent_preds)
+            if padded:
+                gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_decoder.gene_dim())
             else:
-                pert_cell_counts_preds = self.gene_decoder(latent_preds)
-                if padded:
-                    gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_decoder.gene_dim())
-                else:
-                    gene_targets = gene_targets.reshape(1, -1, self.gene_decoder.gene_dim())
+                gene_targets = gene_targets.reshape(1, -1, self.gene_decoder.gene_dim())
 
-                decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
+            decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
 
             # Log decoder loss
             self.log("decoder_loss", decoder_loss)
@@ -482,17 +437,11 @@ class PertSetsPerturbationModel(PerturbationModel):
             latent_preds = pred
 
             # Train decoder to map latent predictions to gene space
-            if isinstance(self.gene_decoder, NBDecoder):
-                mu, theta = self.gene_decoder(latent_preds)
-                gene_targets = batch["pert_cell_counts"].reshape_as(mu)
-                decoder_loss = nb_nll(gene_targets, mu, theta)
-            else:
-                # Get decoder predictions
-                pert_cell_counts_preds = self.gene_decoder(latent_preds).reshape(
-                    -1, self.cell_sentence_len, self.gene_dim
-                )
-                gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
-                decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
+            pert_cell_counts_preds = self.gene_decoder(latent_preds).reshape(
+                -1, self.cell_sentence_len, self.gene_dim
+            )
+            gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
+            decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
 
             # Log the validation metric
             self.log("val/decoder_loss", decoder_loss)
@@ -567,11 +516,7 @@ class PertSetsPerturbationModel(PerturbationModel):
             output_dict["confidence_pred"] = confidence_pred
 
         if self.gene_decoder is not None:
-            if isinstance(self.gene_decoder, NBDecoder):
-                mu, _ = self.gene_decoder(latent_output)
-                pert_cell_counts_preds = mu
-            else:
-                pert_cell_counts_preds = self.gene_decoder(latent_output)
+            pert_cell_counts_preds = self.gene_decoder(latent_output)
 
             output_dict["pert_cell_counts_preds"] = pert_cell_counts_preds
 
