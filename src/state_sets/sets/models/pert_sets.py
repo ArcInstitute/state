@@ -9,7 +9,6 @@ from geomloss import SamplesLoss
 from typing import Tuple
 
 from .base import PerturbationModel
-from .decoders_nb import NBDecoder, nb_nll
 from .utils import build_mlp, get_activation_class, get_transformer_backbone
 
 
@@ -187,14 +186,6 @@ class PertSetsPerturbationModel(PerturbationModel):
             for module in modules_to_freeze:
                 for param in module.parameters():
                     param.requires_grad = False
-
-        if kwargs.get("nb_decoder", False):
-            self.gene_decoder = NBDecoder(
-                latent_dim=self.output_dim + (self.batch_dim or 0),
-                gene_dim=gene_dim,
-                hidden_dims=[512, 512, 512],
-                dropout=self.dropout,
-            )
         print(self)
 
     def _build_networks(self):
@@ -375,18 +366,13 @@ class PertSetsPerturbationModel(PerturbationModel):
             else:
                 latent_preds = pred
 
-            if isinstance(self.gene_decoder, NBDecoder):
-                mu, theta = self.gene_decoder(latent_preds)
-                gene_targets = batch["pert_cell_counts"].reshape_as(mu)
-                decoder_loss = nb_nll(gene_targets, mu, theta)
+            pert_cell_counts_preds = self.gene_decoder(latent_preds)
+            if padded:
+                gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_decoder.gene_dim())
             else:
-                pert_cell_counts_preds = self.gene_decoder(latent_preds)
-                if padded:
-                    gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_decoder.gene_dim())
-                else:
-                    gene_targets = gene_targets.reshape(1, -1, self.gene_decoder.gene_dim())
+                gene_targets = gene_targets.reshape(1, -1, self.gene_decoder.gene_dim())
 
-                decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
+            decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
 
             # Log decoder loss
             self.log("decoder_loss", decoder_loss)
@@ -451,17 +437,11 @@ class PertSetsPerturbationModel(PerturbationModel):
             latent_preds = pred
 
             # Train decoder to map latent predictions to gene space
-            if isinstance(self.gene_decoder, NBDecoder):
-                mu, theta = self.gene_decoder(latent_preds)
-                gene_targets = batch["pert_cell_counts"].reshape_as(mu)
-                decoder_loss = nb_nll(gene_targets, mu, theta)
-            else:
-                # Get decoder predictions
-                pert_cell_counts_preds = self.gene_decoder(latent_preds).reshape(
-                    -1, self.cell_sentence_len, self.gene_dim
-                )
-                gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
-                decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
+            pert_cell_counts_preds = self.gene_decoder(latent_preds).reshape(
+                -1, self.cell_sentence_len, self.gene_dim
+            )
+            gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
+            decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
 
             # Log the validation metric
             self.log("val/decoder_loss", decoder_loss)
@@ -536,11 +516,7 @@ class PertSetsPerturbationModel(PerturbationModel):
             output_dict["confidence_pred"] = confidence_pred
 
         if self.gene_decoder is not None:
-            if isinstance(self.gene_decoder, NBDecoder):
-                mu, _ = self.gene_decoder(latent_output)
-                pert_cell_counts_preds = mu
-            else:
-                pert_cell_counts_preds = self.gene_decoder(latent_output)
+            pert_cell_counts_preds = self.gene_decoder(latent_output)
 
             output_dict["pert_cell_counts_preds"] = pert_cell_counts_preds
 
