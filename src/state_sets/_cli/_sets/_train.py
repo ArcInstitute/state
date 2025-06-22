@@ -11,6 +11,7 @@ def add_arguments_train(parser: ap.ArgumentParser):
 def run_sets_train(cfg: DictConfig):
     import json
     import os
+    import pickle
     from pathlib import Path
     import shutil
     from os.path import join, exists
@@ -137,6 +138,20 @@ def run_sets_train(cfg: DictConfig):
 
     # tuck it into the kwargs that will reach the LightningModule
     cfg["model"]["kwargs"]["decoder_cfg"] = decoder_cfg
+    
+    # Save the onehot maps as pickle files instead of storing in config
+    cell_type_onehot_map_path = join(run_output_dir, "cell_type_onehot_map.pkl")
+    pert_onehot_map_path = join(run_output_dir, "pert_onehot_map.pt")
+    batch_onehot_map_path = join(run_output_dir, "batch_onehot_map.pkl")
+    var_dims_path = join(run_output_dir, "var_dims.pkl")
+    
+    with open(cell_type_onehot_map_path, "wb") as f:
+        pickle.dump(data_module.cell_type_onehot_map, f)
+    torch.save(data_module.pert_onehot_map, pert_onehot_map_path)
+    with open(batch_onehot_map_path, "wb") as f:
+        pickle.dump(data_module.batch_onehot_map, f)
+    with open(var_dims_path, "wb") as f:
+        pickle.dump(var_dims, f)
 
     if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
         cfg["model"]["kwargs"]["n_cell_types"] = len(data_module.celltype_onehot_map)

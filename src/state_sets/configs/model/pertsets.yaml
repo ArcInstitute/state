@@ -5,6 +5,7 @@ device: cuda
 kwargs:
   cell_set_len: 512 # how many cells to group together into a single set of cells
   extra_tokens: 1  # configurable buffer for confidence/special tokens
+  decoder_hidden_dims: [1024, 1024, 512]
   blur: 0.05
   hidden_dim: 328 # hidden dimension going into the transformer backbone
   loss: energy

@@ -6,9 +6,9 @@ import os
 import pandas as pd
 from tqdm import tqdm
 import yaml
+import pickle
 
 from ...sets.models.pert_sets import PertSetsPerturbationModel
-from cell_load.data_modules import PerturbationDataModule
 
 
 def add_arguments_infer(parser: argparse.ArgumentParser):
@@ -53,17 +53,10 @@ def run_sets_infer(args):
     cfg = load_config(config_path)
     logger.info(f"Loaded config from {config_path}")
 
-    # Find run output directory & load data module
-    run_output_dir = os.path.join(cfg["output_dir"], cfg["name"])
-    data_module_path = os.path.join(run_output_dir, "data_module.torch")
-    if not os.path.exists(data_module_path):
-        raise FileNotFoundError(f"Could not find data module at {data_module_path}")
-    data_module = PerturbationDataModule.load_state(data_module_path)
-    data_module.setup(stage="test")
-    logger.info(f"Loaded data module from {data_module_path}")
-
     # Get perturbation dimensions and mapping from data module
-    var_dims = data_module.get_var_dims()
+    var_dims_path = os.path.join(args.output_dir, "var_dims.pkl")
+    with open(var_dims_path, "rb") as f:
+        var_dims = pickle.load(f)
     pert_dim = var_dims["pert_dim"]
 
     # Load model
@@ -103,8 +96,9 @@ def run_sets_infer(args):
     pert_tensor = torch.zeros((len(pert_names), pert_dim), device="cpu")  # Keep on CPU initially
     logger.info(f"Perturbation tensor shape: {pert_tensor.shape}")
 
-    # Use data module's perturbation mapping
-    pert_onehot_map = data_module.pert_onehot_map
+    # Load perturbation mapping from torch file    
+    pert_onehot_map_path = os.path.join(args.output_dir, "pert_onehot_map.pt")
+    pert_onehot_map = torch.load(pert_onehot_map_path, weights_only=False)
 
     logger.info(f"Data module has {len(pert_onehot_map)} perturbations in mapping")
     logger.info(f"First 10 perturbations in data module: {list(pert_onehot_map.keys())[:10]}")
@@ -121,7 +115,7 @@ def run_sets_infer(args):
         logger.warning(f"Missing perturbations: {list(missing)[:10]}")
 
     # Check if there's a control perturbation that might match
-    control_pert = data_module.get_control_pert()
+    control_pert = cfg["data"]["kwargs"]["control_pert"]
     logger.info(f"Control perturbation in data module: '{control_pert}'")
 
     matched_count = 0
