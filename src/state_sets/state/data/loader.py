@@ -204,6 +204,7 @@ class FilteredGenesCounts(H5adSentenceDataset):
             new_mapping = np.array([global_pos.get(g, -1) for g in gene_names])
             if (new_mapping == -1).all():
                 # probably it contains ensembl id's instead
+                assert "gene_name" in adata.var.keys()
                 gene_names = adata.var["gene_name"].values
                 new_mapping = np.array([global_pos.get(g, -1) for g in gene_names])
 

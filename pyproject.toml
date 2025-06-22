@@ -1,6 +1,6 @@
 [project]
 name = "state-sets"
-version = "0.6.5"
+version = "0.7.0"
 description = "Add your description here"
 readme = "README.md"
 authors = []
@@ -29,7 +29,7 @@ dev = ["ruff>=0.11.11", "vulture>=2.14"]
 
 [tool.uv.sources]
 cell-load = { git = "ssh://github.com/arcinstitute/cell-load.git" }
-cell-eval = { git = "ssh://github.com/arcinstitute/cell-eval.git", branch = "pin_with_pr_curves" }
+cell-eval = { git = "ssh://github.com/arcinstitute/cell-eval.git" }
 zclip = { git = "https://github.com/bluorion-com/ZClip.git" }
 
 [build-system]
