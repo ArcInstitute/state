@@ -9,7 +9,7 @@ from pathlib import Path
 from tqdm import tqdm
 from torch import nn
 
-from .nn.model import LitUCEModel
+from .nn.model import StateEmbeddingModel
 from .train.trainer import get_embeddings
 from .data import create_dataloader
 from .utils import get_embedding_cfg
@@ -18,10 +18,10 @@ log = logging.getLogger(__name__)
 
 
 class Inference:
-    def __init__(self, cfg):
+    def __init__(self, cfg=None, protein_embeds=None):
         self.model = None
         self.collator = None
-        self.protein_embeds = None
+        self.protein_embeds = protein_embeds
         self._vci_conf = cfg
 
     def __load_dataset_meta(self, adata_path):
@@ -94,17 +94,17 @@ class Inference:
             raise ValueError("Model already initialized")
 
         # Load and initialize model for eval
-        self.model = LitUCEModel.load_from_checkpoint(
-            checkpoint, strict=False, cfg=self._vci_conf
-        )  ### THIS IS THE LINE THAT FAILS
-        all_pe = get_embeddings(self._vci_conf)
-        all_pe.requires_grad = False
+        self.model = StateEmbeddingModel.load_from_checkpoint(checkpoint, strict=False)
+        all_pe = self.protein_embeds or get_embeddings(self._vci_conf)
+        if isinstance(all_pe, dict):
+            all_pe = torch.vstack(list(all_pe.values()))
         self.model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
         self.model.pe_embedding.to(self.model.device)
         self.model.binary_decoder.requires_grad = False
         self.model.eval()
 
-        self.protein_embeds = torch.load(get_embedding_cfg(self._vci_conf).all_embeddings, weights_only=False)
+        if self.protein_embeds is None:
+            self.protein_embeds = torch.load(get_embedding_cfg(self._vci_conf).all_embeddings, weights_only=False)
 
     def init_from_model(self, model, protein_embeds=None):
         """
@@ -149,10 +149,11 @@ class Inference:
         dataloader = create_dataloader(
             self._vci_conf,
             adata=adata,
-            adata_name=dataset_name,
+            adata_name=dataset_name or "inference",
             shape_dict=shape_dict,
             data_dir=os.path.dirname(input_adata_path),
             shuffle=False,
+            protein_embeds=self.protein_embeds,
         )
 
         all_embeddings = []
@@ -172,14 +173,6 @@ class Inference:
 
         adata.obsm[emb_key] = all_embeddings
         adata.write_h5ad(output_adata_path)
-
-        # This streaming approach was not working (h5 files could not be opened)
-        # for embeddings in tqdm(self.encode(dataloader),
-        #                        total=len(dataloader),
-        #                        desc='Encoding'):
-        #     self._save_data(input_adata_path, output_adata_path, emb_key, embeddings)
-
-        # return output_adata_path
 
     def decode_from_file(self, adata_path, emb_key: str, read_depth=None, batch_size=64):
         adata = anndata.read_h5ad(adata_path)
@@ -205,7 +198,7 @@ class Inference:
                 task_counts = torch.full((cell_embeds_batch.shape[0],), read_depth, device=self.model.device)
             else:
                 task_counts = None
-            merged_embs = LitUCEModel.resize_batch(cell_embeds_batch, gene_embeds, task_counts)
+            merged_embs = StateEmbeddingModel.resize_batch(cell_embeds_batch, gene_embeds, task_counts)
             logprobs_batch = self.model.binary_decoder(merged_embs)
             logprobs_batch = logprobs_batch.detach().cpu().numpy()
             yield logprobs_batch.squeeze()

@@ -1,7 +1,6 @@
 # File: vci/flash_transformer.py
 """
-This module implements a Transformer encoder layer that uses Flash Attention.
-It provides a FlashTransformerEncoderLayer and a FlashTransformerEncoder.
+This module implements a Transformer encoder layer.
 """
 
 import torch

@@ -366,6 +366,7 @@ def run_sets_predict(args: ap.ArgumentParser):
                 outdir=results_dir,
                 prefix=ct,
                 pdex_kwargs=pdex_kwargs,
+                batch_size=2048,
             )
 
             evaluator.compute(

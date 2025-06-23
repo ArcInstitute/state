@@ -115,6 +115,28 @@ def run_sets_train(cfg: DictConfig):
         data_module.save_state(f)
 
     data_module.setup(stage="fit")
+    dl = data_module.train_dataloader()
+    print("num_workers:", dl.num_workers)
+    print("batch size:", dl.batch_size)
+
+    var_dims = data_module.get_var_dims()  # {"gene_dim": …, "hvg_dim": …}
+    if cfg["data"]["kwargs"]["output_space"] == "gene":
+        gene_dim = var_dims.get("hvg_dim", 2000)  # fallback if key missing
+    else:
+        gene_dim = var_dims.get("gene_dim", 2000)  # fallback if key missing
+    latent_dim = var_dims["output_dim"]  # same as model.output_dim
+    hidden_dims = cfg["model"]["kwargs"].get("decoder_hidden_dims", [1024, 1024, 512])
+
+    decoder_cfg = dict(
+        latent_dim=latent_dim,
+        gene_dim=gene_dim,
+        hidden_dims=hidden_dims,
+        dropout=cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
+        residual_decoder=cfg["model"]["kwargs"].get("residual_decoder", False),
+    )
+
+    # tuck it into the kwargs that will reach the LightningModule
+    cfg["model"]["kwargs"]["decoder_cfg"] = decoder_cfg
 
     if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
         cfg["model"]["kwargs"]["n_cell_types"] = len(data_module.celltype_onehot_map)
@@ -130,7 +152,9 @@ def run_sets_train(cfg: DictConfig):
         data_module.get_var_dims(),
     )
 
-    # Set up logging
+    print(
+        f"Model created. Estimated params size: {sum(p.numel() * p.element_size() for p in model.parameters()) / 1024**3:.2f} GB"
+    )
     loggers = get_loggers(
         output_dir=cfg["output_dir"],
         name=cfg["name"],
@@ -198,7 +222,9 @@ def run_sets_train(cfg: DictConfig):
         del trainer_kwargs["max_steps"]
 
     # Build trainer
+    print(f"Building trainer with kwargs: {trainer_kwargs}")
     trainer = pl.Trainer(**trainer_kwargs)
+    print("Trainer built successfully")
 
     # Load checkpoint if exists
     checkpoint_path = join(ckpt_callbacks[0].dirpath, "last.ckpt")
@@ -207,12 +233,17 @@ def run_sets_train(cfg: DictConfig):
     else:
         logging.info(f"!! Resuming training from {checkpoint_path} !!")
 
+    print(f"Model device: {next(model.parameters()).device}")
+    print(f"CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    print(f"CUDA memory reserved: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+
     logger.info("Starting trainer fit.")
 
     # if a checkpoint does not exist, start with the provided checkpoint
     # this is mainly used for pretrain -> finetune workflows
     manual_init = cfg["model"]["kwargs"].get("init_from", None)
     if checkpoint_path is None and manual_init is not None:
+        print(f"Loading manual checkpoint from {manual_init}")
         checkpoint_path = manual_init
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -253,6 +284,7 @@ def run_sets_train(cfg: DictConfig):
 
         # Load the filtered state dict
         model.load_state_dict(filtered_state, strict=False)
+        print("About to call trainer.fit() with manual checkpoint...")
 
         # Train - for clarity we pass None
         trainer.fit(
@@ -260,13 +292,18 @@ def run_sets_train(cfg: DictConfig):
             datamodule=data_module,
             ckpt_path=None,
         )
+        print("trainer.fit() completed with manual checkpoint")
     else:
+        print(f"About to call trainer.fit() with checkpoint_path={checkpoint_path}")
         # Train
         trainer.fit(
             model,
             datamodule=data_module,
             ckpt_path=checkpoint_path,
         )
+        print("trainer.fit() completed")
+
+    print("Training completed, saving final checkpoint...")
 
     # at this point if checkpoint_path does not exist, manually create one
     checkpoint_path = join(ckpt_callbacks[0].dirpath, "final.ckpt")

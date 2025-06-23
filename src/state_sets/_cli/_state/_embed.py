@@ -1,16 +1,13 @@
 import argparse as ap
+import torch
 
 
 def add_arguments_embed(parser: ap.ArgumentParser):
     """Add arguments for state embedding CLI."""
-    parser.add_argument("--checkpoint", required=True, help="Path to the model checkpoint file")
-    parser.add_argument("--config", required=True, help="Path to the model training config")
+    parser.add_argument("--model-folder", required=True, help="Path to the model checkpoint folder")
     parser.add_argument("--input", required=True, help="Path to input anndata file (h5ad)")
     parser.add_argument("--output", required=True, help="Path to output embedded anndata file (h5ad)")
-    parser.add_argument("--dataset-name", default="perturbation", help="Dataset name to be used in dataloader creation")
-    parser.add_argument("--gpu", action="store_true", help="Use GPU if available")
-    parser.add_argument("--filter", action="store_true", help="Filter gene set to our esm embeddings only.")
-    parser.add_argument("--embed-key", help="Name of key to store embeddings")
+    parser.add_argument("--embed-key", default="X_state", help="Name of key to store embeddings")
 
 
 def run_state_embed(args: ap.ArgumentParser):
@@ -18,6 +15,7 @@ def run_state_embed(args: ap.ArgumentParser):
     Compute embeddings for an input anndata file using a pre-trained VCI model checkpoint.
     """
     import os
+    import glob
     import logging
 
     from omegaconf import OmegaConf
@@ -27,13 +25,23 @@ def run_state_embed(args: ap.ArgumentParser):
 
     from ...state.inference import Inference
 
-    # Load configuration
-    logger.info(f"Loading config from {args.config}")
-    conf = OmegaConf.load(args.config)
+    # look in the model folder with glob for *.ckpt, get the first one, and print it
+    model_files = glob.glob(os.path.join(args.model_folder, "*.ckpt"))
+    if not model_files:
+        logger.error(f"No model checkpoint found in {args.model_folder}")
+        raise FileNotFoundError(f"No model checkpoint found in {args.model_folder}")
+    args.checkpoint = model_files[0]
+    logger.info(f"Using model checkpoint: {args.checkpoint}")
 
     # Create inference object
     logger.info("Creating inference object")
-    inferer = Inference(conf)
+    embedding_file = os.path.join(args.model_folder, "protein_embeddings.pt")
+    protein_embeds = torch.load(embedding_file, weights_only=False, map_location="cpu")
+
+    config_file = os.path.join(args.model_folder, "config.yaml")
+    conf = OmegaConf.load(config_file)
+
+    inferer = Inference(cfg=conf, protein_embeds=protein_embeds)
 
     # Load model from checkpoint
     logger.info(f"Loading model from checkpoint: {args.checkpoint}")
@@ -53,7 +61,6 @@ def run_state_embed(args: ap.ArgumentParser):
         input_adata_path=args.input,
         output_adata_path=args.output,
         emb_key=args.embed_key,
-        dataset_name=args.dataset_name,
     )
 
     logger.info("Embedding computation completed successfully!")

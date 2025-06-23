@@ -83,53 +83,11 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-class RDAEncoder(nn.Module):
-    """
-    Map a scalar read-depth d  ->  (mu, log_sigma).
-    latent_dim is whatever you used for z_count.
-    """
-
-    def __init__(self, latent_dim: int):
-        super().__init__()
-        self.latent_dim = latent_dim
-        self.net = nn.Sequential(
-            # nn.Linear(2, latent_dim, bias=True),
-            SkipBlock(self.latent_dim),
-            SkipBlock(self.latent_dim),
-        )
-
-    def forward(self, mu, sigma):
-        """
-        Parameters
-        ----------
-        mu    : tensor or float -- shape (B,) or (B,1) or scalar
-        sigma : tensor or float -- same shape as `mu`; *must be ≥0*
-
-        Returns
-        -------
-        z_latent : tensor of shape (B, latent_dim)
-            Sampled from 𝒩(μ, σ²I) and processed by `self.net`.
-        """
-        # Ensure tensors, move to same device as the network
-        mu = mu.view(-1, 1)
-        sigma = sigma.view(-1, 1)
-
-        # Sample eps ~ N(0, I) and build z
-        eps = torch.randn(mu.size(0), self.latent_dim, device=mu.device)
-        z = mu.expand(-1, self.latent_dim) + sigma.expand(-1, self.latent_dim) * eps
-
-        # z = torch.cat((mu, sigma), dim=1)  # (B, 2)
-
-        # Pass through two SkipBlocks (or identity if you prefer)
-        z = self.net(z)  # (B, latent_dim)
-        return z
-
-
 def nanstd(x):
     return torch.sqrt(torch.nanmean(torch.pow(x - torch.nanmean(x, dim=-1).unsqueeze(-1), 2), dim=-1))
 
 
-class LitUCEModel(L.LightningModule):
+class StateEmbeddingModel(L.LightningModule):
     def __init__(
         self,
         token_dim: int,
@@ -195,11 +153,7 @@ class LitUCEModel(L.LightningModule):
         if compiled:
             self.decoder = torch.compile(self.decoder)
 
-        if self.cfg.model.get("sample_rda", False):
-            self.z_dim_rd = 128
-            self.z_encoder = RDAEncoder(self.z_dim_rd)
-        else:
-            self.z_dim_rd = 1 if self.cfg.model.rda else 0
+        self.z_dim_rd = 1 if self.cfg.model.rda else 0
         self.z_dim_ds = 10 if self.cfg.model.get("dataset_correction", False) else 0
         self.z_dim = self.z_dim_rd + self.z_dim_ds
 
@@ -362,31 +316,22 @@ class LitUCEModel(L.LightningModule):
             _, _, _, emb, ds_emb = self._compute_embedding_for_batch(batch)
 
             # now decode from the embedding
-            if self.z_dim_rd > 1:
-                Y = batch[2].to(self.device)
-                nan_y = Y.masked_fill(Y == 0, float("nan"))[:, : self.cfg.dataset.P + self.cfg.dataset.N]
-                mu = torch.nanmean(nan_y, dim=1) if self.cfg.model.rda else None
-                sigma = nanstd(nan_y) if self.cfg.model.rda else None
-                sampled_rda = self.z_encoder(mu, sigma)
-                task_counts = None
-            elif self.z_dim_rd == 1:
+            task_counts = None
+            sampled_rda = None
+            if self.z_dim_rd == 1:
                 Y = batch[2].to(self.device)
                 nan_y = Y.masked_fill(Y == 0, float("nan"))[:, : self.cfg.dataset.P + self.cfg.dataset.N]
                 task_counts = torch.nanmean(nan_y, dim=1) if self.cfg.model.rda else None
                 sampled_rda = None
-            else:
-                task_counts = None
-                sampled_rda = None
 
+            ds_emb = None
             if self.dataset_token is not None:
                 ds_emb = self.dataset_embedder(ds_emb)
-            else:
-                ds_emb = None
 
             emb_batches.append(emb.detach().cpu().numpy())
             ds_emb_batches.append(ds_emb.detach().cpu().numpy())
 
-            merged_embs = LitUCEModel.resize_batch(emb, gene_embeds, task_counts, sampled_rda, ds_emb)
+            merged_embs = StateEmbeddingModel.resize_batch(emb, gene_embeds, task_counts, sampled_rda, ds_emb)
             logprobs_batch = self.binary_decoder(merged_embs)
             logprobs_batch = logprobs_batch.detach().cpu().numpy()
             logprob_batches.append(logprobs_batch.squeeze())
@@ -450,25 +395,16 @@ class LitUCEModel(L.LightningModule):
                 src + count_emb
             )  # should both be B x H x self.d_model, or B x H + 1 x self.d_model if dataset correction
 
-        if self.training:
-            # random chance 10% to set mask to None
-            if self.cfg.model.get("variable_masking", False) and np.random.rand() < 0.1:
-                mask = None
-            else:
-                mask = mask.to(self.device)
-            output = self.transformer_encoder(src, src_key_padding_mask=mask)
-        else:
-            output = self.transformer_encoder(src, src_key_padding_mask=None)
+        output = self.transformer_encoder(src, src_key_padding_mask=None)
         gene_output = self.decoder(output)  # batch x seq_len x 128
         # In the new format, the cls token, which is at the 0 index mark, is the output.
         embedding = gene_output[:, 0, :]  # select only the CLS token.
         embedding = nn.functional.normalize(embedding, dim=1)  # Normalize.
 
         # we must be in train mode to use dataset correction
+        dataset_emb = None
         if self.dataset_token is not None:
             dataset_emb = gene_output[:, -1, :]
-        else:
-            dataset_emb = None
 
         return gene_output, embedding, dataset_emb
 
@@ -478,16 +414,7 @@ class LitUCEModel(L.LightningModule):
 
         z = embs.unsqueeze(1).repeat(1, X.shape[1], 1)  # CLS token
 
-        if self.z_dim_rd > 1:
-            # your code here that computes mu and std dev from Y
-            nan_y = Y.masked_fill(Y == 0, float("nan"))[:, : self.cfg.dataset.P + self.cfg.dataset.N]
-            mu = torch.nanmean(nan_y, dim=1) if self.cfg.model.rda else None
-            sigma = nanstd(nan_y) if self.cfg.model.rda else None
-
-            reshaped_counts = self.z_encoder(mu, sigma).unsqueeze(1)
-            reshaped_counts = reshaped_counts.expand(X.shape[0], X.shape[1], reshaped_counts.shape[2])
-            combine = torch.cat((X, z, reshaped_counts), dim=2)
-        elif self.z_dim_rd == 1:
+        if self.z_dim_rd == 1:
             mu = torch.nanmean(Y.masked_fill(Y == 0, float("nan")), dim=1) if self.cfg.model.rda else None
             reshaped_counts = mu.unsqueeze(1).unsqueeze(2)
             reshaped_counts = reshaped_counts.repeat(1, X.shape[1], 1)
