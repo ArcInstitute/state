@@ -1,6 +1,6 @@
 [project]
 name = "state-sets"
-version = "0.7.0"
+version = "0.8.0"
 description = "Add your description here"
 readme = "README.md"
 authors = []
@@ -28,8 +28,8 @@ dependencies = [
 dev = ["ruff>=0.11.11", "vulture>=2.14"]
 
 [tool.uv.sources]
-cell-load = { git = "ssh://github.com/arcinstitute/cell-load.git" }
-cell-eval = { git = "ssh://github.com/arcinstitute/cell-eval.git" }
+cell-load = { git = "https://github.com/arcinstitute/cell-load.git" }
+cell-eval = { git = "https://github.com/arcinstitute/cell-eval.git" }
 zclip = { git = "https://github.com/bluorion-com/ZClip.git" }
 
 [build-system]
