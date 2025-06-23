@@ -1,6 +1,6 @@
 # Predicting cellular responses to perturbation across diverse contexts with State
 
-> Train State perturbation models or pretrain State embedding models. See the State [paper](https://arcinstitute.org/manuscripts/State). 
+> Train State perturbation models or pretrain State embedding models. See the State [paper](https://arcinstitute.org/manuscripts/State).
 
 ## Associated repositories
 
@@ -12,32 +12,24 @@
 This package is distributed via [`uv`](https://docs.astral.sh/uv).
 
 ```bash
-# Clone repo
-git clone github.com:arcinstitute/state-sets
-cd state-sets
-
-# Initialize venv
-uv venv
-
-# Install
-uv tool install -e .
+uv tool install arc-state
 ```
 
 ## CLI Usage
 
 You can access the CLI help menu with:
 
-```state-sets --help```
+```state --help```
 
 Output:
 ```
-usage: state-sets [-h] {state,sets} ...
+usage: state [-h] {emb,tx} ...
 
 positional arguments:
-  {state,sets}
+  {emb,tx}
 
 options:
-  -h, --help
+  -h, --help  show this help message and exit
 ```
 
 ## State Transition Model (SM)
@@ -45,7 +37,7 @@ options:
 Example: Training an SM:
 
 ```bash
-state-sets sets train \
+state tx train \
   data.kwargs.toml_config_path="/home/aadduri/cell-load/example.toml" \
   data.kwargs.embed_key=X_vci_1.4.2 \
   data.kwargs.output_space=gene \
@@ -70,13 +62,13 @@ state-sets sets train \
 Example: Evaluating an SM
 
 ```bash
-state-sets sets predict --output_dir /home/aadduri/state-sets/test/ --checkpoint last.ckpt
+state tx predict --output_dir /home/aadduri/state-sets/test/ --checkpoint last.ckpt
 ```
 
 An example inference command for a sets model:
 
 ```bash
-state-sets sets infer --output /home/dhruvgautam/state-sets/test/ --output_dir /path/to/model/ --checkpoint /path/to/model/checkpoints/last.ckpt --adata /path/to/anndata/processed.h5 --pert_col gene --embed_key X_hvg
+state tx infer --output /home/dhruvgautam/state-sets/test/ --output_dir /path/to/model/ --checkpoint /path/to/model/checkpoints/last.ckpt --adata /path/to/anndata/processed.h5 --pert_col gene --embed_key X_hvg
 ```
 
 The toml files should be setup to define perturbation splits, if running fewshot experiments. Here are some examples:
@@ -130,13 +122,13 @@ replogle = "train"
 Example: Pre-training an SE instance:
 
 ```bash
-state-sets state train --conf ${CONFIG}
+state emb fit --conf ${CONFIG}
 ```
 
 To run inference with a trained State checkpoint, e.g., the State 1.5.2 trained to 4 epochs:
 
 ```bash
-state-sets state embed \
+state emb transform \
   --checkpoint "/large_storage/ctc/userspace/aadduri/vci_1.5.0_btc_step=195000_epoch=4.ckpt" \
   --config "/large_storage/ctc/userspace/aadduri/vci_1.5.0_btc.yaml" \
   --input "/large_storage/ctc/datasets/replogle/rpe1_raw_singlecell_01.h5ad" \
@@ -145,8 +137,8 @@ state-sets state embed \
 ```
 
 ## Licenses
-State code is [licensed](LICENSE) under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0). 
+State code is [licensed](LICENSE) under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0).
 
 The model weights and output are licensed under the [Arc Research Institute State Model Non-Commercial License](MODEL_LICENSE.md) and subject to the [Arc Research Institute State Model Acceptable Use Policy](MODEL_ACCEPTABLE_USE_POLICY.md).
 
-Any publication that uses this source code or model parameters should cite the State [paper](https://arcinstitute.org/manuscripts/State). 
+Any publication that uses this source code or model parameters should cite the State [paper](https://arcinstitute.org/manuscripts/State).
