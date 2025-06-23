@@ -28,7 +28,7 @@ dependencies = [
 dev = ["ruff>=0.11.11", "vulture>=2.14"]
 
 [tool.uv.sources]
-cell-load = { git = "ssh://github.com/arcinstitute/cell-load.git" }
+cell-load = { git = "https://github.com/arcinstitute/cell-load.git" }
 zclip = { git = "https://github.com/bluorion-com/ZClip.git" }
 
 [build-system]
