@@ -30,6 +30,7 @@ def create_dataloader(
     adata_name=None,
     shuffle=False,
     sentence_collator=None,
+    protein_embeds=None,
 ):
     """
     Expected to be used for inference
@@ -44,7 +45,7 @@ def create_dataloader(
     if data_dir:
         utils.get_dataset_cfg(cfg).data_dir = data_dir
 
-    dataset = FilteredGenesCounts(cfg, datasets=datasets, shape_dict=shape_dict, adata=adata, adata_name=adata_name)
+    dataset = FilteredGenesCounts(cfg, datasets=datasets, shape_dict=shape_dict, adata=adata, adata_name=adata_name, protein_embeds=protein_embeds)
     if sentence_collator is None:
         sentence_collator = VCIDatasetSentenceCollator(
             cfg, valid_gene_mask=dataset.valid_gene_index, ds_emb_mapping_inference=dataset.ds_emb_map, is_train=False
@@ -170,21 +171,17 @@ class H5adSentenceDataset(data.Dataset):
 
 
 class FilteredGenesCounts(H5adSentenceDataset):
-    def __init__(self, cfg, test=False, datasets=None, shape_dict=None, adata=None, adata_name=None) -> None:
+    def __init__(self, cfg, test=False, datasets=None, shape_dict=None, adata=None, adata_name=None, protein_embeds=None) -> None:
         super(FilteredGenesCounts, self).__init__(cfg, test, datasets, shape_dict, adata, adata_name)
         self.valid_gene_index = {}
+        self.protein_embeds = protein_embeds
 
         # make sure we get training datasets
-        _, self.datasets, self.shapes_dict, self.dataset_path_map, self.dataset_group_map = utils.get_shapes_dict(
-            "/home/aadduri/state/h5ad_all.csv"
-        )
+        self.datasets = []
+        self.shapes_dict = {}
+        self.ds_emb_map = {}
 
         emb_cfg = utils.get_embedding_cfg(self.cfg)
-        try:
-            self.ds_emb_map = torch.load(emb_cfg.ds_emb_mapping, weights_only=False)
-        except (FileNotFoundError, IOError):
-            self.ds_emb_map = {}
-
         # for inference, let's make sure this dataset's valid mask is available
         if adata_name is not None:
             # append it to self.datasets
@@ -192,7 +189,7 @@ class FilteredGenesCounts(H5adSentenceDataset):
             self.shapes_dict[adata_name] = adata.shape
 
             # compute its embedding‐index vector
-            esm_data = torch.load(emb_cfg.all_embeddings, weights_only=False)
+            esm_data = self.protein_embeds or torch.load(emb_cfg.all_embeddings, weights_only=False)
             valid_genes_list = list(esm_data.keys())
             # make a gene→global‐index lookup
             global_pos = {g: i for i, g in enumerate(valid_genes_list)}
@@ -212,7 +209,7 @@ class FilteredGenesCounts(H5adSentenceDataset):
             self.ds_emb_map[adata_name] = new_mapping
 
         if utils.get_embedding_cfg(self.cfg).ds_emb_mapping is not None:
-            esm_data = torch.load(utils.get_embedding_cfg(self.cfg)["all_embeddings"], weights_only=False)
+            esm_data = self.protein_embeds or torch.load(emb_cfg.ds_emb_mapping, weights_only=False)
             valid_genes_list = list(esm_data.keys())
             for name in self.datasets:
                 if not utils.is_valid_uuid(
