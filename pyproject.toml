@@ -3,7 +3,6 @@ name = "arc-state"
 version = "0.8.3"
 description = "State is a machine learning model that predicts cellular perturbation response across diverse contexts."
 readme = "README.md"
-license = "MODEL_LICENSE.md"
 authors = [
     { name = "Abhinav Adduri", email = "abhinav.adduri@arcinstitute.org" },
     { name = "Yusuf Roohani", email = "yusuf.roohani@arcinstitute.org" },
