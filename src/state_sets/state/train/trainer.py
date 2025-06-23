@@ -11,7 +11,7 @@ from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
 from zclip import ZClipLightningCallback
 
-from ..nn.model import LitUCEModel
+from ..nn.model import StateEmbeddingModel
 from ..data import H5adSentenceDataset, VCIDatasetSentenceCollator
 from ..train.callbacks import LogLR, ProfilerCallback, ResumeCallback, EMACallback, PerfProfilerCallback
 from ..utils import get_latest_checkpoint, get_embedding_cfg, get_dataset_cfg
@@ -74,7 +74,7 @@ def main(cfg):
         generator=generator,
     )
 
-    model = LitUCEModel(
+    model = StateEmbeddingModel(
         token_dim=get_embedding_cfg(cfg).size,
         d_model=cfg.model.emsize,
         nhead=cfg.model.nhead,
@@ -141,7 +141,7 @@ def main(cfg):
         accumulate_grad_batches=cfg.optimizer.gradient_accumulation_steps,
         precision="bf16-mixed",
         strategy=DDPStrategy(
-            process_group_backend="nccl",  # if cfg.experiment.num_nodes == 1 else "gloo",
+            process_group_backend="nccl",
             find_unused_parameters=False,
             timeout=timedelta(seconds=cfg.experiment.get("ddp_timeout", 3600)),
         ),

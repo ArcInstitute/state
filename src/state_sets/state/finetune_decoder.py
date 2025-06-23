@@ -2,7 +2,7 @@ import logging
 import torch
 from torch import nn
 
-from vci.nn.model import LitUCEModel
+from vci.nn.model import StateEmbeddingModel
 from vci.train.trainer import get_embeddings
 from vci.utils import get_embedding_cfg
 
@@ -44,7 +44,7 @@ class Finetune:
         # Import locally to avoid circular imports
 
         # Load and initialize model for eval
-        self.model = LitUCEModel.load_from_checkpoint(checkpoint, strict=False)
+        self.model = StateEmbeddingModel.load_from_checkpoint(checkpoint, strict=False)
         self.device = self.model.device
 
         # Load protein embeddings

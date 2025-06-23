@@ -45,7 +45,9 @@ def create_dataloader(
     if data_dir:
         utils.get_dataset_cfg(cfg).data_dir = data_dir
 
-    dataset = FilteredGenesCounts(cfg, datasets=datasets, shape_dict=shape_dict, adata=adata, adata_name=adata_name, protein_embeds=protein_embeds)
+    dataset = FilteredGenesCounts(
+        cfg, datasets=datasets, shape_dict=shape_dict, adata=adata, adata_name=adata_name, protein_embeds=protein_embeds
+    )
     if sentence_collator is None:
         sentence_collator = VCIDatasetSentenceCollator(
             cfg, valid_gene_mask=dataset.valid_gene_index, ds_emb_mapping_inference=dataset.ds_emb_map, is_train=False
@@ -171,7 +173,9 @@ class H5adSentenceDataset(data.Dataset):
 
 
 class FilteredGenesCounts(H5adSentenceDataset):
-    def __init__(self, cfg, test=False, datasets=None, shape_dict=None, adata=None, adata_name=None, protein_embeds=None) -> None:
+    def __init__(
+        self, cfg, test=False, datasets=None, shape_dict=None, adata=None, adata_name=None, protein_embeds=None
+    ) -> None:
         super(FilteredGenesCounts, self).__init__(cfg, test, datasets, shape_dict, adata, adata_name)
         self.valid_gene_index = {}
         self.protein_embeds = protein_embeds

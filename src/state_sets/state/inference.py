@@ -9,7 +9,7 @@ from pathlib import Path
 from tqdm import tqdm
 from torch import nn
 
-from .nn.model import LitUCEModel
+from .nn.model import StateEmbeddingModel
 from .train.trainer import get_embeddings
 from .data import create_dataloader
 from .utils import get_embedding_cfg
@@ -94,9 +94,7 @@ class Inference:
             raise ValueError("Model already initialized")
 
         # Load and initialize model for eval
-        self.model = LitUCEModel.load_from_checkpoint(
-            checkpoint, strict=False
-        )
+        self.model = StateEmbeddingModel.load_from_checkpoint(checkpoint, strict=False)
         all_pe = self.protein_embeds or get_embeddings(self._vci_conf)
         if isinstance(all_pe, dict):
             all_pe = torch.vstack(list(all_pe.values()))
@@ -200,7 +198,7 @@ class Inference:
                 task_counts = torch.full((cell_embeds_batch.shape[0],), read_depth, device=self.model.device)
             else:
                 task_counts = None
-            merged_embs = LitUCEModel.resize_batch(cell_embeds_batch, gene_embeds, task_counts)
+            merged_embs = StateEmbeddingModel.resize_batch(cell_embeds_batch, gene_embeds, task_counts)
             logprobs_batch = self.model.binary_decoder(merged_embs)
             logprobs_batch = logprobs_batch.detach().cpu().numpy()
             yield logprobs_batch.squeeze()
