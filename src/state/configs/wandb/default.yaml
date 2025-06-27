@@ -1,7 +1,6 @@
 # Generic wandb configuration
 # Users should customize these values for their own use
-wandb:
-  entity: your_entity_name
-  project: state
-  local_wandb_dir: ./wandb_logs
-  tags: [] 
+entity: arcinstitute
+project: vci1
+local_wandb_dir: /large_storage/ctc/userspace/dhruvgautam/wandb/vci1
+tags: [] 

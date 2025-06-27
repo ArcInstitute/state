@@ -102,6 +102,15 @@ def run_tx_infer(args):
     else:
         X = adata.X
         logger.info(f"Using adata.X as input features: shape {X.shape}")
+    
+    # Convert sparse matrix to dense if necessary
+    if hasattr(X, 'toarray'):  # Check if it's a sparse matrix
+        logger.info("Converting sparse matrix to dense format")
+        X = X.toarray()
+    elif hasattr(X, 'todense'):  # Alternative method for some sparse formats
+        logger.info("Converting sparse matrix to dense format")
+        X = X.todense()
+        X = np.asarray(X)  # Convert matrix to array if needed
 
     # Prepare perturbation tensor using the data module's mapping
     pert_names = adata.obs[args.pert_col].values

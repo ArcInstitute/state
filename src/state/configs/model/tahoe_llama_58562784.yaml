@@ -6,6 +6,7 @@ kwargs:
   cell_set_len: 512
   blur: 0.05
   hidden_dim: 1104      # hidden dimension going into the transformer backbone
+  decoder_hidden_dims: [1024, 2048, 2048]
   loss: energy
   confidence_head: False
   n_encoder_layers: 4

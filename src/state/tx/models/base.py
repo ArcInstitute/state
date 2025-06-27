@@ -204,12 +204,15 @@ class PerturbationModel(ABC, LightningModule):
         Re-create the decoder using the exact hyper-parameters saved in the ckpt,
         so that parameter shapes match and load_state_dict succeeds.
         """
-        if "decoder_cfg" in checkpoint["hyper_parameters"]:
+        # Check if decoder_cfg was already set externally (e.g., by training script for output_space mismatch)
+        decoder_already_configured = hasattr(self, '_decoder_externally_configured') and self._decoder_externally_configured
+        
+        if not decoder_already_configured and "decoder_cfg" in checkpoint["hyper_parameters"]:
             self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
             self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)
             logger.info(f"Loaded decoder from checkpoint decoder_cfg: {self.decoder_cfg}")
-        else:
-            # Only fall back to old logic if no decoder_cfg was saved
+        elif not decoder_already_configured:
+            # Only fall back to old logic if no decoder_cfg was saved and not externally configured
             self.decoder_cfg = None
             self._build_decoder()
             logger.info(f"DEBUG: output_space: {self.output_space}")
@@ -241,6 +244,8 @@ class PerturbationModel(ABC, LightningModule):
                         residual_decoder=self.residual_decoder,
                     )
                     logger.info(f"Initialized gene decoder for embedding {self.embed_key} to gene space")
+        else:
+            logger.info("Decoder was already configured externally, skipping checkpoint decoder configuration")
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
