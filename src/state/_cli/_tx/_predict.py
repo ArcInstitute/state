@@ -233,8 +233,8 @@ def run_tx_predict(args: ap.ArgumentParser):
     all_pert_names = []
     all_celltypes = []
     all_gem_groups = []
-    all_pert_barcodes = []
-    all_ctrl_barcodes = []
+    # all_pert_barcodes = []
+    # all_ctrl_barcodes = []
 
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(test_loader, desc="Predicting", unit="batch")):
@@ -251,12 +251,12 @@ def run_tx_predict(args: ap.ArgumentParser):
             else:
                 all_pert_names.append(batch_preds["pert_name"])
 
-            if isinstance(batch_preds["pert_cell_barcode"], list):
-                all_pert_barcodes.extend(batch_preds["pert_cell_barcode"])
-                all_ctrl_barcodes.extend(batch_preds["ctrl_cell_barcode"])
-            else:
-                all_pert_barcodes.append(batch_preds["pert_cell_barcode"])
-                all_ctrl_barcodes.append(batch_preds["ctrl_cell_barcode"])
+            # if isinstance(batch_preds["pert_cell_barcode"], list):
+            #     all_pert_barcodes.extend(batch_preds["pert_cell_barcode"])
+            #     all_ctrl_barcodes.extend(batch_preds["ctrl_cell_barcode"])
+            # else:
+            #     all_pert_barcodes.append(batch_preds["pert_cell_barcode"])
+            #     all_ctrl_barcodes.append(batch_preds["ctrl_cell_barcode"])
 
             # Handle celltype_name
             if isinstance(batch_preds["celltype_name"], list):
@@ -297,8 +297,8 @@ def run_tx_predict(args: ap.ArgumentParser):
             data_module.pert_col: all_pert_names,
             data_module.cell_type_key: all_celltypes,
             data_module.batch_col: all_gem_groups,
-            "pert_cell_barcode": all_pert_barcodes,
-            "ctrl_cell_barcode": all_ctrl_barcodes,
+            # "pert_cell_barcode": all_pert_barcodes,
+            # "ctrl_cell_barcode": all_ctrl_barcodes,
         }
     )
 
