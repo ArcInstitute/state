@@ -258,7 +258,7 @@ def run_tx_train(cfg: DictConfig):
         print(f"Loading manual checkpoint from {manual_init}")
         checkpoint_path = manual_init
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        checkpoint = torch.load(checkpoint_path, map_location=device)
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         model_state = model.state_dict()
         checkpoint_state = checkpoint["state_dict"]
 
