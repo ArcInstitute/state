@@ -230,9 +230,9 @@ To run inference with a trained State checkpoint, e.g., the State trained to 4 e
 
 ```bash
 state emb transform \
-  --checkpoint "/large_storage/ctc/userspace/aadduri/SE-600M" \
+  --model-folder "/large_storage/ctc/userspace/aadduri/SE-600M" \
   --input "/large_storage/ctc/datasets/replogle/rpe1_raw_singlecell_01.h5ad" \
-  --output "/home/aadduri/vci_pretrain/test_output.h5ad" \
+  --output "/home/aadduri/vci_pretrain/test_output.h5ad"
 ```
 
 ## Licenses
