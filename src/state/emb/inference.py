@@ -28,7 +28,7 @@ class Inference:
         with h5.File(adata_path) as h5f:
             attrs = dict(h5f["X"].attrs)
             if "encoding-type" in attrs:  # Fixed: was checking undefined 'adata'
-                if attrs["encoding-type"] == "csr_matrix":
+                if attrs["encoding-type"] in ["csr_matrix", "csc_matrix"]:
                     num_cells = attrs["shape"][0]
                     num_genes = attrs["shape"][1]
                 elif attrs["encoding-type"] == "array":
@@ -147,15 +147,22 @@ class Inference:
     def encode_adata(
         self,
         input_adata_path: str,
-        output_adata_path: str,
+        output_adata_path: str | None = None,
         emb_key: str = "X_emb",
-        dataset_name=None,
+        dataset_name: str | None = None,
         batch_size: int = 32,
+        lancedb_path: str | None = None,
+        update_lancedb: bool = False,
+        lancedb_batch_size: int = 1000,
+        gene_column: str = "gene_name",
     ):
         shape_dict = self.__load_dataset_meta(input_adata_path)
         adata = anndata.read_h5ad(input_adata_path)
         if dataset_name is None:
             dataset_name = Path(input_adata_path).stem
+
+        # Convert to CSR format if needed
+        adata = self._convert_to_csr(adata)
 
         device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
         precision = get_precision_config(device_type=device_type)
@@ -168,6 +175,7 @@ class Inference:
             shuffle=False,
             protein_embeds=self.protein_embeds,
             precision=precision,
+            gene_column=gene_column,
         )
 
         all_embeddings = []
@@ -184,9 +192,40 @@ class Inference:
 
             # concatenate along axis -1 with all embeddings
             all_embeddings = np.concatenate([all_embeddings, all_ds_embeddings], axis=-1)
+        
+        # if output_adata_path is provided, write the adata to the file
+        if output_adata_path is not None:
+            adata.obsm[emb_key] = all_embeddings
+            adata.write_h5ad(output_adata_path)
 
-        adata.obsm[emb_key] = all_embeddings
-        adata.write_h5ad(output_adata_path)
+        # Save to lancedb, if requested
+        if lancedb_path is not None:
+            from .vectordb import StateVectorDB
+        
+            log.info(f"Saving embeddings to LanceDB at {lancedb_path}")
+            vector_db = StateVectorDB(lancedb_path)
+        
+            # Extract relevant metadata
+            metadata = adata.obs.copy()
+        
+            # Create or update the database
+            vector_db.create_or_update_table(
+                embeddings=all_embeddings,
+                metadata=metadata,
+                embedding_key=emb_key,
+                dataset_name=dataset_name or Path(input_adata_path).stem,
+                batch_size=lancedb_batch_size
+            )
+        
+            log.info(f"Successfully saved {len(all_embeddings)} embeddings to LanceDB")
+
+    def _convert_to_csr(self, adata):
+        """Convert the adata.X matrix to CSR format if it's not already."""
+        from scipy.sparse import csr_matrix, issparse
+        if issparse(adata.X) and not isinstance(adata.X, csr_matrix):
+            log.info(f"Converting {type(adata.X).__name__} to csr_matrix format")
+            adata.X = csr_matrix(adata.X)
+        return adata
 
     def decode_from_file(self, adata_path, emb_key: str, read_depth=None, batch_size=64):
         adata = anndata.read_h5ad(adata_path)

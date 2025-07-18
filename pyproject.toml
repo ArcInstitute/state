@@ -29,6 +29,12 @@ dependencies = [
     "cell-eval>=0.5.22",
 ]
 
+[project.optional-dependencies]
+vectordb = [
+    "lancedb>=0.24.0"
+]
+
+
 [dependency-groups]
 dev = ["ruff>=0.11.11", "vulture>=2.14"]
 

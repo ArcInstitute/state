@@ -32,6 +32,7 @@ def create_dataloader(
     sentence_collator=None,
     protein_embeds=None,
     precision=None,
+    gene_column: str = "gene_name",
 ):
     """
     Expected to be used for inference
@@ -47,7 +48,7 @@ def create_dataloader(
         utils.get_dataset_cfg(cfg).data_dir = data_dir
 
     dataset = FilteredGenesCounts(
-        cfg, datasets=datasets, shape_dict=shape_dict, adata=adata, adata_name=adata_name, protein_embeds=protein_embeds
+        cfg, datasets=datasets, shape_dict=shape_dict, adata=adata, adata_name=adata_name, protein_embeds=protein_embeds, gene_column=gene_column
     )
     if sentence_collator is None:
         sentence_collator = VCIDatasetSentenceCollator(
@@ -175,11 +176,12 @@ class H5adSentenceDataset(data.Dataset):
 
 class FilteredGenesCounts(H5adSentenceDataset):
     def __init__(
-        self, cfg, test=False, datasets=None, shape_dict=None, adata=None, adata_name=None, protein_embeds=None
+        self, cfg, test=False, datasets=None, shape_dict=None, adata=None, adata_name=None, protein_embeds=None, gene_column: str = "gene_name"
     ) -> None:
         super(FilteredGenesCounts, self).__init__(cfg, test, datasets, shape_dict, adata, adata_name)
         self.valid_gene_index = {}
         self.protein_embeds = protein_embeds
+        self.gene_column = gene_column
 
         # make sure we get training datasets
         self.datasets = []
@@ -206,8 +208,8 @@ class FilteredGenesCounts(H5adSentenceDataset):
             new_mapping = np.array([global_pos.get(g, -1) for g in gene_names])
             if (new_mapping == -1).all():
                 # probably it contains ensembl id's instead
-                assert "gene_name" in adata.var.keys()
-                gene_names = adata.var["gene_name"].values
+                assert self.gene_column in adata.var.keys(), f"Column '{self.gene_column}' not found in adata.var. Available columns: {list(adata.var.keys())}"
+                gene_names = adata.var[self.gene_column].values
                 new_mapping = np.array([global_pos.get(g, -1) for g in gene_names])
 
             log.info(f"{(new_mapping != -1).sum()} genes mapped to embedding file (out of {len(new_mapping)})")
@@ -224,11 +226,11 @@ class FilteredGenesCounts(H5adSentenceDataset):
                         a = self.dataset_file(name)
                         try:
                             gene_names = np.array(
-                                [g.decode("utf-8") for g in a["/var/gene_name"][:]]
+                                [g.decode("utf-8") for g in a[f"/var/{self.gene_column}"][:]]
                             )  # Decode byte strings
                         except:
-                            gene_categories = a["/var/gene_name/categories"][:]
-                            gene_codes = np.array(a["/var/gene_name/codes"][:])
+                            gene_categories = a[f"/var/{self.gene_column}/categories"][:]
+                            gene_codes = np.array(a[f"/var/{self.gene_column}/codes"][:])
                             gene_names = np.array([g.decode("utf-8") for g in gene_categories[gene_codes]])
                         valid_mask = np.isin(gene_names, valid_genes_list)
                         self.valid_gene_index[name] = valid_mask
@@ -238,7 +240,7 @@ class FilteredGenesCounts(H5adSentenceDataset):
 
                         if not valid_mask.any():
                             # none of the genes were valid, probably ensembl id's
-                            gene_names = adata.var["gene_name"].values
+                            gene_names = adata.var[self.gene_column].values
                             valid_mask = np.isin(gene_names, valid_genes_list)
 
                         self.valid_gene_index[name] = valid_mask
