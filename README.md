@@ -3,6 +3,7 @@
 > Train State transition models or pretrain State embedding models. See the State [paper](https://arcinstitute.org/manuscripts/State).
 > 
 > See the [Google Colab](https://colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l) to train STATE for the [Virtual Cell Challenge](https://virtualcellchallenge.org/).
+> See the [Deepwiki overview](https://deepwiki.com/ArcInstitute/state) of the repository.
 
 ## Associated repositories
 
