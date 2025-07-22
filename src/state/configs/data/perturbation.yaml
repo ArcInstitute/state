@@ -19,5 +19,6 @@ kwargs:
   store_raw_basal: false
   int_counts: false
   barcode: true
+  zeroshot_controls: false
 output_dir: null
 debug: true

@@ -1,6 +1,6 @@
 [project]
 name = "arc-state"
-version = "0.9.9"
+version = "0.9.10"
 description = "State is a machine learning model that predicts cellular perturbation response across diverse contexts."
 readme = "README.md"
 authors = [
@@ -13,7 +13,7 @@ authors = [
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "anndata>=0.11.4",
-    "cell-load>=0.7.5",
+    "cell-load>=0.7.6",
     "numpy>=2.2.6",
     "pandas>=2.2.3",
     "pyyaml>=6.0.2",

@@ -234,35 +234,78 @@ def run_tx_infer(args):
             for i in range(0, group_size, batch_size):
                 batch_indices = indices[i:i + batch_size]
                 current_batch_size = len(batch_indices)
-
-                # Get batch data
-                X_batch = torch.tensor(X[batch_indices], dtype=torch.float32).to(device)
-                pert_batch = pert_tensor[batch_indices].to(device)
-                batch_idx_batch = batch_indices_tensor[batch_indices].to(device)
-                pert_names_batch = [pert_names[idx] for idx in batch_indices]
-
-                # Prepare batch
-                batch = {
-                    "ctrl_cell_emb": X_batch,
-                    "pert_emb": pert_batch,
-                    "pert_name": pert_names_batch,
-                    "batch": batch_idx_batch.unsqueeze(0),  # Shape: (1, current_batch_size)
-                }
-
-                # Run inference on batch
-                batch_preds = model.predict_step(batch, batch_idx=batch_idx, padded=False)
-
-                # Extract predictions from the dictionary returned by predict_step
-                if "pert_cell_counts_preds" in batch_preds and batch_preds["pert_cell_counts_preds"] is not None:
-                    # Use gene space predictions (from decoder)
-                    pred_tensor = batch_preds["pert_cell_counts_preds"]
+                
+                # Check if this is an incomplete batch that needs sampling with replacement
+                if current_batch_size < batch_size:
+                    # Sample with replacement to fill out the batch
+                    additional_samples_needed = batch_size - current_batch_size
+                    replacement_indices = np.random.choice(batch_indices, size=additional_samples_needed, replace=True)
+                    
+                    # Combine original indices with replacement indices
+                    extended_batch_indices = np.concatenate([batch_indices, replacement_indices])
+                    
+                    # Get batch data for the extended batch
+                    X_batch = torch.tensor(X[extended_batch_indices], dtype=torch.float32).to(device)
+                    pert_batch = pert_tensor[extended_batch_indices].to(device)
+                    batch_idx_batch = batch_indices_tensor[extended_batch_indices].to(device)
+                    pert_names_batch = [pert_names[idx] for idx in extended_batch_indices]
+                    
+                    # Prepare batch
+                    batch = {
+                        "ctrl_cell_emb": X_batch,
+                        "pert_emb": pert_batch,
+                        "pert_name": pert_names_batch,
+                        "batch": batch_idx_batch.unsqueeze(0),  # Shape: (1, batch_size)
+                    }
+                    
+                    # Run inference on batch
+                    batch_preds = model.predict_step(batch, batch_idx=batch_idx, padded=False)
+                    
+                    # Extract predictions from the dictionary returned by predict_step
+                    if "pert_cell_counts_preds" in batch_preds and batch_preds["pert_cell_counts_preds"] is not None:
+                        # Use gene space predictions (from decoder)
+                        pred_tensor = batch_preds["pert_cell_counts_preds"]
+                    else:
+                        # Use latent space predictions
+                        pred_tensor = batch_preds["preds"]
+                    
+                    # Only keep predictions for the original samples (not the replacement samples)
+                    original_preds = pred_tensor[:current_batch_size]
+                    
+                    # Store predictions with their original indices to maintain order
+                    batch_preds_with_indices = [(batch_indices[j], original_preds[j].cpu().numpy()) for j in range(current_batch_size)]
+                    all_preds.extend(batch_preds_with_indices)
+                    
                 else:
-                    # Use latent space predictions
-                    pred_tensor = batch_preds["preds"]
+                    # Full batch - process normally
+                    # Get batch data
+                    X_batch = torch.tensor(X[batch_indices], dtype=torch.float32).to(device)
+                    pert_batch = pert_tensor[batch_indices].to(device)
+                    batch_idx_batch = batch_indices_tensor[batch_indices].to(device)
+                    pert_names_batch = [pert_names[idx] for idx in batch_indices]
 
-                # Store predictions with their original indices to maintain order
-                batch_preds_with_indices = [(batch_indices[j], pred_tensor[j].cpu().numpy()) for j in range(current_batch_size)]
-                all_preds.extend(batch_preds_with_indices)
+                    # Prepare batch
+                    batch = {
+                        "ctrl_cell_emb": X_batch,
+                        "pert_emb": pert_batch,
+                        "pert_name": pert_names_batch,
+                        "batch": batch_idx_batch.unsqueeze(0),  # Shape: (1, current_batch_size)
+                    }
+
+                    # Run inference on batch
+                    batch_preds = model.predict_step(batch, batch_idx=batch_idx, padded=False)
+
+                    # Extract predictions from the dictionary returned by predict_step
+                    if "pert_cell_counts_preds" in batch_preds and batch_preds["pert_cell_counts_preds"] is not None:
+                        # Use gene space predictions (from decoder)
+                        pred_tensor = batch_preds["pert_cell_counts_preds"]
+                    else:
+                        # Use latent space predictions
+                        pred_tensor = batch_preds["preds"]
+
+                    # Store predictions with their original indices to maintain order
+                    batch_preds_with_indices = [(batch_indices[j], pred_tensor[j].cpu().numpy()) for j in range(current_batch_size)]
+                    all_preds.extend(batch_preds_with_indices)
 
                 # Update progress bar
                 progress_bar.update(current_batch_size)
