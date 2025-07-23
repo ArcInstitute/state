@@ -9,24 +9,24 @@ def add_arguments_infer(parser: argparse.ArgumentParser):
         help="Path to model checkpoint (.ckpt). If not provided, will use model_dir/checkpoints/final.ckpt",
     )
     parser.add_argument("--adata", type=str, required=True, help="Path to input AnnData file (.h5ad)")
-    parser.add_argument("--embed_key", type=str, default=None, help="Key in adata.obsm for input features")
+    parser.add_argument("--embed-key", type=str, default=None, help="Key in adata.obsm for input features")
     parser.add_argument(
-        "--pert_col", type=str, default="drugname_drugconc", help="Column in adata.obs for perturbation labels"
+        "--pert-col", type=str, default="drugname_drugconc", help="Column in adata.obs for perturbation labels"
     )
     parser.add_argument("--output", type=str, default=None, help="Path to output AnnData file (.h5ad)")
     parser.add_argument(
-        "--model_dir",
+        "--model-dir",
         type=str,
         required=True,
         help="Path to the model_dir containing the config.yaml file and the pert_onehot_map.pt file that was saved during training.",
     )
     parser.add_argument(
-        "--celltype_col", type=str, default=None, help="Column in adata.obs for cell type labels (optional)"
+        "--celltype-col", type=str, default=None, help="Column in adata.obs for cell type labels (optional)"
     )
     parser.add_argument(
         "--celltypes", type=str, default=None, help="Comma-separated list of cell types to include (optional)"
     )
-    parser.add_argument("--batch_size", type=int, default=1000, help="Batch size for inference (default: 1000)")
+    parser.add_argument("--batch-size", type=int, default=1000, help="Batch size for inference")
 
 
 def run_tx_infer(args):
@@ -42,7 +42,7 @@ def run_tx_infer(args):
 
     from ...tx.models.state_transition import StateTransitionPerturbationModel
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
 
     def load_config(cfg_path: str) -> dict:

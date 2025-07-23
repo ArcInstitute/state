@@ -150,17 +150,15 @@ class Inference:
         output_adata_path: str | None = None,
         emb_key: str = "X_emb",
         dataset_name: str | None = None,
-        batch_size: int = 32,
         lancedb_path: str | None = None,
-        update_lancedb: bool = False,
         lancedb_batch_size: int = 1000,
         gene_column: str = "gene_name",
     ):
-        shape_dict = self.__load_dataset_meta(input_adata_path)
-        adata = anndata.read_h5ad(input_adata_path)
         if dataset_name is None:
             dataset_name = Path(input_adata_path).stem
-
+        shape_dict = self.__load_dataset_meta(input_adata_path)
+        adata = anndata.read_h5ad(input_adata_path)
+        
         # Convert to CSR format if needed
         adata = self._convert_to_csr(adata)
 
@@ -202,7 +200,7 @@ class Inference:
         if lancedb_path is not None:
             from .vectordb import StateVectorDB
         
-            log.info(f"Saving embeddings to LanceDB at {lancedb_path}")
+            log.info(f"Saving embeddings to LanceDB at {lancedb_path} using dataset name: {dataset_name}")
             vector_db = StateVectorDB(lancedb_path)
         
             # Extract relevant metadata
@@ -213,8 +211,8 @@ class Inference:
                 embeddings=all_embeddings,
                 metadata=metadata,
                 embedding_key=emb_key,
-                dataset_name=dataset_name or Path(input_adata_path).stem,
-                batch_size=lancedb_batch_size
+                dataset_name=dataset_name,
+                batch_size=lancedb_batch_size,
             )
         
             log.info(f"Successfully saved {len(all_embeddings)} embeddings to LanceDB")

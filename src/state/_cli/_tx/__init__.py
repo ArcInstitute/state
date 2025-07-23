@@ -5,15 +5,45 @@ from ._predict import add_arguments_predict, run_tx_predict
 from ._preprocess_infer import add_arguments_preprocess_infer, run_tx_preprocess_infer
 from ._preprocess_train import add_arguments_preprocess_train, run_tx_preprocess_train
 from ._train import add_arguments_train, run_tx_train
+from .._utils import CustomFormatter
 
 __all__ = ["run_tx_train", "run_tx_predict", "run_tx_infer", "run_tx_preprocess_train", "run_tx_preprocess_infer", "add_arguments_tx"]
 
 
 def add_arguments_tx(parser: ap.ArgumentParser):
-    """"""
+    """Add transcriptomic commands to the parser"""
     subparsers = parser.add_subparsers(required=True, dest="subcommand")
-    add_arguments_train(subparsers.add_parser("train", add_help=False))
-    add_arguments_predict(subparsers.add_parser("predict"))
-    add_arguments_infer(subparsers.add_parser("infer"))
-    add_arguments_preprocess_train(subparsers.add_parser("preprocess_train"))
-    add_arguments_preprocess_infer(subparsers.add_parser("preprocess_infer"))
+
+    # Train
+    desc = """description:
+  Train a perturbation model using a Hydra configuration.
+  Provide overrides to customize training, e.g.:
+  `state tx train data.batch_size=32`"""
+    add_arguments_train(
+        subparsers.add_parser("train", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # Predict
+    desc = """description:
+  Generate predictions from a trained model and optionally compute evaluation metrics."""
+    add_arguments_predict(
+        subparsers.add_parser("predict", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # Infer
+    desc = """description:
+  Run inference on new samples using a trained model."""
+    add_arguments_infer(
+        subparsers.add_parser("infer", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # Preprocess: train
+    desc = """description:
+  Preprocess a dataset for training."""
+    add_arguments_preprocess_train(subparsers.add_parser("preprocess-train", description=desc, formatter_class=CustomFormatter))
+
+    # Preprocess: infer
+    desc = """description:
+  Preprocess a dataset for inference."""
+    add_arguments_preprocess_infer(subparsers.add_parser("preprocess-infer", description=desc, formatter_class=CustomFormatter))
+

@@ -1,3 +1,4 @@
+import os
 import argparse as ap
 import logging
 import pandas as pd
@@ -14,15 +15,16 @@ def add_arguments_query(parser: ap.ArgumentParser):
     parser.add_argument("--embed-key", default="X_state", help="Key containing embeddings in input file")
     parser.add_argument("--exclude-distances", action="store_true", 
                        help="Exclude vector distances in results")
-    parser.add_argument("--filter", type=str, help="Filter expression (e.g., 'cell_type==\"B cell\"')")
-    parser.add_argument("--batch-size", type=int, default=100,
-                       help="Batch size for query operations")
+    parser.add_argument("--filter", type=str, 
+                        help="Filter expression (e.g., 'cell_type==\"B cell\"', assuming a 'cell_type' column exists in the database)")
+    parser.add_argument("--batch-size", type=int, default=100, help="Batch size for query operations")
+    parser.add_argument("--max-workers", type=int, default=os.cpu_count(), help="Maximum number of workers for parallel processing")
 
 def run_emb_query(args: ap.ArgumentParser):
     """
     Query a LanceDB database for similar cells.
     """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
     
     from ...emb.vectordb import StateVectorDB
@@ -59,6 +61,7 @@ def run_emb_query(args: ap.ArgumentParser):
         filter=args.filter,
         include_distance=not args.exclude_distances,
         batch_size=args.batch_size,
+        max_workers=args.max_workers,
         show_progress=True
     )
     
@@ -66,11 +69,21 @@ def run_emb_query(args: ap.ArgumentParser):
     all_results = []
     for query_idx, result_df in enumerate(results_list):
         result_df['query_cell_id'] = query_adata.obs.index[query_idx]
-        result_df['query_rank'] = range(1, len(result_df) + 1)
+        result_df['subject_rank'] = range(1, len(result_df) + 1)
         all_results.append(result_df)
     
     # Combine results
     final_results = pd.concat(all_results, ignore_index=True)
+
+    # Format the results table
+    ## Move certain columns to the start, if they exist
+    to_move = ['query_cell_id', 'subject_rank', 'query_subject_distance', 'cell_id', 'dataset', 'embedding_key']
+    to_move = [col for col in to_move if col in final_results.columns]
+    final_results = final_results[to_move + [col for col in final_results.columns if col not in to_move]]
+    ## Rename `cell_id` to 'subject_cell_id'
+    rn_dict = {'cell_id': 'subject_cell_id', 'dataset': 'subject_dataset'}
+    rn_dict = {k:v for k,v in rn_dict.items() if k in final_results.columns}
+    final_results = final_results.rename(columns=rn_dict)
     
     # Save results
     output_path = Path(args.output)
@@ -96,11 +109,11 @@ def create_result_anndata(query_adata, results_df, k):
     cell_ids_array = np.array(cell_ids_pivot.values, dtype=str)
     
     # Handle distances - convert to float64 and handle missing values
-    if 'vector_distance' in results_df:
+    if 'query_subject_distance' in results_df:
         distances_pivot = results_df.pivot(
             index='query_cell_id', 
             columns='query_rank', 
-            values='vector_distance'
+            values='query_subject_distance'
         )
         distances_array = np.array(distances_pivot.values, dtype=np.float64)
     else:
@@ -118,5 +131,5 @@ def create_result_anndata(query_adata, results_df, k):
     # Create result anndata
     result_adata = query_adata.copy()
     result_adata.uns['lancedb_query_results'] = uns_data
-    
+
     return result_adata

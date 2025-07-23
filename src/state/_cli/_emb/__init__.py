@@ -3,13 +3,42 @@ import argparse as ap
 from ._fit import add_arguments_fit, run_emb_fit
 from ._transform import add_arguments_transform, run_emb_transform
 from ._query import add_arguments_query, run_emb_query
+from ._vectordb import add_arguments_vectordb, run_emb_vectordb
+from .._utils import CustomFormatter
 
-__all__ = ["run_emb_fit", "run_emb_transform", "run_emb_query", "add_arguments_emb"]
+__all__ = ["run_emb_fit", "run_emb_transform", "run_emb_query", "run_emb_vectordb", "add_arguments_emb"]
 
 
 def add_arguments_emb(parser: ap.ArgumentParser):
-    """"""
+    """Add embedding commands to the parser"""
     subparsers = parser.add_subparsers(required=True, dest="subcommand")
-    add_arguments_fit(subparsers.add_parser("fit"))
-    add_arguments_transform(subparsers.add_parser("transform"))
-    add_arguments_query(subparsers.add_parser("query"))
+
+    # fit
+    desc = """description:
+  Train an embedding model on a reference dataset.
+  Provide Hydra overrides to adjust training parameters."""
+    add_arguments_fit(
+        subparsers.add_parser("fit", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # transform
+    desc = """description:
+  Encode an input dataset with a trained embedding model.
+  Results can be saved locally and inserted into a LanceDB vector store."""
+    add_arguments_transform(
+        subparsers.add_parser("transform", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # query
+    desc = """description:
+  Search a LanceDB vector store (created with `transform`) for cells with similar embeddings."""
+    add_arguments_query(
+        subparsers.add_parser("query", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # vectordb
+    desc = """description:
+  Get summary statistics about a LanceDB vector database including datasets, cell counts, and embeddings."""
+    add_arguments_vectordb(
+        subparsers.add_parser("vectordb", description=desc, formatter_class=CustomFormatter)
+    )
