@@ -16,7 +16,7 @@ def run_emb_vectordb(args: ap.ArgumentParser):
     """
     Get summary statistics about a LanceDB vector database.
     """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
     
     from ...emb.vectordb import StateVectorDB

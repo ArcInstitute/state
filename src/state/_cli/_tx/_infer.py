@@ -42,7 +42,7 @@ def run_tx_infer(args):
 
     from ...tx.models.state_transition import StateTransitionPerturbationModel
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
 
     def load_config(cfg_path: str) -> dict:

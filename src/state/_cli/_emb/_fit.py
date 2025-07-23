@@ -21,6 +21,7 @@ def run_emb_fit(cfg, args):
 
     from ...emb.train.trainer import main as trainer_main
 
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     log = logging.getLogger(__name__)
 
     # Load the base configuration

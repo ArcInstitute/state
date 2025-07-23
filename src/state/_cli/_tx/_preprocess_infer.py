@@ -22,13 +22,13 @@ def add_arguments_preprocess_infer(parser: ap.ArgumentParser):
         help="Path to output preprocessed AnnData file (.h5ad)",
     )
     parser.add_argument(
-        "--control_condition",
+        "--control-condition",
         type=str,
         required=True,
         help="Control condition identifier (e.g., \"[('DMSO_TF', 0.0, 'uM')]\")",
     )
     parser.add_argument(
-        "--pert_col",
+        "--pert-col",
         type=str,
         required=True,
         help="Column name containing perturbation information (e.g., 'drugname_drugconc')",
@@ -46,7 +46,8 @@ def run_tx_preprocess_infer(
     output_path: str, 
     control_condition: str, 
     pert_col: str, 
-    seed: int = 42
+    seed: int = 42,
+    log_level: str = "INFO"
 ):
     """
     Preprocess inference data by replacing perturbed cells with control expression.
@@ -62,6 +63,7 @@ def run_tx_preprocess_infer(
         pert_col: Column name containing perturbation information
         seed: Random seed for reproducibility
     """
+    logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
     logger.info(f"Loading AnnData from {adata_path}")
     adata = ad.read_h5ad(adata_path)
     

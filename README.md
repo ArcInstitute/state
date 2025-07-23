@@ -87,17 +87,17 @@ The cell lines and perturbations specified in the TOML should match the values a
 you can use the `tx predict` command:
 
 ```bash
-state tx predict --output_dir $HOME/state/test/ --checkpoint final.ckpt
+state tx predict --output-dir $HOME/state/test/ --checkpoint final.ckpt
 ```
 
-It will look in the `output_dir` above, for a `checkpoints` folder.
+It will look in the `output-dir` above, for a `checkpoints` folder.
 
 If you instead want to use a trained checkpoint for inference (e.g. on data not specified)
 in the TOML file:
 
 
 ```bash
-state tx infer --output $HOME/state/test/ --output_dir /path/to/model/ --checkpoint /path/to/model/final.ckpt --adata /path/to/anndata/processed.h5 --pert_col gene --embed_key X_hvg
+state tx infer --output $HOME/state/test/ --output-dir /path/to/model/ --checkpoint /path/to/model/final.ckpt --adata /path/to/anndata/processed.h5 --pert-col gene --embed-key X_hvg
 ```
 
 Here, `/path/to/model/` is the folder downloaded from [HuggingFace](https://huggingface.co/arcinstitute).
@@ -108,13 +108,13 @@ State provides two preprocessing commands to prepare data for training and infer
 
 #### Training Data Preprocessing
 
-Use `preprocess_train` to normalize, log-transform, and select highly variable genes from your training data:
+Use `preprocess-train` to normalize, log-transform, and select highly variable genes from your training data:
 
 ```bash
-state tx preprocess_train \
+state tx preprocess-train \
   --adata /path/to/raw_data.h5ad \
   --output /path/to/preprocessed_training_data.h5ad \
-  --num_hvgs 2000
+  --num-hvgs 2000
 ```
 
 This command:
@@ -125,14 +125,14 @@ This command:
 
 #### Inference Data Preprocessing
 
-Use `preprocess_infer` to create a "control template" for model inference:
+Use `preprocess-infer` to create a "control template" for model inference:
 
 ```bash
-state tx preprocess_infer \
+state tx preprocess-infer \
   --adata /path/to/real_data.h5ad \
   --output /path/to/control_template.h5ad \
-  --control_condition "DMSO" \
-  --pert_col "treatment" \
+  --control-condition "DMSO" \
+  --pert-col "treatment" \
   --seed 42
 ```
 

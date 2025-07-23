@@ -26,6 +26,7 @@ def get_args() -> tuple[ap.Namespace, list[str]]:
   Use these commands to train models, compute embeddings, and run inference.
   Run `state <command> --help` for details on each command."""
     parser = ap.ArgumentParser(description=desc, formatter_class=CustomFormatter)
+    parser.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Logging level")
     subparsers = parser.add_subparsers(required=True, dest="command")
 
     # emb
@@ -129,19 +130,19 @@ def main():
                     else:
                         # Load Hydra config with overrides for sets training
                         cfg = load_hydra_config("tx", args.hydra_overrides)
-                        run_tx_train(cfg)
+                        run_tx_train(cfg, args)
                 case "predict":
                     # For now, predict uses argparse and not hydra
                     run_tx_predict(args)
                 case "infer":
                     # Run inference using argparse, similar to predict
                     run_tx_infer(args)
-                case "preprocess_train":
+                case "preprocess-train":
                     # Run preprocessing using argparse
-                    run_tx_preprocess_train(args.adata, args.output, args.num_hvgs)
-                case "preprocess_infer":
+                    run_tx_preprocess_train(args.adata, args.output, args.num_hvgs, args.log_level)
+                case "preprocess-infer":
                     # Run inference preprocessing using argparse
-                    run_tx_preprocess_infer(args.adata, args.output, args.control_condition, args.pert_col, args.seed)
+                    run_tx_preprocess_infer(args.adata, args.output, args.control_condition, args.pert_col, args.seed, args.log_level)
 
 
 if __name__ == "__main__":

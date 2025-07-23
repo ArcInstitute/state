@@ -26,7 +26,7 @@ def run_emb_transform(args: ap.ArgumentParser):
     import torch
     from omegaconf import OmegaConf
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
 
     from ...emb.inference import Inference

@@ -40,10 +40,10 @@ def add_arguments_tx(parser: ap.ArgumentParser):
     # Preprocess: train
     desc = """description:
   Preprocess a dataset for training."""
-    add_arguments_preprocess_train(subparsers.add_parser("preprocess_train", description=desc, formatter_class=CustomFormatter))
+    add_arguments_preprocess_train(subparsers.add_parser("preprocess-train", description=desc, formatter_class=CustomFormatter))
 
     # Preprocess: infer
     desc = """description:
   Preprocess a dataset for inference."""
-    add_arguments_preprocess_infer(subparsers.add_parser("preprocess_infer", description=desc, formatter_class=CustomFormatter))
+    add_arguments_preprocess_infer(subparsers.add_parser("preprocess-infer", description=desc, formatter_class=CustomFormatter))
 

@@ -24,7 +24,7 @@ def run_emb_query(args: ap.ArgumentParser):
     """
     Query a LanceDB database for similar cells.
     """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
     
     from ...emb.vectordb import StateVectorDB

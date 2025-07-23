@@ -22,14 +22,14 @@ def add_arguments_preprocess_train(parser: ap.ArgumentParser):
         help="Path to output preprocessed AnnData file (.h5ad)",
     )
     parser.add_argument(
-        "--num_hvgs",
+        "--num-hvgs",
         type=int,
         required=True,
         help="Number of highly variable genes to select",
     )
 
 
-def run_tx_preprocess_train(adata_path: str, output_path: str, num_hvgs: int):
+def run_tx_preprocess_train(adata_path: str, output_path: str, num_hvgs: int, log_level: str):
     """
     Preprocess training data by normalizing, log-transforming, and selecting highly variable genes.
     
@@ -38,6 +38,7 @@ def run_tx_preprocess_train(adata_path: str, output_path: str, num_hvgs: int):
         output_path: Path to save preprocessed AnnData file
         num_hvgs: Number of highly variable genes to select
     """
+    logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
     logger.info(f"Loading AnnData from {adata_path}")
     adata = ad.read_h5ad(adata_path)
     

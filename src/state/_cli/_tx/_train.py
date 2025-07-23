@@ -8,7 +8,7 @@ def add_arguments_train(parser: ap.ArgumentParser):
     parser.add_argument("hydra_overrides", nargs="*", help="Hydra configuration overrides (e.g., data.batch_size=32)")
 
 
-def run_tx_train(cfg: DictConfig):
+def run_tx_train(cfg: DictConfig, args: ap.ArgumentParser):
     import json
     import logging
     import os
@@ -27,6 +27,7 @@ def run_tx_train(cfg: DictConfig):
     from ...tx.callbacks import BatchSpeedMonitorCallback
     from ...tx.utils import get_checkpoint_callbacks, get_lightning_module, get_loggers
 
+    logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
     logger = logging.getLogger(__name__)
     torch.set_float32_matmul_precision("medium")
 
