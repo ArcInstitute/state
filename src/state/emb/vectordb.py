@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from typing import Optional, List
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
 
 class StateVectorDB:
     """Manages LanceDB operations for State embeddings."""
@@ -22,7 +24,7 @@ class StateVectorDB:
         metadata: pd.DataFrame,
         embedding_key: str = "X_state",
         dataset_name: Optional[str] = None,
-        batch_size: int = 1000
+        batch_size: int = 1000,  
     ):
         """Create or update the embeddings table.
         
@@ -40,9 +42,10 @@ class StateVectorDB:
             batch_data = []
             
             for j in range(i, batch_end):
+                cell_id = metadata.index[j]
                 record = {
                     "vector": embeddings[j].tolist(),
-                    "cell_id": metadata.index[j],
+                    "cell_id": cell_id,
                     "embedding_key": embedding_key,
                     "dataset": dataset_name or "unknown",
                     **{col: metadata.iloc[j][col] for col in metadata.columns}
@@ -54,7 +57,12 @@ class StateVectorDB:
         # Create or append to table
         if self.table_name in self.db.table_names():
             table = self.db.open_table(self.table_name)
-            table.add(data)
+            (
+                table.merge_insert(["cell_id", "dataset"])
+                .when_matched_update_all()
+                .when_not_matched_insert_all()
+                .execute(data)
+            )
         else:
             self.db.create_table(self.table_name, data=data)
     
@@ -90,16 +98,17 @@ class StateVectorDB:
         if columns:
             query = query.select(columns + ['_distance'] if include_distance else columns)
         
+        # convert to pandas
         results = query.to_pandas()
 
         # deal with _distance column
         if '_distance' in results.columns:
             if include_distance:
-                results = results.rename(columns={'_distance': 'query_distance'})
+                results = results.rename(columns={'_distance': 'query_subject_distance'})
             else:
                 results = results.drop('_distance', axis=1)
         elif include_distance:
-            results['query_distance'] = 0.0
+            results['query_subject_distance'] = 0.0
 
         # drop vector column if include_vector is False
         if not include_vector and 'vector' in results.columns:
@@ -107,17 +116,29 @@ class StateVectorDB:
         
         return results
     
+    def _search_single(self, query_vector: np.ndarray, k: int, filter: str | None, 
+                      include_distance: bool, include_vector: bool):
+        """Helper method for parallel search."""
+        return self.search(
+            query_vector=query_vector,
+            k=k,
+            filter=filter,
+            include_distance=include_distance,
+            include_vector=include_vector,
+        )
+    
     def batch_search(
         self,
         query_vectors: np.ndarray,
         k: int = 10,
         filter: str | None = None,
         include_distance: bool = True,
-        batch_size: int = 100,
+        include_vector: bool = False,
+        max_workers: int = 4,
+        batch_size: int = 1000,
         show_progress: bool = True,
-        include_vector: bool = False
     ):
-        """Batch search for multiple query vectors.
+        """Parallel batch search for multiple query vectors using ThreadPoolExecutor.
         
         Args:
             query_vectors: Array of query embedding vectors
@@ -125,35 +146,57 @@ class StateVectorDB:
             filter: Optional filter expression
             include_distance: Whether to include distances
             include_vector: Whether to include the query vector in the results
-            batch_size: Number of queries to process at once
+            max_workers: Maximum number of worker threads
+            batch_size: Number of queries to submit to executor at once
             show_progress: Show progress bar
         Returns:
             List of DataFrames with search results
         """
         from tqdm import tqdm
         
-        results = []
-        iterator = range(0, len(query_vectors), batch_size)
+        # Create a partial function with fixed parameters
+        search_func = partial(
+            self._search_single,
+            k=k,
+            filter=filter,
+            include_distance=include_distance,
+            include_vector=include_vector,
+        )
         
-        if show_progress:
-            iterator = tqdm(iterator, desc="Searching")
+        results = [None] * len(query_vectors)
         
-        for i in iterator:
-            batch_end = min(i + batch_size, len(query_vectors))
-            batch_queries = query_vectors[i:batch_end]
+        # Process in batches to manage memory and avoid overwhelming the database
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            total_processed = 0
             
-            batch_results = []
-            for query_vec in batch_queries:
-                result = self.search(
-                    query_vector=query_vec,
-                    k=k,
-                    filter=filter,
-                    include_distance=include_distance,
-                    include_vector=include_vector,
-                )
-                batch_results.append(result)
+            if show_progress:
+                pbar = tqdm(total=len(query_vectors), desc="Searching")
             
-            results.extend(batch_results)
+            for batch_start in range(0, len(query_vectors), batch_size):
+                batch_end = min(batch_start + batch_size, len(query_vectors))
+                batch_vectors = query_vectors[batch_start:batch_end]
+                
+                # Submit batch to executor
+                future_to_index = {
+                    executor.submit(search_func, batch_vectors[i]): batch_start + i 
+                    for i in range(len(batch_vectors))
+                }
+                
+                # Collect results for this batch
+                for future in as_completed(future_to_index):
+                    index = future_to_index[future]
+                    try:
+                        results[index] = future.result()
+                    except Exception as e:
+                        print(f"Query {index} failed: {e}")
+                        results[index] = pd.DataFrame()  # Empty result on error
+                    
+                    total_processed += 1
+                    if show_progress:
+                        pbar.update(1)
+            
+            if show_progress:
+                pbar.close()
         
         return results
     

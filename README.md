@@ -265,16 +265,19 @@ state emb transform \
 ```
 
 Running this command multiple times with the same lancedb appends the new data to the provided database.
+Existing cell records will be updated with the new embeddings.
 
 #### Query the database
+
+> For this example, we will use the same dataset (SRX27532045), so the top hit should be the same cell.
 
 Obtain the embeddings:
 
 ```bash
 state emb transform \
   --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
-  --input /large_storage/ctc/public/scBasecamp/GeneFull_Ex50pAS/GeneFull_Ex50pAS/Homo_sapiens/SRX27532046.h5ad \
-  --output tmp/SRX27532046.h5ad \
+  --input /large_storage/ctc/public/scBasecamp/GeneFull_Ex50pAS/GeneFull_Ex50pAS/Homo_sapiens/SRX27532045.h5ad \
+  --output tmp/SRX27532045.h5ad \
   --gene-column gene_symbols
 ```
 
@@ -283,9 +286,19 @@ Query the database with the embeddings:
 ```bash
 state emb query \
   --lancedb tmp/state_embeddings.lancedb \
-  --input tmp/SRX27532046.h5ad \
+  --input tmp/SRX27532045.h5ad \
   --output tmp/similar_cells.csv \
   --k 3
+```
+
+Output:
+ - `query_cell_id` : The cell id of the query cell
+ - `subject_rank` : The rank of the h (smallest distance to)
+ - `query_subject_distance` : The distance between the query and subject cell vectors
+ - `subject_cell_id` : The cell id of the hit cell
+ - `subject_dataset` : The dataset of the hit cell
+ - `embedding_key` : The embedding key of the hit cell
+ - `...` : Other `obs` metadata columns from the query cell
 
 # Singularity
 

@@ -8,7 +8,7 @@ __all__ = ["run_emb_fit", "run_emb_transform", "run_emb_query", "add_arguments_e
 
 
 def add_arguments_emb(parser: ap.ArgumentParser):
-    """"""
+    """Add embedding commands to the parser"""
     subparsers = parser.add_subparsers(required=True, dest="subcommand")
     add_arguments_fit(subparsers.add_parser("fit"))
     add_arguments_transform(subparsers.add_parser("transform"))

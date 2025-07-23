@@ -3,6 +3,7 @@ import argparse as ap
 from hydra import compose, initialize
 from omegaconf import DictConfig
 
+from ._cli._utils import CustomFormatter
 from ._cli import (
     add_arguments_emb,
     add_arguments_tx,
@@ -17,10 +18,23 @@ from ._cli import (
 
 def get_args() -> tuple[ap.Namespace, list[str]]:
     """Parse known args and return remaining args for Hydra overrides"""
-    parser = ap.ArgumentParser()
+    desc = """description:
+  STATE command line interface.
+  For more information on how to use the CLI, use the `state <command> --help` command."""
+    parser = ap.ArgumentParser(description=desc, formatter_class=CustomFormatter)
     subparsers = parser.add_subparsers(required=True, dest="command")
-    add_arguments_emb(subparsers.add_parser("emb"))
-    add_arguments_tx(subparsers.add_parser("tx"))
+
+    # emb
+    desc = """description:
+  Embedding commands.
+  For more information on how to use the CLI, use the `state emb <command> --help` command."""
+    add_arguments_emb(subparsers.add_parser("emb", description=desc, formatter_class=CustomFormatter))
+
+    # tx
+    desc = """description:
+  Transcriptomic commands.
+  For more information on how to use the CLI, use the `state tx <command> --help` command."""
+    add_arguments_tx(subparsers.add_parser("tx", description=desc, formatter_class=CustomFormatter))
 
     # Use parse_known_args to get both known args and remaining args
     return parser.parse_args()
