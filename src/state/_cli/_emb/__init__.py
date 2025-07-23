@@ -23,14 +23,14 @@ def add_arguments_emb(parser: ap.ArgumentParser):
     # transform
     desc = """description:
   Encode an input dataset with a trained embedding model.
-  Results can be saved locally or inserted into a LanceDB database."""
+  Results can be saved locally and inserted into a LanceDB vector store."""
     add_arguments_transform(
         subparsers.add_parser("transform", description=desc, formatter_class=CustomFormatter)
     )
 
     # query
     desc = """description:
-  Search a LanceDB vector store for cells with matching embeddings."""
+  Search a LanceDB vector store (created with `transform`) for cells with similar embeddings."""
     add_arguments_query(
         subparsers.add_parser("query", description=desc, formatter_class=CustomFormatter)
     )
