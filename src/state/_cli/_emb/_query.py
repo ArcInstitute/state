@@ -15,7 +15,8 @@ def add_arguments_query(parser: ap.ArgumentParser):
     parser.add_argument("--embed-key", default="X_state", help="Key containing embeddings in input file")
     parser.add_argument("--exclude-distances", action="store_true", 
                        help="Exclude vector distances in results")
-    parser.add_argument("--filter", type=str, help="Filter expression (e.g., 'cell_type==\"B cell\"')")
+    parser.add_argument("--filter", type=str, 
+                        help="Filter expression (e.g., 'cell_type==\"B cell\"', assuming a 'cell_type' column exists in the database)")
     parser.add_argument("--batch-size", type=int, default=100, help="Batch size for query operations")
     parser.add_argument("--max-workers", type=int, default=os.cpu_count(), help="Maximum number of workers for parallel processing")
 
