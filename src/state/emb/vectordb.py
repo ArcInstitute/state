@@ -25,7 +25,7 @@ class StateVectorDB:
         embedding_key: str = "X_state",
         dataset_name: Optional[str] = None,
         batch_size: int = 1000,  
-    ):
+    ) -> None:
         """Create or update the embeddings table.
         
         Args:
@@ -211,3 +211,61 @@ class StateVectorDB:
             "columns": table.schema.names,
             "embedding_dim": len(table.to_pandas().iloc[0]['vector']) if len(table) > 0 else 0
         }
+
+    def get_database_summary(self) -> dict:
+        """Get comprehensive summary statistics about the database contents.
+        
+        Returns:
+            Dictionary containing database statistics including:
+            - num_cells: Total number of cells stored
+            - num_datasets: Number of unique datasets
+            - num_embedding_keys: Number of unique embedding keys
+            - datasets: List of dataset names
+            - embedding_keys: List of embedding key names
+            - cells_per_dataset: Dictionary mapping dataset to cell count
+        """
+        if self.table_name not in self.db.table_names():
+            return {
+                "num_cells": 0,
+                "num_datasets": 0,
+                "num_embedding_keys": 0,
+                "datasets": [],
+                "embedding_keys": [],
+                "cells_per_dataset": {},
+                "table_exists": False
+            }
+        
+        table = self.db.open_table(self.table_name)
+        
+        # Get the full dataset to compute statistics
+        # For large tables, we might want to optimize this with SQL-like queries
+        df = table.to_pandas()
+        
+        if len(df) == 0:
+            return {
+                "num_cells": 0,
+                "num_datasets": 0,
+                "num_embedding_keys": 0,
+                "datasets": [],
+                "embedding_keys": [],
+                "cells_per_dataset": {},
+                "table_exists": True
+            }
+        
+        # Calculate summary statistics
+        datasets = df['dataset'].unique().tolist()
+        embedding_keys = df['embedding_key'].unique().tolist()
+        cells_per_dataset = df['dataset'].value_counts().to_dict()
+        
+        summary = {
+            "num_cells": len(df),
+            "num_datasets": len(datasets),
+            "num_embedding_keys": len(embedding_keys),
+            "datasets": sorted(datasets),
+            "embedding_keys": sorted(embedding_keys),
+            "cells_per_dataset": cells_per_dataset,
+            "table_exists": True,
+            "embedding_dim": len(df.iloc[0]['vector']) if 'vector' in df.columns else 0
+        }
+        
+        return summary

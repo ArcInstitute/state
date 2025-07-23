@@ -3,9 +3,10 @@ import argparse as ap
 from ._fit import add_arguments_fit, run_emb_fit
 from ._transform import add_arguments_transform, run_emb_transform
 from ._query import add_arguments_query, run_emb_query
+from ._vectordb import add_arguments_vectordb, run_emb_vectordb
 from .._utils import CustomFormatter
 
-__all__ = ["run_emb_fit", "run_emb_transform", "run_emb_query", "add_arguments_emb"]
+__all__ = ["run_emb_fit", "run_emb_transform", "run_emb_query", "run_emb_vectordb", "add_arguments_emb"]
 
 
 def add_arguments_emb(parser: ap.ArgumentParser):
@@ -33,4 +34,11 @@ def add_arguments_emb(parser: ap.ArgumentParser):
   Search a LanceDB vector store (created with `transform`) for cells with similar embeddings."""
     add_arguments_query(
         subparsers.add_parser("query", description=desc, formatter_class=CustomFormatter)
+    )
+
+    # vectordb
+    desc = """description:
+  Get summary statistics about a LanceDB vector database including datasets, cell counts, and embeddings."""
+    add_arguments_vectordb(
+        subparsers.add_parser("vectordb", description=desc, formatter_class=CustomFormatter)
     )

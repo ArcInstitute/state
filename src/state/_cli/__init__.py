@@ -1,4 +1,4 @@
-from ._emb import add_arguments_emb, run_emb_fit, run_emb_transform, run_emb_query
+from ._emb import add_arguments_emb, run_emb_fit, run_emb_transform, run_emb_query, run_emb_vectordb
 from ._tx import add_arguments_tx, run_tx_infer, run_tx_predict, run_tx_train
 
 __all__ = [
@@ -10,4 +10,5 @@ __all__ = [
     "run_emb_fit",
     "run_emb_query",
     "run_emb_transform",
+    "run_emb_vectordb",
 ]

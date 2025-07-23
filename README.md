@@ -300,6 +300,28 @@ Output:
  - `embedding_key` : The embedding key of the hit cell
  - `...` : Other `obs` metadata columns from the query cell
 
+#### Summarize the vector database
+
+Get comprehensive statistics about your vector database:
+
+```bash
+state emb vectordb \
+  --lancedb tmp/state_embeddings.lancedb \
+  --format table
+```
+
+Output formats:
+ - `table` (default): Human-readable table format with emojis
+ - `json`: Machine-readable JSON format
+ - `yaml`: YAML format
+
+The summary includes:
+ - Total number of cells and datasets
+ - Number of unique embedding keys
+ - Embedding vector dimensions
+ - Cell count breakdown by dataset
+ - List of all embedding keys
+
 # Singularity
 
 Containerization for STATE is available via the `singularity.def` file.

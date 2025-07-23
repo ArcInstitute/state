@@ -10,6 +10,7 @@ from ._cli import (
     run_emb_fit,
     run_emb_transform,
     run_emb_query,
+    run_emb_vectordb,
     run_tx_infer,
     run_tx_predict,
     run_tx_train,
@@ -115,6 +116,8 @@ def main():
                     run_emb_transform(args)
                 case "query":
                     run_emb_query(args)
+                case "vectordb":
+                    run_emb_vectordb(args)
         case "tx":
             match args.subcommand:
                 case "train":
