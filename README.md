@@ -87,7 +87,9 @@ The cell lines and perturbations specified in the TOML should match the values a
 you can use the `tx predict` command:
 
 ```bash
-state tx predict --output-dir $HOME/state/test/ --checkpoint final.ckpt
+state tx predict \
+  --output-dir $HOME/state/test/ \
+  --checkpoint final.ckpt
 ```
 
 It will look in the `output-dir` above, for a `checkpoints` folder.
@@ -97,7 +99,13 @@ in the TOML file:
 
 
 ```bash
-state tx infer --output $HOME/state/test/ --output-dir /path/to/model/ --checkpoint /path/to/model/final.ckpt --adata /path/to/anndata/processed.h5 --pert-col gene --embed-key X_hvg
+state tx infer \
+  --output $HOME/state/test/ \
+  --output-dir /path/to/model/ \
+  --checkpoint /path/to/model/final.ckpt \
+  --adata /path/to/anndata/processed.h5 \
+  --pert-col gene \
+  --embed-key X_hvg
 ```
 
 Here, `/path/to/model/` is the folder downloaded from [HuggingFace](https://huggingface.co/arcinstitute).
