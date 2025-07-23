@@ -19,21 +19,22 @@ from ._cli import (
 def get_args() -> tuple[ap.Namespace, list[str]]:
     """Parse known args and return remaining args for Hydra overrides"""
     desc = """description:
-  STATE command line interface.
-  For more information on how to use the CLI, use the `state <command> --help` command."""
+  Entry point for the STATE command line interface.
+  Use these commands to train models, compute embeddings, and run inference.
+  Run `state <command> --help` for details on each command."""
     parser = ap.ArgumentParser(description=desc, formatter_class=CustomFormatter)
     subparsers = parser.add_subparsers(required=True, dest="command")
 
     # emb
     desc = """description:
-  Embedding commands.
-  For more information on how to use the CLI, use the `state emb <command> --help` command."""
+  Commands for generating and querying STATE embeddings.
+  See `state emb <command> --help` for subcommand options."""
     add_arguments_emb(subparsers.add_parser("emb", description=desc, formatter_class=CustomFormatter))
 
     # tx
     desc = """description:
-  Transcriptomic commands.
-  For more information on how to use the CLI, use the `state tx <command> --help` command."""
+  Train and evaluate perturbation models with Hydra configuration.
+  Overrides can be passed via `state tx <subcommand> param=value`."""
     add_arguments_tx(subparsers.add_parser("tx", description=desc, formatter_class=CustomFormatter))
 
     # Use parse_known_args to get both known args and remaining args
@@ -74,21 +75,20 @@ def show_hydra_help(method: str):
     print()
     print("Usage examples:")
     print("  Override single parameter:")
-    print(f"    uv run state tx train data.batch_size=64")
+    print("    uv run state tx train data.batch_size=64")
     print()
     print("  Override nested parameter:")
-    print(f"    uv run state tx train model.kwargs.hidden_dim=512")
+    print("    uv run state tx train model.kwargs.hidden_dim=512")
     print()
     print("  Override multiple parameters:")
-    print(f"    uv run state tx train data.batch_size=64 training.lr=0.001")
+    print("    uv run state tx train data.batch_size=64 training.lr=0.001")
     print()
     print("  Change config group:")
-    print(f"    uv run state tx train data=custom_data model=custom_model")
+    print("    uv run state tx train data=custom_data model=custom_model")
     print()
     print("Available config groups:")
     
     # Show available config groups
-    import os
     from pathlib import Path
     
     config_dir = Path(__file__).parent / "configs"

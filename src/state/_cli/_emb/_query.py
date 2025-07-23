@@ -131,5 +131,5 @@ def create_result_anndata(query_adata, results_df, k):
     # Create result anndata
     result_adata = query_adata.copy()
     result_adata.uns['lancedb_query_results'] = uns_data
-    
+
     return result_adata
