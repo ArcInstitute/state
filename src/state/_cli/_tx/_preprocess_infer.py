@@ -37,7 +37,7 @@ def add_arguments_preprocess_infer(parser: ap.ArgumentParser):
         "--seed",
         type=int,
         default=42,
-        help="Random seed for reproducibility (default: 42)",
+        help="Random seed for reproducibility",
     )
 
 
