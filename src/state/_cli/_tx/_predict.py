@@ -147,18 +147,18 @@ def run_tx_predict(args: ap.ArgumentParser):
 
         ModelClass = OldNeuralOTPerturbationModel
     elif model_class_name.lower() in ["neuralot", "pertsets"]:
-        from ...tx.models.pert_sets import PertSetsPerturbationModel
+        from ...tx.models.state_transition import StateTransitionPerturbationModel
 
-        ModelClass = PertSetsPerturbationModel
+        ModelClass = StateTransitionPerturbationModel
 
     elif model_class_name.lower() == "globalsimplesum":
-        from ...tx.models.global_simple_sum import GlobalSimpleSumPerturbationModel
+        from ...tx.models.perturb_mean import PerturbMeanPerturbationModel
 
-        ModelClass = GlobalSimpleSumPerturbationModel
+        ModelClass = PerturbMeanPerturbationModel
     elif model_class_name.lower() == "celltypemean":
-        from ...tx.models.cell_type_mean import CellTypeMeanModel
+        from ...tx.models.context_mean import ContextMeanPerturbationModel
 
-        ModelClass = CellTypeMeanModel
+        ModelClass = ContextMeanPerturbationModel
     elif model_class_name.lower() == "decoder_only":
         from ...tx.models.decoder_only import DecoderOnlyPerturbationModel
 
@@ -251,12 +251,13 @@ def run_tx_predict(args: ap.ArgumentParser):
             else:
                 all_pert_names.append(batch_preds["pert_name"])
 
-            if isinstance(batch_preds["pert_cell_barcode"], list):
-                all_pert_barcodes.extend(batch_preds["pert_cell_barcode"])
-                all_ctrl_barcodes.extend(batch_preds["ctrl_cell_barcode"])
-            else:
-                all_pert_barcodes.append(batch_preds["pert_cell_barcode"])
-                all_ctrl_barcodes.append(batch_preds["ctrl_cell_barcode"])
+            if "pert_cell_barcode" in batch_preds:
+                if isinstance(batch_preds["pert_cell_barcode"], list):
+                    all_pert_barcodes.extend(batch_preds["pert_cell_barcode"])
+                    all_ctrl_barcodes.extend(batch_preds["ctrl_cell_barcode"])
+                else:
+                    all_pert_barcodes.append(batch_preds["pert_cell_barcode"])
+                    all_ctrl_barcodes.append(batch_preds["ctrl_cell_barcode"])
 
             # Handle celltype_name
             if isinstance(batch_preds["celltype_name"], list):
@@ -292,15 +293,17 @@ def run_tx_predict(args: ap.ArgumentParser):
     logger.info("Creating anndatas from predictions from manual loop...")
 
     # Build pandas DataFrame for obs and var
-    obs = pd.DataFrame(
-        {
+    df_dict = {
             data_module.pert_col: all_pert_names,
             data_module.cell_type_key: all_celltypes,
             data_module.batch_col: all_gem_groups,
-            "pert_cell_barcode": all_pert_barcodes,
-            "ctrl_cell_barcode": all_ctrl_barcodes,
         }
-    )
+
+    if len(all_pert_barcodes) > 0:
+        df_dict["pert_cell_barcode"] = all_pert_barcodes
+        df_dict["ctrl_cell_barcode"] = all_ctrl_barcodes
+
+    obs = pd.DataFrame(df_dict)
 
     gene_names = var_dims["gene_names"]
     var = pd.DataFrame({"gene_names": gene_names})

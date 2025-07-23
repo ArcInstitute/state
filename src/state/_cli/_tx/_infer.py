@@ -40,7 +40,7 @@ def run_tx_infer(args):
     import yaml
     from tqdm import tqdm
 
-    from ...tx.models.pert_sets import PertSetsPerturbationModel
+    from ...tx.models.state_transition import StateTransitionPerturbationModel
 
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def run_tx_infer(args):
 
     # Load model
     logger.info(f"Loading model from checkpoint: {checkpoint_path}")
-    model = PertSetsPerturbationModel.load_from_checkpoint(checkpoint_path)
+    model = StateTransitionPerturbationModel.load_from_checkpoint(checkpoint_path)
     model.eval()
     cell_sentence_len = model.cell_sentence_len
     device = next(model.parameters()).device

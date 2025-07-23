@@ -10,7 +10,7 @@ from .base import PerturbationModel
 logger = logging.getLogger(__name__)
 
 
-class GlobalSimpleSumPerturbationModel(PerturbationModel):
+class PerturbMeanPerturbationModel(PerturbationModel):
     """
     A map-independent baseline that computes a cell-type-specific
     control mean and a cell-type-specific offset for each (cell type, perturbation).
@@ -173,7 +173,7 @@ class GlobalSimpleSumPerturbationModel(PerturbationModel):
             else:
                 self.global_basal = torch.stack(all_ctrl_means).mean(0)
 
-            logger.info(f"GlobalSimpleSum: computed offsets for {len(self.pert_mean_offsets)} perturbations")
+            logger.info(f"PerturbMean: computed offsets for {len(self.pert_mean_offsets)} perturbations")
 
     def forward(self, batch: dict) -> torch.Tensor:
         """
@@ -234,7 +234,7 @@ class GlobalSimpleSumPerturbationModel(PerturbationModel):
             p_name: offset.cpu().numpy() for p_name, offset in self.pert_mean_offsets.items()
         }
 
-        logger.info("GlobalSimpleSum: Saved global_basal and pert_mean_offsets to checkpoint.")
+        logger.info("PerturbMean: Saved global_basal and pert_mean_offsets to checkpoint.")
 
     def on_load_checkpoint(self, checkpoint):
         """
@@ -248,9 +248,9 @@ class GlobalSimpleSumPerturbationModel(PerturbationModel):
         # Load global_basal
         if "global_basal" in checkpoint:
             self.global_basal = torch.tensor(checkpoint["global_basal"], dtype=torch.float32)
-            logger.info("GlobalSimpleSum: Loaded global_basal from checkpoint.")
+            logger.info("PerturbMean: Loaded global_basal from checkpoint.")
         else:
-            logger.warning("GlobalSimpleSum: No global_basal found in checkpoint. Using zero vector.")
+            logger.warning("PerturbMean: No global_basal found in checkpoint. Using zero vector.")
             self.global_basal = torch.zeros(self.output_dim)
 
         # Load perturbation offsets
@@ -260,10 +260,10 @@ class GlobalSimpleSumPerturbationModel(PerturbationModel):
                 loaded_offsets[p_name] = torch.tensor(offset_np, dtype=torch.float32)
             self.pert_mean_offsets = loaded_offsets
             logger.info(
-                f"GlobalSimpleSum: Loaded offsets for {len(self.pert_mean_offsets)} perturbations from checkpoint."
+                f"PerturbMean: Loaded offsets for {len(self.pert_mean_offsets)} perturbations from checkpoint."
             )
         else:
-            logger.warning("GlobalSimpleSum: No pert_mean_offsets found in checkpoint. All offsets set to zero.")
+            logger.warning("PerturbMean: No pert_mean_offsets found in checkpoint. All offsets set to zero.")
             self.pert_mean_offsets = {}
 
     def encode_perturbation(self, pert: torch.Tensor) -> torch.Tensor:

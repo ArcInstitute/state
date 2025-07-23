@@ -102,6 +102,42 @@ state tx infer --output $HOME/state/test/ --output_dir /path/to/model/ --checkpo
 
 Here, `/path/to/model/` is the folder downloaded from [HuggingFace](https://huggingface.co/arcinstitute).
 
+### Data Preprocessing
+
+State provides two preprocessing commands to prepare data for training and inference:
+
+#### Training Data Preprocessing
+
+Use `preprocess_train` to normalize, log-transform, and select highly variable genes from your training data:
+
+```bash
+state tx preprocess_train \
+  --adata /path/to/raw_data.h5ad \
+  --output /path/to/preprocessed_training_data.h5ad \
+  --num_hvgs 2000
+```
+
+This command:
+- Normalizes total counts per cell (`sc.pp.normalize_total`)
+- Applies log1p transformation (`sc.pp.log1p`) 
+- Identifies highly variable genes (`sc.pp.highly_variable_genes`)
+- Stores the HVG expression matrix in `.obsm['X_hvg']`
+
+#### Inference Data Preprocessing
+
+Use `preprocess_infer` to create a "control template" for model inference:
+
+```bash
+state tx preprocess_infer \
+  --adata /path/to/real_data.h5ad \
+  --output /path/to/control_template.h5ad \
+  --control_condition "DMSO" \
+  --pert_col "treatment" \
+  --seed 42
+```
+
+This command replaces all perturbed cells with control cell expression while preserving perturbation annotations. The resulting dataset serves as a baseline where `state_transition(control_template) ≈ original_data`, allowing you to evaluate how well the model reconstructs perturbation effects from control states.
+
 ## TOML Configuration Files
 
 State experiments are configured using TOML files that define datasets, training splits, and evaluation scenarios. The configuration system supports both **zeroshot** (unseen cell types) and **fewshot** (limited perturbation examples) evaluation paradigms.

@@ -95,7 +95,7 @@ class ConfidenceToken(nn.Module):
         return main_output, confidence_pred
 
 
-class PertSetsPerturbationModel(PerturbationModel):
+class StateTransitionPerturbationModel(PerturbationModel):
     """
     This model:
       1) Projects basal expression and perturbation encodings into a shared latent space.

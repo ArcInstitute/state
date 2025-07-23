@@ -10,7 +10,7 @@ from .base import PerturbationModel
 logger = logging.getLogger(__name__)
 
 
-class CellTypeMeanModel(PerturbationModel):
+class ContextMeanPerturbationModel(PerturbationModel):
     """
     Baseline model that predicts the perturbed expression for a cell by returning
     the cell-type-specific average expression computed from perturbed cells in the training data.
@@ -126,7 +126,7 @@ class CellTypeMeanModel(PerturbationModel):
             self.celltype_pert_means[ct_name] = stats["sum"] / stats["count"]
 
         logger.info(
-            f"CellTypeMeanModel: computed average perturbed expression for {len(self.celltype_pert_means)} cell types."
+            f"ContextMean: computed average perturbed expression for {len(self.celltype_pert_means)} cell types."
         )
 
     def configure_optimizers(self):
@@ -206,7 +206,7 @@ class CellTypeMeanModel(PerturbationModel):
         super().on_save_checkpoint(checkpoint)
         # Convert each tensor to a CPU numpy array for serialization.
         checkpoint["celltype_pert_means"] = {ct: mean.cpu().numpy() for ct, mean in self.celltype_pert_means.items()}
-        logger.info("CellTypeMeanModel: Saved celltype_pert_means to checkpoint.")
+        logger.info("ContextMean: Saved celltype_pert_means to checkpoint.")
 
     def on_load_checkpoint(self, checkpoint):
         """
@@ -219,10 +219,10 @@ class CellTypeMeanModel(PerturbationModel):
                 loaded_means[ct] = torch.tensor(mean_np, dtype=torch.float32)
             self.celltype_pert_means = loaded_means
             logger.info(
-                f"CellTypeMeanModel: Loaded means for {len(self.celltype_pert_means)} cell types from checkpoint."
+                f"ContextMean: Loaded means for {len(self.celltype_pert_means)} cell types from checkpoint."
             )
         else:
-            logger.warning("CellTypeMeanModel: No celltype_pert_means found in checkpoint. All means set to empty.")
+            logger.warning("ContextMean: No celltype_pert_means found in checkpoint. All means set to empty.")
             self.celltype_pert_means = {}
 
     def _build_networks(self):

@@ -1,4 +1,4 @@
-name: CellContextMean
+name: perturb_mean
 checkpoint: null 
 device: cuda
 
@@ -10,11 +10,11 @@ kwargs:
   n_encoder_layers: 4
   n_decoder_layers: 4
   predict_residual: True
+  batch_encoder: False
   softplus: False
   freeze_pert_backbone: False
   transformer_decoder: False
   finetune_vci_decoder: False
-  batch_encoder: False
   nb_decoder: False
   distributional_loss: energy
   transformer_backbone_key: GPT2
