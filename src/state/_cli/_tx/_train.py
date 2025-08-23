@@ -213,6 +213,8 @@ def run_tx_train(cfg: DictConfig):
 
     if torch.cuda.is_available():
         accelerator = "gpu"
+    elif torch.backends.mps.is_available():
+        accelerator = "mps"
     else:
         accelerator = "cpu"
     
@@ -259,7 +261,7 @@ def run_tx_train(cfg: DictConfig):
     if checkpoint_path is None and manual_init is not None:
         print(f"Loading manual checkpoint from {manual_init}")
         checkpoint_path = manual_init
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
         checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         model_state = model.state_dict()
         checkpoint_state = checkpoint["state_dict"]
