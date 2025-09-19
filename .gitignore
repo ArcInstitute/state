@@ -11,4 +11,4 @@ notebooks/
 *.sif
 *.slurm
 temp
-wandb/
+/wandb/
