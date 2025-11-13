@@ -1,0 +1,24 @@
+# Multi-dataset TOML configuration for MoE training
+# Defines all 5 datasets for training
+
+[datasets]
+jiang = "/data/jiang_new"
+mcfaline = "/data/mcfaline_new"
+parse = "/data/parse_final_concat"
+replogle = "/data/replogle_nogwps_v2"
+srivatsan = "/data/srivatsan_19k"
+
+# Training specifications - all datasets used for training
+[training]
+jiang = "train"
+mcfaline = "train"
+parse = "train"
+replogle = "train"
+srivatsan = "train"
+
+# Zeroshot specifications - none for initial training
+[zeroshot]
+
+# Fewshot specifications - none for initial training
+[fewshot]
+

@@ -11,6 +11,9 @@ from ._cli import (
     run_emb_query,
     run_emb_preprocess,
     run_emb_eval,
+    run_tx_double,
+    run_tx_single,
+    run_tx_heatmap,
     run_tx_infer,
     run_tx_predict,
     run_tx_preprocess_infer,
@@ -121,6 +124,15 @@ def main():
                 case "predict":
                     # For now, predict uses argparse and not hydra
                     run_tx_predict(args)
+                case "heatmap":
+                    # Run heatmap analysis using argparse
+                    run_tx_heatmap(args)
+                case "double":
+                    # Run double perturbation analysis using argparse
+                    run_tx_double(args)
+                case "single":
+                    # Run single perturbation analysis using argparse
+                    run_tx_single(args)
                 case "infer":
                     # Run inference using argparse, similar to predict
                     run_tx_infer(args)

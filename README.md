@@ -59,6 +59,25 @@ options:
   -h, --help  show this help message and exit
 ```
 
+### Double Perturbation Analysis
+
+Generate double perturbation sweeps against a baseline core cell batch:
+
+```bash
+uv run state tx double \
+  --output-dir /path/to/training/run \
+  --target-cell-type RPE1 \
+  --checkpoint last.ckpt
+```
+
+Key arguments:
+- `--target-cell-type`: cell type used to seed the core control cells
+- `--checkpoint`: checkpoint filename inside `<output-dir>/checkpoints`
+- `--results-dir`: optional override for where to dump results; defaults to `<output-dir>/eval_<checkpoint>`
+- `--phase-one-only`: stop after saving single-perturbation predictions
+
+The command emits `.npy` snapshots, AnnData files, and metric reports mirroring the single-perturbation heatmap command.
+
 ## State Transition Model (ST)
 
 To start an experiment, write a TOML file (see `examples/zeroshot.toml` or

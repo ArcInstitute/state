@@ -1,0 +1,157 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    MoE DATASET ROUTING ARCHITECTURE                        ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. TOML CONFIG: /home/dhruvgautam/state/examples/moe_full.toml             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   [datasets]                                                                │
+│   jiang = "/data/jiang_new"         ──► PerturbationDataset(name="jiang")  │
+│   mcfaline = "/data/mcfaline_new"   ──► PerturbationDataset(name="mcfaline")│
+│   parse = "/data/parse_..."         ──► PerturbationDataset(name="parse")  │
+│   replogle = "/data/replogle_..."   ──► PerturbationDataset(name="replogle")│
+│   srivatsan = "/data/srivatsan_..." ──► PerturbationDataset(name="srivatsan")│
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. DATA MODULE: PerturbationDataModule._setup_datasets()                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   for dataset_name in config.get_all_datasets():                           │
+│       ds = PerturbationDataset(name=dataset_name, ...)                     │
+│       self.train_datasets.append(ds)                                        │
+│                                                                             │
+│   Result: List of separate PerturbationDataset instances                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. CONCATENATION: MetadataConcatDataset                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   concat_dataset = MetadataConcatDataset([                                 │
+│       PerturbationDataset("jiang"),     ─┐                                 │
+│       PerturbationDataset("mcfaline"),  ─┤─► Single unified dataset        │
+│       PerturbationDataset("parse"),     ─┤   with global indices           │
+│       PerturbationDataset("replogle"),  ─┤                                 │
+│       PerturbationDataset("srivatsan")  ─┘                                 │
+│   ])                                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. BATCH SAMPLING: PerturbationBatchSampler                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   def _process_subset(subset):                                             │
+│       # Groups cells by (cell_type, perturbation) WITHIN subset            │
+│       # Each subset = one PerturbationDataset                              │
+│       # Creates sentences (batches) from ONE dataset only                  │
+│                                                                             │
+│   Example sentence creation:                                               │
+│   ┌──────────────┬──────────────┬──────────────┬──────────────┐           │
+│   │ Batch 0:     │ Batch 1:     │ Batch 2:     │ Batch 3:     │           │
+│   │ [idx 0-63]   │ [idx 64-127] │ [idx 200-263]│ [idx 450-513]│           │
+│   │ from jiang   │ from jiang   │ from mcfaline│ from replogle│           │
+│   └──────────────┴──────────────┴──────────────┴──────────────┘           │
+│                                                                             │
+│   Result: Each batch contains indices from ONLY ONE dataset                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. SAMPLE FETCHING: PerturbationDataset.__getitem__()                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   For each index in batch:                                                 │
+│       sample = {                                                            │
+│           "pert_cell_emb": ...,                                             │
+│           "ctrl_cell_emb": ...,                                             │
+│           "dataset": self.name,  ◄─── CRITICAL: Dataset name added here    │
+│           ...                                                               │
+│       }                                                                     │
+│                                                                             │
+│   Example for Batch 2 (mcfaline):                                          │
+│       sample[0]["dataset"] = "mcfaline"                                    │
+│       sample[1]["dataset"] = "mcfaline"                                    │
+│       ...                                                                   │
+│       sample[63]["dataset"] = "mcfaline"  (all same!)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 6. COLLATION: PerturbationDataset.collate_fn()                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   # Verify homogeneity                                                     │
+│   unique_datasets = set([s["dataset"] for s in batch])                     │
+│   assert len(unique_datasets) == 1  # Must be single dataset!             │
+│                                                                             │
+│   batch_dict = {                                                            │
+│       "pert_cell_emb": torch.stack([...]),                                 │
+│       "dataset": dataset_list[0],  ◄─── Single string, not list           │
+│       ...                                                                   │
+│   }                                                                         │
+│                                                                             │
+│   Example: batch_dict["dataset"] = "mcfaline"                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 7. MODEL FORWARD: StateTransitionPerturbationModel.forward()               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   dataset_name = batch["dataset"]  # e.g., "mcfaline"                     │
+│                                                                             │
+│   # Map to expert index                                                    │
+│   dataset_to_expert = {                                                    │
+│       "replogle": 0,                                                        │
+│       "jiang": 1,                                                           │
+│       "mcfaline": 2,  ◄─── Matches "mcfaline"                             │
+│       "parse": 3,                                                           │
+│       "srivatsan": 4,                                                       │
+│   }                                                                         │
+│                                                                             │
+│   expert_idx = 2  # For mcfaline                                           │
+│   batch["moe_expert_indices"] = torch.tensor([2, 2, 2, ..., 2])           │
+│                                  All batch samples route to Expert 2       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8. MOE ROUTING: DeepseekV3BidirectionalModel                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   # Forced expert routing                                                  │
+│   for layer in self.layers:                                                │
+│       mlp._forced_expert_ids = batch["moe_expert_indices"]                 │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────┐                      │
+│   │  Expert 0 (replogle)    ──► Idle this batch     │                      │
+│   │  Expert 1 (jiang)       ──► Idle this batch     │                      │
+│   │  Expert 2 (mcfaline)    ──► ACTIVE! Process all tokens                │
+│   │  Expert 3 (parse)       ──► Idle this batch     │                      │
+│   │  Expert 4 (srivatsan)   ──► Idle this batch     │                      │
+│   └─────────────────────────────────────────────────┘                      │
+│                                                                             │
+│   Result: Expert 2 processes this batch, learns mcfaline-specific patterns │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TRAINING LOOP                                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   Batch 0: replogle  ──► Expert 0 processes                                │
+│   Batch 1: jiang     ──► Expert 1 processes                                │
+│   Batch 2: mcfaline  ──► Expert 2 processes                                │
+│   Batch 3: parse     ──► Expert 3 processes                                │
+│   Batch 4: srivatsan ──► Expert 4 processes                                │
+│   Batch 5: replogle  ──► Expert 0 processes                                │
+│   ...                                                                       │
+│                                                                             │
+│   Each expert specializes on its assigned dataset!                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                            KEY GUARANTEES                                  ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ ✓ Each batch contains samples from ONLY ONE dataset                       ║
+║ ✓ batch["dataset"] is ALWAYS a single string                              ║
+║ ✓ All samples in batch route to the SAME expert                           ║
+║ ✓ Each expert specializes on ONE dataset                                  ║
+║ ✓ Automatic routing - no manual intervention needed                       ║
+╚════════════════════════════════════════════════════════════════════════════╝
