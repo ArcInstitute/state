@@ -4,11 +4,9 @@ warnings.filterwarnings("ignore")
 
 import math
 import logging
-import numpy as np
-import pandas as pd
-import scanpy as sc
 import torch.nn.functional as F
 import torch
+from omegaconf import OmegaConf
 import lightning as L
 
 import sys
@@ -17,21 +15,15 @@ sys.path.append("../../")
 sys.path.append("../")
 
 from torch import nn, Tensor
-from torch.nn import TransformerEncoder, TransformerEncoderLayer, BCEWithLogitsLoss
+from torch.nn import BCEWithLogitsLoss
 
 
-from tqdm.auto import tqdm
 from torch.optim.lr_scheduler import ChainedScheduler, LinearLR, CosineAnnealingLR, ReduceLROnPlateau
 
-from ..data import create_dataloader
 from ..utils import (
-    compute_gene_overlap_cross_pert,
     get_embedding_cfg,
     get_dataset_cfg,
-    compute_pearson_delta,
-    compute_perturbation_ranking_score,
 )
-from ..eval.emb import cluster_embedding
 from .loss import WassersteinLoss, KLDivergenceLoss, MMDLoss, TabularLoss
 
 
@@ -62,27 +54,6 @@ class SkipBlock(nn.Module):
         return x
 
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 1536):
-        super().__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer("pe", pe)
-
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        Args:
-            x: Tensor, shape [seq_len, batch_size, embedding_dim]
-        """
-        x = x + self.pe[: x.size(0)]
-        return self.dropout(x)
-
-
 def nanstd(x):
     return torch.sqrt(torch.nanmean(torch.pow(x - torch.nanmean(x, dim=-1).unsqueeze(-1), 2), dim=-1))
 
@@ -106,8 +77,8 @@ class StateEmbeddingModel(L.LightningModule):
         collater=None,
     ):
         super().__init__()
-        self.save_hyperparameters()
         self.cfg = cfg
+        self.save_hyperparameters()
         self.compiled = compiled
         self.model_type = "Transformer"
         self.cls_token = nn.Parameter(torch.randn(1, token_dim))
@@ -125,19 +96,9 @@ class StateEmbeddingModel(L.LightningModule):
             nn.SiLU(),  # Changed to SiLU
         )
 
-        # Check the configuration flag whether to use Flash Attention
-        use_flash = getattr(self.cfg.model, "use_flash_attention", False)
-        if use_flash and FlashTransformerEncoderLayer is not None:
-            print("!!! Using Flash Attention !!!")
-            # Create a list of FlashTransformerEncoderLayer instances
-            layers = [FlashTransformerEncoderLayer(d_model, nhead, d_hid, dropout=dropout) for _ in range(nlayers)]
-            self.transformer_encoder = FlashTransformerEncoder(layers)
-        else:
-            # Fallback to the standard PyTorch TransformerEncoderLayer
-            encoder_layer = TransformerEncoderLayer(
-                d_model, nhead, d_hid, dropout=dropout, batch_first=True, activation="gelu"
-            )
-            self.transformer_encoder = TransformerEncoder(encoder_layer, nlayers)
+        # Create a list of FlashTransformerEncoderLayer instances
+        layers = [FlashTransformerEncoderLayer(d_model, nhead, d_hid, dropout=dropout) for _ in range(nlayers)]
+        self.transformer_encoder = FlashTransformerEncoder(layers)
 
         if compiled:
             self.transformer_encoder = torch.compile(self.transformer_encoder)
@@ -193,7 +154,7 @@ class StateEmbeddingModel(L.LightningModule):
 
         if getattr(self.cfg.model, "dataset_correction", False):
             self.dataset_token = nn.Parameter(torch.randn(1, token_dim))
-            self.dataset_embedder = nn.Linear(output_dim, 10)
+            self.dataset_embedder = nn.Linear(output_dim, self.z_dim_ds)
 
             # Assume self.cfg.model.num_datasets is set to the number of unique datasets.
             num_dataset = get_dataset_cfg(self.cfg).num_datasets
@@ -209,6 +170,41 @@ class StateEmbeddingModel(L.LightningModule):
             self.dataset_loss = nn.CrossEntropyLoss()
         else:
             self.dataset_token = None
+
+    def on_save_checkpoint(self, checkpoint):
+        """
+        Persist a snapshot of the training config inside the checkpoint so downstream
+        inference/eval can run without an external config file.
+        """
+        try:
+            if self.cfg is not None:
+                # Store both a YAML snapshot and a resolved container for robustness
+                checkpoint["cfg_yaml"] = OmegaConf.to_yaml(self.cfg)
+        except Exception:
+            # Never block checkpointing if config serialization fails
+            pass
+
+        # Also package protein embeddings for standalone inference/transform.
+        try:
+            if self.protein_embeds is not None:
+                pe = self.protein_embeds
+            else:
+                # Load from configured path as a fallback
+                from ..utils import get_embedding_cfg
+
+                pe = torch.load(get_embedding_cfg(self.cfg).all_embeddings, map_location="cpu", weights_only=False)
+            # Ensure CPU tensors in the dictionary
+            if isinstance(pe, dict):
+                cpu_pe = {}
+                for k, v in pe.items():
+                    try:
+                        cpu_pe[k] = v.detach().to("cpu") if hasattr(v, "detach") else torch.tensor(v, device="cpu")
+                    except Exception:
+                        cpu_pe[k] = v
+                checkpoint["protein_embeds_dict"] = cpu_pe
+        except Exception:
+            # Do not block checkpoint save if embedding packaging fails
+            pass
 
     def _compute_embedding_for_batch(self, batch):
         batch_sentences = batch[0].to(self.device)
@@ -268,7 +264,7 @@ class StateEmbeddingModel(L.LightningModule):
         A = task_embeds.unsqueeze(0).repeat(cell_embeds.size(0), 1, 1)
         B = cell_embeds.unsqueeze(1).repeat(1, task_embeds.size(0), 1)
         if sampled_rda is not None:
-            # your code here that computes mu and std dev from Y
+            # computes mu and std dev from Y
             reshaped_counts = sampled_rda.unsqueeze(1)
             reshaped_counts = reshaped_counts.repeat(1, A.shape[1], 1)
             combine = torch.cat((A, B, reshaped_counts), dim=2)
@@ -288,79 +284,6 @@ class StateEmbeddingModel(L.LightningModule):
             combine = torch.cat((combine, ds_emb), dim=2)
 
         return combine
-
-    def _predict_exp_for_adata(self, adata, dataset_name, pert_col):
-        dataloader = create_dataloader(
-            self.cfg,
-            adata=adata,
-            adata_name=dataset_name,
-            shuffle=False,
-            sentence_collator=self.collater,
-        )
-        try:
-            gene_embeds = self.get_gene_embedding(adata.var.index)
-        except:
-            gene_embeds = self.get_gene_embedding(adata.var["gene_symbols"])
-        emb_batches = []
-        ds_emb_batches = []
-        logprob_batches = []
-        for batch in tqdm(
-            dataloader,
-            position=0,
-            leave=True,
-            ncols=100,
-            desc=f"Embeddings for {dataset_name}",
-        ):
-            torch.cuda.synchronize()
-            torch.cuda.empty_cache()
-            _, _, _, emb, ds_emb = self._compute_embedding_for_batch(batch)
-
-            # now decode from the embedding
-            task_counts = None
-            sampled_rda = None
-            if self.z_dim_rd == 1:
-                Y = batch[2].to(self.device)
-                nan_y = Y.masked_fill(Y == 0, float("nan"))[:, : self.cfg.dataset.P + self.cfg.dataset.N]
-                task_counts = torch.nanmean(nan_y, dim=1) if self.cfg.model.rda else None
-                sampled_rda = None
-
-            ds_emb = None
-            if self.dataset_token is not None:
-                ds_emb = self.dataset_embedder(ds_emb)
-
-            emb_batches.append(emb.detach().cpu().numpy())
-            ds_emb_batches.append(ds_emb.detach().cpu().numpy())
-
-            merged_embs = StateEmbeddingModel.resize_batch(emb, gene_embeds, task_counts, sampled_rda, ds_emb)
-            logprobs_batch = self.binary_decoder(merged_embs)
-            logprobs_batch = logprobs_batch.detach().cpu().numpy()
-            logprob_batches.append(logprobs_batch.squeeze())
-
-        logprob_batches = np.vstack(logprob_batches)
-        adata.obsm["X_emb"] = np.vstack(emb_batches)
-        adata.obsm["X_ds_emb"] = np.vstack(ds_emb_batches)
-        adata.obsm["X_emb"] = np.concatenate([adata.obsm["X_emb"], adata.obsm["X_ds_emb"]], axis=-1)
-
-        # Free up memory from logprob_batches if possible
-        probs_df = pd.DataFrame(logprob_batches)
-        del logprob_batches
-        torch.cuda.empty_cache()
-        probs_df[pert_col] = adata.obs[pert_col].values
-
-        # Read config properties
-        k = self.cfg.validations.diff_exp.top_k_rank
-        pert_col = self.cfg.validations.diff_exp.obs_pert_col
-        non_targating_label = self.cfg.validations.diff_exp.obs_filter_label
-
-        probs_df = probs_df.groupby(pert_col).mean()
-        ctrl = probs_df.loc[non_targating_label].values
-        pert_effects = np.abs(probs_df - ctrl)
-        top_k_indices = np.argsort(pert_effects.values, axis=1)[:, -k:][:, ::-1]
-        top_k_genes = np.array(adata.var.index)[top_k_indices]
-        de_genes = pd.DataFrame(top_k_genes)
-        de_genes.index = pert_effects.index.values
-
-        return de_genes
 
     def forward(self, src: Tensor, mask: Tensor, counts=None, dataset_nums=None):
         """
@@ -408,14 +331,58 @@ class StateEmbeddingModel(L.LightningModule):
 
         return gene_output, embedding, dataset_emb
 
+    def _log_nonzero_elements_stats(self, batch_sentences, prefix="trainer"):
+        """
+        Track and log non-zero elements in the sentence for ablation study.
+
+        This function analyzes the mask tensor to count how many positions in each cell sentence
+        contain expressed genes (non-zero) versus unexpressed/padded genes (zero). This is useful
+        for understanding how padding with unexpressed gene embeddings affects model learning.
+
+        Args:
+            batch_sentences: Boolean tensor of shape (batch_size, seq_len) where True indicates
+                  non-zero (expressed) genes and False indicates zero (unexpressed/padded) genes.
+            prefix: String prefix for logging (e.g., "trainer" or "validation")
+
+        Logs:
+            - {prefix}/avg_nonzero_genes: Average number of non-zero genes per cell
+            - {prefix}/nonzero_fraction: Fraction of non-zero genes relative to total slots
+        """
+        # Count non-zero elements per cell in the batch
+        nonzero_counts = batch_sentences.sum(dim=1)  # Sum across sequence dimension
+        avg_nonzero = nonzero_counts.float().mean().item()
+
+        # Calculate the fraction of non-zero elements (excluding CLS token)
+        total_slots = batch_sentences.shape[1]
+        nonzero_fraction = avg_nonzero / total_slots
+
+        # Log the statistics
+        self.log(f"{prefix}/avg_nonzero_genes", avg_nonzero)
+        self.log(f"{prefix}/nonzero_fraction", nonzero_fraction)
+
     def shared_step(self, batch, batch_idx):
         logging.info(f"Step {self.global_step} - Batch {batch_idx}")
         X, Y, batch_weights, embs, dataset_embs = self._compute_embedding_for_batch(batch)
 
+        # Track non-zero elements in the sentence
+        batch_sentences = batch[7].to(self.device).bool()
+        prefix = "trainer" if self.training else "validation"
+        self._log_nonzero_elements_stats(batch_sentences, prefix)
+
         z = embs.unsqueeze(1).repeat(1, X.shape[1], 1)  # CLS token
 
         if self.z_dim_rd == 1:
-            mu = torch.nanmean(Y.masked_fill(Y == 0, float("nan")), dim=1) if self.cfg.model.rda else None
+            mu = (
+                torch.nan_to_num(
+                    torch.nanmean(
+                        Y.float().masked_fill(Y == 0, float("nan")),  # ignore zeros
+                        dim=1,
+                    ),
+                    nan=0.0,  # if all were 0→NaN, make it 0
+                )
+                if self.cfg.model.rda
+                else None
+            )
             reshaped_counts = mu.unsqueeze(1).unsqueeze(2)
             reshaped_counts = reshaped_counts.repeat(1, X.shape[1], 1)
 
@@ -494,179 +461,7 @@ class StateEmbeddingModel(L.LightningModule):
         self.log("validation/val_loss", loss)
         return loss
 
-    def on_validation_epoch_end(self):
-        self.eval()
-        current_step = self.global_step
-        try:
-            current_step = self.global_step
-            if self.global_rank == 0 and self.cfg.validations.diff_exp.enable:
-                interval = self.cfg.validations.diff_exp.eval_interval_multiple * self.cfg.experiment.val_check_interval
-                if current_step - self._last_val_de_check >= interval:
-                    self._compute_val_de()
-                    self._last_val_de_check = current_step
-            self.trainer.strategy.barrier()
-
-            if self.global_rank == 0 and self.cfg.validations.perturbation.enable:
-                interval = (
-                    self.cfg.validations.perturbation.eval_interval_multiple * self.cfg.experiment.val_check_interval
-                )
-                if current_step - self._last_val_perturbation_check >= interval:
-                    self._compute_val_perturbation(current_step)
-                    self._last_val_perturbation_check = current_step
-            self.trainer.strategy.barrier()
-
-        finally:
-            self.train()
-
-    def _compute_val_perturbation(self, current_step):
-        adata = sc.read_h5ad(self.cfg.validations.perturbation.dataset)
-        adata.X = np.log1p(adata.X)
-        dataloader = create_dataloader(
-            self.cfg,
-            adata=adata,
-            adata_name=self.cfg.validations.perturbation.dataset_name,
-            shuffle=False,
-            sentence_collator=self.collater,
-        )
-        all_embs = []
-        for batch in tqdm(
-            dataloader,
-            position=0,
-            leave=True,
-            ncols=100,
-            desc=f"Embeddings for {self.cfg.validations.perturbation.dataset_name}",
-        ):
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-            _, _, _, emb, _ = self._compute_embedding_for_batch(batch)
-            all_embs.append(emb.cpu().detach().numpy())
-
-        all_embs = np.concatenate(all_embs, axis=0)
-        adata.obsm["X_emb"] = all_embs
-        cluster_embedding(adata, current_step, emb_key="X_emb", use_pca=True, job_name=self.cfg.experiment.name)
-
-        col_id = self.cfg.validations.perturbation.pert_col
-        ctrl_label = self.cfg.validations.perturbation.ctrl_label
-
-        # Track metrics across all cell types
-        all_correlations = []
-        all_ranking_scores = []
-
-        # self.trainer.strategy.barrier()
-        for holdout_cell_type in adata.obs["cell_type"].unique():
-            train_adata = adata[adata.obs["cell_type"] != holdout_cell_type]
-            test_adata = adata[adata.obs["cell_type"] == holdout_cell_type]
-
-            mean_pert_dfs = []  # store perturbation mean deltas
-            # for each cell type, train a cell type mean perturbation model
-            for cell_type in train_adata.obs["cell_type"].unique():
-                adata_cell = train_adata[train_adata.obs["cell_type"] == cell_type]
-                ctrl_adata = adata_cell[adata_cell.obs[col_id] == ctrl_label]
-                pert_adata = adata_cell[adata_cell.obs[col_id] != ctrl_label]
-
-                mean_ctrl = ctrl_adata.obsm["X_emb"].mean(axis=0)  # shape: (embedding_dim,)
-                pert_offsets = pert_adata.obsm["X_emb"] - mean_ctrl
-
-                pert_df = pd.DataFrame(
-                    pert_offsets, index=pert_adata.obs_names, columns=[f"emb_{i}" for i in range(pert_offsets.shape[1])]
-                )
-
-                # Add the perturbation label column for grouping
-                pert_df[col_id] = pert_adata.obs[col_id].values
-
-                # Group by the perturbation label and compute the mean offset for this cell type
-                mean_pert_dfs.append(pert_df.groupby(col_id).mean())
-
-            # Average over all mean perturbations
-            mean_pert_df = pd.concat(mean_pert_dfs).groupby(level=0).mean()
-            pert_mean_offsets = {row: vals.values for row, vals in mean_pert_df.iterrows()}
-            pert_mean_offsets.update({ctrl_label: np.zeros(mean_ctrl.shape[0])})
-
-            # Create predicted and real AnnData objects for the test set
-            pred_x = np.zeros_like(test_adata.obsm["X_emb"]).copy()
-            real_adata = sc.AnnData(
-                X=test_adata.obsm["X_emb"],
-                obs=test_adata.obs.copy(),
-            )
-
-            # Sample control cells and compute predictions
-            ctrl_cells = test_adata[test_adata.obs[col_id] == ctrl_label].obs.index
-
-            pert_exclude = set()
-            for i, idx in enumerate(test_adata.obs.index):
-                pert = test_adata.obs.loc[idx, col_id]
-                if pert not in pert_mean_offsets:
-                    # we only want to compute on shared perturbations so add this
-                    # to the blacklist
-                    pert_exclude.add(pert)
-                    continue
-                elif pert == ctrl_label:
-                    # For control cells, use their own embedding
-                    sampled_ctrl_idx = idx
-                else:
-                    # For perturbed cells, sample a random control cell
-                    sampled_ctrl_idx = np.random.choice(ctrl_cells)
-
-                # Get basal expression (control cell embedding)
-                basal = test_adata[sampled_ctrl_idx].obsm["X_emb"]
-
-                # Add perturbation effect
-                pert_effect = pert_mean_offsets[pert]
-                pred = basal + pert_effect
-
-                # Store prediction
-                pred_x[i] = pred
-
-            pred_adata = sc.AnnData(
-                X=pred_x,
-                obs=test_adata.obs.copy(),
-            )
-
-            # retain only the cells in pred and real that are not in the blacklist
-            pred_adata = pred_adata[pred_adata.obs[col_id].isin(pert_mean_offsets.keys())]
-            real_adata = real_adata[real_adata.obs[col_id].isin(pert_mean_offsets.keys())]
-            ctrl_adata = pred_adata[pred_adata.obs[col_id] == ctrl_label]
-
-            # Compute metrics for this cell type. In our case, ctrl_pred = ctrl_true
-            # because we use the zero vector as perturbation for ctrl cells
-            correlation = compute_pearson_delta(pred_adata.X, real_adata.X, ctrl_adata.X, ctrl_adata.X)
-            ranking_score = compute_perturbation_ranking_score(pred_adata, real_adata)
-
-            all_correlations.append(correlation)
-            all_ranking_scores.append(ranking_score)
-
-        # Log average metrics across all cell types
-        self.log("validation/perturbation_correlation_mean", np.mean(all_correlations))
-        self.log("validation/perturbation_ranking_mean", np.mean(all_ranking_scores))
-
-    def _compute_val_de(self):
-        if self.true_top_genes is None:
-            de_val_adata = sc.read_h5ad(self.cfg.validations.diff_exp.dataset)
-            sc.pp.log1p(de_val_adata)
-            sc.tl.rank_genes_groups(
-                de_val_adata,
-                groupby=self.cfg.validations.diff_exp.obs_pert_col,
-                reference=self.cfg.validations.diff_exp.obs_filter_label,
-                rankby_abs=True,
-                n_genes=self.cfg.validations.diff_exp.top_k_rank,
-                method=self.cfg.validations.diff_exp.method,
-                use_raw=False,
-            )
-            self.true_top_genes = pd.DataFrame(de_val_adata.uns["rank_genes_groups"]["names"])
-            self.true_top_genes = self.true_top_genes.T
-            del de_val_adata
-        tmp_adata = sc.read_h5ad(self.cfg.validations.diff_exp.dataset)
-        pred_exp = self._predict_exp_for_adata(
-            tmp_adata, self.cfg.validations.diff_exp.dataset_name, self.cfg.validations.diff_exp.obs_pert_col
-        )
-        torch.cuda.synchronize()
-        de_metrics = compute_gene_overlap_cross_pert(
-            pred_exp, self.true_top_genes, k=self.cfg.validations.diff_exp.top_k_rank
-        )
-        self.log("validation/de", np.array(list(de_metrics.values())).mean())
-
     def configure_optimizers(self):
-        # Marcel Code
         max_lr = self.max_lr
         optimizer = torch.optim.AdamW(self.parameters(), lr=max_lr, weight_decay=self.cfg.optimizer.weight_decay)
         total_steps = self.trainer.estimated_stepping_batches * 2  # not sure why need to do this
@@ -686,3 +481,7 @@ class StateEmbeddingModel(L.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {"scheduler": scheduler, "monitor": "train_loss", "interval": "step", "frequency": 1},
         }
+
+    def update_config(self, new_cfg):
+        """Update the model's config after loading from checkpoint."""
+        self.cfg = new_cfg

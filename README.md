@@ -1,6 +1,6 @@
 # Predicting cellular responses to perturbation across diverse contexts with State
 
-> Train State transition models or pretrain State embedding models. See the State [paper](https://arcinstitute.org/manuscripts/State).
+> Train State transition models or pretrain State embedding models. See the State [paper](https://www.biorxiv.org/content/10.1101/2025.06.26.661135v2).
 > 
 > See the [Google Colab](https://colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l) to train STATE for the [Virtual Cell Challenge](https://virtualcellchallenge.org/).
 
@@ -8,6 +8,13 @@
 
 - Model evaluation framework: [cell-eval](https://github.com/ArcInstitute/cell-eval)
 - Dataloaders and preprocessing: [cell-load](https://github.com/ArcInstitute/cell-load)
+
+## Getting started
+
+- Train an ST model for genetic perturbation prediction using the Replogle-Nadig dataset: [Colab](https://colab.research.google.com/drive/1Ih-KtTEsPqDQnjTh6etVv_f-gRAA86ZN)
+- Perform inference using an ST model trained on Tahoe-100M: [Colab](https://colab.research.google.com/drive/1bq5v7hixnM-tZHwNdgPiuuDo6kuiwLKJ)
+- Embed and annotate a new dataset using SE: [Colab](https://colab.research.google.com/drive/1uJinTJLSesJeot0mP254fQpSxGuDEsZt)
+- Train STATE for the Virtual Cell Challenge: [Colab](https://colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l)
 
 ## Installation
 
@@ -87,7 +94,7 @@ The cell lines and perturbations specified in the TOML should match the values a
 you can use the `tx predict` command:
 
 ```bash
-state tx predict --output_dir $HOME/state/test/ --checkpoint final.ckpt
+state tx predict --output-dir $HOME/state/test/ --checkpoint final.ckpt
 ```
 
 It will look in the `output_dir` above, for a `checkpoints` folder.
@@ -101,6 +108,42 @@ state tx infer --output $HOME/state/test/ --output_dir /path/to/model/ --checkpo
 ```
 
 Here, `/path/to/model/` is the folder downloaded from [HuggingFace](https://huggingface.co/arcinstitute).
+
+### Data Preprocessing
+
+State provides two preprocessing commands to prepare data for training and inference:
+
+#### Training Data Preprocessing
+
+Use `preprocess_train` to normalize, log-transform, and select highly variable genes from your training data:
+
+```bash
+state tx preprocess_train \
+  --adata /path/to/raw_data.h5ad \
+  --output /path/to/preprocessed_training_data.h5ad \
+  --num_hvgs 2000
+```
+
+This command:
+- Normalizes total counts per cell (`sc.pp.normalize_total`)
+- Applies log1p transformation (`sc.pp.log1p`) 
+- Identifies highly variable genes (`sc.pp.highly_variable_genes`)
+- Stores the HVG expression matrix in `.obsm['X_hvg']`
+
+#### Inference Data Preprocessing
+
+Use `preprocess_infer` to create a "control template" for model inference:
+
+```bash
+state tx preprocess_infer \
+  --adata /path/to/real_data.h5ad \
+  --output /path/to/control_template.h5ad \
+  --control_condition "DMSO" \
+  --pert_col "treatment" \
+  --seed 42
+```
+
+This command replaces all perturbed cells with control cell expression while preserving perturbation annotations. The resulting dataset serves as a baseline where `state_transition(control_template) ≈ original_data`, allowing you to evaluate how well the model reconstructs perturbation effects from control states.
 
 ## TOML Configuration Files
 
@@ -226,14 +269,95 @@ After following the same installation commands above:
 state emb fit --conf ${CONFIG}
 ```
 
-To run inference with a trained State checkpoint, e.g., the State trained to 4 epochs:
+To run inference with a trained State checkpoint, e.g., the State trained to 16 epochs:
 
 ```bash
 state emb transform \
-  --model-folder "/large_storage/ctc/userspace/aadduri/SE-600M" \
-  --input "/large_storage/ctc/datasets/replogle/rpe1_raw_singlecell_01.h5ad" \
-  --output "/home/aadduri/vci_pretrain/test_output.h5ad"
+  --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
+  --checkpoint /large_storage/ctc/userspace/aadduri/SE-600M/se600m_epoch15.ckpt \
+  --input /large_storage/ctc/datasets/replogle/rpe1_raw_singlecell_01.h5ad \
+  --output /home/aadduri/vci_pretrain/test_output.h5ad
 ```
+
+Notes on the h5ad file format:
+ - CSR matrix format is required
+ - `gene_name` is required in the `var` dataframe
+
+### Vector Database
+
+Install the optional dependencies:
+
+```bash
+uv tool install ".[vectordb]"
+```
+
+If working off a previous installation, you may need to run:
+
+```bash
+uv sync --extra vectordb
+```
+
+#### Build the vector database
+
+```bash
+state emb transform \
+  --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
+  --input /large_storage/ctc/public/scBasecamp/GeneFull_Ex50pAS/GeneFull_Ex50pAS/Homo_sapiens/SRX27532045.h5ad \
+  --lancedb tmp/state_embeddings.lancedb \
+  --gene-column gene_symbols
+```
+
+Running this command multiple times with the same lancedb appends the new data to the provided database.
+
+#### Query the database
+
+Obtain the embeddings:
+
+```bash
+state emb transform \
+  --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
+  --input /large_storage/ctc/public/scBasecamp/GeneFull_Ex50pAS/GeneFull_Ex50pAS/Homo_sapiens/SRX27532046.h5ad \
+  --output tmp/SRX27532046.h5ad \
+  --gene-column gene_symbols
+```
+
+Query the database with the embeddings:
+
+```bash
+state emb query \
+  --lancedb tmp/state_embeddings.lancedb \
+  --input tmp/SRX27532046.h5ad \
+  --output tmp/similar_cells.csv \
+  --k 3
+
+# Singularity
+
+Containerization for STATE is available via the `singularity.def` file.
+
+Build the container:
+
+```bash
+singularity build state.sif singularity.def
+```
+
+Run the container:
+
+```bash
+singularity run state.sif --help
+```
+
+Example run of `state emb transform`:
+
+```bash
+singularity run --nv -B /large_storage:/large_storage \
+  state.sif emb transform \
+    --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
+    --checkpoint /large_storage/ctc/userspace/aadduri/SE-600M/se600m_epoch15.ckpt \
+    --input /large_storage/ctc/datasets/replogle/rpe1_raw_singlecell_01.h5ad \
+    --output test_output.h5ad
+```
+
+
 
 ## Licenses
 State code is [licensed](LICENSE) under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0).

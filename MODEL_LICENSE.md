@@ -36,7 +36,7 @@ If You redistribute the State Model or any Derivative Work, You must (a) include
 
 ## 4. Restrictions
 
-4.1  You may not use or distribute the State Model, any or Derivative Work for any purpose other than Non-Commercial Purposes, unless You first obtain a separate, express, written license from Licensor granting such rights.  If you wish to inquire about such separate license, you may contact <legal@arcinsitute.org>.
+4.1  You may not use or distribute the State Model, any or Derivative Work for any purpose other than Non-Commercial Purposes, unless You first obtain a separate, express, written license from Licensor granting such rights.  If you wish to inquire about such separate license, you may contact <legal@arcinstitute.org>.
 
 4.2  You may not remove, obfuscate, or alter any copyright, trademark, citation or other proprietary notice included in the State Model.
 

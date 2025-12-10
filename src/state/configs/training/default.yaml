@@ -1,4 +1,4 @@
-wandb_track: false
+wandb_track: true
 weight_decay: 0.0005
 batch_size: 16
 lr: 1e-4
@@ -10,3 +10,10 @@ gradient_clip_val: 10 # 0 means no clipping
 loss_fn: mse
 devices: 1  # Number of GPUs to use for training
 strategy: auto  # DDP strategy for multi-GPU training
+use_mfu: true
+mfu_kwargs:
+    available_flops: 60e12
+    use_backward: true
+    logging_interval: 10
+    window_size: 2
+cumulative_flops_use_backward: true

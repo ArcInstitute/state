@@ -8,8 +8,13 @@ from ._cli import (
     add_arguments_tx,
     run_emb_fit,
     run_emb_transform,
+    run_emb_query,
+    run_emb_preprocess,
+    run_emb_eval,
     run_tx_infer,
     run_tx_predict,
+    run_tx_preprocess_infer,
+    run_tx_preprocess_train,
     run_tx_train,
 )
 
@@ -46,10 +51,10 @@ def load_hydra_config(method: str, overrides: list[str] = None) -> DictConfig:
 def show_hydra_help(method: str):
     """Show Hydra configuration help with all parameters"""
     from omegaconf import OmegaConf
-    
+
     # Load the default config to show structure
     cfg = load_hydra_config(method)
-    
+
     print("Hydra Configuration Help")
     print("=" * 50)
     print(f"Configuration for method: {method}")
@@ -59,31 +64,30 @@ def show_hydra_help(method: str):
     print()
     print("Usage examples:")
     print("  Override single parameter:")
-    print(f"    uv run state tx train data.batch_size=64")
+    print("    uv run state tx train data.batch_size=64")
     print()
     print("  Override nested parameter:")
-    print(f"    uv run state tx train model.kwargs.hidden_dim=512")
+    print("    uv run state tx train model.kwargs.hidden_dim=512")
     print()
     print("  Override multiple parameters:")
-    print(f"    uv run state tx train data.batch_size=64 training.lr=0.001")
+    print("    uv run state tx train data.batch_size=64 training.lr=0.001")
     print()
     print("  Change config group:")
-    print(f"    uv run state tx train data=custom_data model=custom_model")
+    print("    uv run state tx train data=custom_data model=custom_model")
     print()
     print("Available config groups:")
-    
+
     # Show available config groups
-    import os
     from pathlib import Path
-    
+
     config_dir = Path(__file__).parent / "configs"
     if config_dir.exists():
         for item in config_dir.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
+            if item.is_dir() and not item.name.startswith("."):
                 configs = [f.stem for f in item.glob("*.yaml")]
                 if configs:
                     print(f"  {item.name}: {', '.join(configs)}")
-    
+
     exit(0)
 
 
@@ -98,10 +102,16 @@ def main():
                     run_emb_fit(cfg, args)
                 case "transform":
                     run_emb_transform(args)
+                case "query":
+                    run_emb_query(args)
+                case "preprocess":
+                    run_emb_preprocess(args)
+                case "eval":
+                    run_emb_eval(args)
         case "tx":
             match args.subcommand:
                 case "train":
-                    if hasattr(args, 'help') and args.help:
+                    if hasattr(args, "help") and args.help:
                         # Show Hydra configuration help
                         show_hydra_help("tx")
                     else:
@@ -114,6 +124,12 @@ def main():
                 case "infer":
                     # Run inference using argparse, similar to predict
                     run_tx_infer(args)
+                case "preprocess_train":
+                    # Run preprocessing using argparse
+                    run_tx_preprocess_train(args.adata, args.output, args.num_hvgs)
+                case "preprocess_infer":
+                    # Run inference preprocessing using argparse
+                    run_tx_preprocess_infer(args.adata, args.output, args.control_condition, args.pert_col, args.seed)
 
 
 if __name__ == "__main__":

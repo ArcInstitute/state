@@ -4,6 +4,14 @@ import torch
 import torch.nn as nn
 from transformers import GPT2Config, GPT2Model, LlamaConfig, LlamaModel, PreTrainedModel
 
+# LoRA / PEFT
+try:
+    from peft import LoraConfig, get_peft_model, TaskType  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    LoraConfig = None  # type: ignore
+    get_peft_model = None  # type: ignore
+    TaskType = None  # type: ignore
+
 
 def build_mlp(
     in_dim: int,
@@ -91,6 +99,8 @@ def get_loss_fn(loss: Union[str, nn.Module]) -> nn.Module:
 
 
 def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
+    kwargs = dict(kwargs or {})
+
     if key == "GPT2":
         config = GPT2Config(**kwargs)
         model = GPT2BidirectionalModel(config)
@@ -103,8 +113,13 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
 
         model_dim = config.n_embd
     elif key == "llama":
+        bidirectional_attention = bool(kwargs.pop("bidirectional_attention", False))
+
         config = LlamaConfig(**kwargs)
-        model = LlamaBidirectionalModel(config)
+        if bidirectional_attention:
+            model = LlamaBidirectionalModel(config)
+        else:
+            model = LlamaModel(config)
         model_dim = config.hidden_size
 
         model.embed_tokens.weight.requires_grad = False
@@ -115,6 +130,72 @@ def get_transformer_backbone(key, kwargs) -> PreTrainedModel:
     return model, model_dim
 
 
+# -------------------------------
+# LoRA utilities
+# -------------------------------
+def _default_lora_targets(backbone_key: str, adapt_mlp: bool) -> list[str]:
+    """
+    Choose target module names for LoRA injection based on backbone type.
+    """
+    k = backbone_key.lower()
+    if k == "llama":
+        targets = ["q_proj", "k_proj", "v_proj", "o_proj"]
+        if adapt_mlp:
+            targets += ["gate_proj", "up_proj", "down_proj"]
+        return targets
+    if k == "gpt2":
+        targets = ["c_attn", "c_proj"]
+        if adapt_mlp:
+            targets += ["mlp.c_fc", "mlp.c_proj"]
+        return targets
+    raise ValueError(f"Unsupported backbone for LoRA: {backbone_key}")
+
+
+def apply_lora(model: PreTrainedModel, backbone_key: str, lora_cfg: dict | None) -> PreTrainedModel:
+    """
+    Apply LoRA adapters to a HuggingFace transformer model when enabled.
+    If PEFT is unavailable or config is disabled, returns the original model.
+    """
+    if not lora_cfg or not lora_cfg.get("enable", False):
+        return model
+
+    if LoraConfig is None or get_peft_model is None:
+        raise ImportError(
+            "peft is not installed but `lora.enable` is True. Add `peft` to dependencies."
+        )
+
+    target = lora_cfg.get("target", "auto")
+    adapt_mlp = bool(lora_cfg.get("adapt_mlp", False))
+    target_modules = (
+        lora_cfg.get("target_modules")
+        if target != "auto"
+        else _default_lora_targets(backbone_key, adapt_mlp)
+    )
+
+    # Build PEFT LoRA config
+    task_type_key = lora_cfg.get("task_type", "FEATURE_EXTRACTION")
+    task_type = TaskType[task_type_key] if isinstance(task_type_key, str) else task_type_key
+
+    config = LoraConfig(
+        r=int(lora_cfg.get("r", 16)),
+        lora_alpha=int(lora_cfg.get("alpha", 32)),
+        lora_dropout=float(lora_cfg.get("dropout", 0.0)),
+        bias=lora_cfg.get("bias", "none"),
+        target_modules=target_modules,
+        task_type=task_type,
+    )
+
+    peft_model = get_peft_model(model, config)
+
+    # Optional: print trainable params summary if available
+    try:
+        peft_model.print_trainable_parameters()
+    except Exception:
+        pass
+
+    return peft_model
+
+
 class NoRoPE(nn.Module):
     """
     A drop-in replacement for LlamaRotaryEmbedding that always returns:
@@ -122,19 +203,18 @@ class NoRoPE(nn.Module):
     of shape (batch_size, seq_len, head_dim), so rotary has no effect.
     """
 
-    def __init__(self, num_attention_heads: int, hidden_size: int):
+    def __init__(self, head_dim: int):
         super().__init__()
-        self.num_heads = num_attention_heads
-        self.hidden_size = hidden_size
+        self.head_dim = head_dim
 
     def forward(self, hidden_states: torch.Tensor, position_ids: torch.LongTensor):
         # hidden_states: (batch_size, seq_len, hidden_dim)
-        batch_size, seq_len, hidden_dim = hidden_states.shape
+        batch_size, seq_len, _hidden_dim = hidden_states.shape
 
         # Create cos = ones, sin = zeros
         #   shape --> (batch_size, seq_len, head_dim)
-        cos = hidden_states.new_ones(batch_size, seq_len, self.num_heads)
-        sin = hidden_states.new_zeros(batch_size, seq_len, self.num_heads)
+        cos = hidden_states.new_ones(batch_size, seq_len, self.head_dim)
+        sin = hidden_states.new_zeros(batch_size, seq_len, self.head_dim)
         return cos, sin
 
 
@@ -148,9 +228,15 @@ class LlamaBidirectionalModel(LlamaModel):
         super().__init__(config)
 
         self.rotary_emb = NoRoPE(
-            num_attention_heads=config.head_dim,
-            hidden_size=config.hidden_size,
+            head_dim=config.head_dim,
         )
+        
+        # Explicitly disable causal attention
+        self.config.is_causal = False
+        # force every layer to be non-causal
+        for layer in self.layers:
+            if hasattr(layer, "self_attn"):
+                layer.self_attn.is_causal = False   # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
 
     def _update_causal_mask(
         self,
@@ -161,14 +247,14 @@ class LlamaBidirectionalModel(LlamaModel):
         output_attentions: bool = False,
     ):
         # By returning None, we disable any causal‐(look‐ahead) masking.
-        # The only mask that remains is whatever “attention_mask” the user has passed
+        # The only mask that remains is whatever "attention_mask" the user has passed
         # (e.g. padding‐mask), which will be handled by Flash/SDPA internally as non‐causal.
         return None
 
     def forward(
         self,
         input_ids: torch.LongTensor = None,
-        attention_mask: torch.Tensor = None,
+        attention_mask: torch.Tensor | None = None,
         position_ids: torch.LongTensor = None,
         past_key_values=None,
         inputs_embeds: torch.FloatTensor = None,
@@ -179,6 +265,18 @@ class LlamaBidirectionalModel(LlamaModel):
         **flash_attn_kwargs,
     ):
         flash_attn_kwargs["is_causal"] = False
+        
+        # If no attention_mask is provided, create an all-ones mask (no masking)
+        # This ensures bidirectional attention with correct device/dtype
+        if attention_mask is None:
+            # Get batch size (B) and sequence length (S) from input_embeds if available, else from input_ids.
+            # If neither is available, fall back to attention_mask=None and log a warning.
+            B = None
+            S = None
+            if inputs_embeds is not None:
+                B, S = inputs_embeds.size(0), inputs_embeds.size(1)
+            if B and S:
+                attention_mask = torch.ones((B, 1, S, S), dtype=torch.float, device=inputs_embeds.device)
 
         return super().forward(
             input_ids=input_ids,

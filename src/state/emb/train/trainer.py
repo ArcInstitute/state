@@ -12,7 +12,14 @@ from lightning.pytorch.strategies import DDPStrategy
 
 from ..nn.model import StateEmbeddingModel
 from ..data import H5adSentenceDataset, VCIDatasetSentenceCollator
-from ..train.callbacks import LogLR, ProfilerCallback, ResumeCallback, EMACallback, PerfProfilerCallback
+from ..train.callbacks import (
+    LogLR,
+    ProfilerCallback,
+    ResumeCallback,
+    EMACallback,
+    PerfProfilerCallback,
+    CumulativeFLOPSCallback,
+)
 from ..utils import get_latest_checkpoint, get_embedding_cfg, get_dataset_cfg
 
 
@@ -88,6 +95,14 @@ def main(cfg):
         collater=val_dataset_sentence_collator,
         cfg=cfg,
     )
+    # Ensure model always uses the current config, even after checkpoint loading
+    model.update_config(cfg)
+    # Also update datasets and collaters with current config
+    train_dataset.cfg = cfg
+    val_dataset.cfg = cfg
+    train_dataset_sentence_collator.cfg = cfg
+    val_dataset_sentence_collator.cfg = cfg
+    model.collater = val_dataset_sentence_collator
     model = model.cuda()
     all_pe = get_embeddings(cfg)
     all_pe.requires_grad = False
@@ -127,6 +142,9 @@ def main(cfg):
     if getattr(cfg.model, "ema", False):
         ema_decay = getattr(cfg.model, "ema_decay", 0.999)
         callbacks.append(EMACallback(decay=ema_decay))
+
+    # Add cumulative FLOPS callback
+    callbacks.append(CumulativeFLOPSCallback(use_backward=cfg.experiment.cumulative_flops_use_backward))
 
     max_steps = -1
     if cfg.experiment.profile.enable_profiler:

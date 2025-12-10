@@ -93,7 +93,8 @@ class MMDLoss(nn.Module):
         input = input.reshape(-1, self.downsample, input.shape[-1])
         target = target.reshape(-1, self.downsample, target.shape[-1])
 
-        return self.mmd_loss(input, target).mean()
+        loss = self.mmd_loss(input, target)
+        return loss.mean()
 
 
 class TabularLoss(nn.Module):
@@ -108,7 +109,7 @@ class TabularLoss(nn.Module):
     def forward(self, input, target):
         input = input.reshape(-1, self.downsample, input.shape[-1])
         target = target.reshape(-1, self.downsample, target.shape[-1])
-        gene_mmd = self.gene_loss(input, target).mean()
+        gene_mmd = self.gene_loss(input, target).nanmean()
 
         # cell_mmd should only be on the shared genes, and match scale to mse loss
         cell_inputs = input[:, :, -self.shared :]
@@ -117,6 +118,12 @@ class TabularLoss(nn.Module):
         # need to reshape each from (B, self.downsample, F) to (F, self.downsample, B)
         cell_inputs = cell_inputs.transpose(2, 0)
         cell_targets = cell_targets.transpose(2, 0)
-        cell_mmd = self.cell_loss(cell_inputs, cell_targets).mean()
+        cell_mmd = self.cell_loss(cell_inputs, cell_targets).nanmean()
 
-        return gene_mmd + cell_mmd
+        final_loss = torch.tensor(0.0).to(cell_mmd.device)
+        if not gene_mmd.isnan():
+            final_loss += gene_mmd
+        if not cell_mmd.isnan():
+            final_loss += cell_mmd
+
+        return final_loss

@@ -15,7 +15,7 @@ class RobustCSVLogger(BaseCSVLogger):
     This fixes the issue where PyTorch Lightning's default CSV logger fails when new metrics
     are added after the CSV file is created.
     """
-    
+
     def log_metrics(self, metrics, step):
         """Override to handle dynamic metrics gracefully"""
         try:
@@ -28,39 +28,39 @@ class RobustCSVLogger(BaseCSVLogger):
                 super().log_metrics(metrics, step)
             else:
                 raise e
-    
+
     def _recreate_csv_with_new_fields(self, new_metrics):
         """Recreate the CSV file with additional fields to accommodate new metrics"""
-        if not hasattr(self.experiment, 'metrics_file_path'):
+        if not hasattr(self.experiment, "metrics_file_path"):
             return
-            
+
         # Read existing data
         existing_data = []
         csv_file = self.experiment.metrics_file_path
-        
+
         if os.path.exists(csv_file):
-            with open(csv_file, 'r', newline='') as f:
+            with open(csv_file, "r", newline="") as f:
                 reader = csv.DictReader(f)
                 existing_data = list(reader)
-        
+
         # Get all unique fieldnames from existing data and new metrics
         all_fieldnames = set()
         for row in existing_data:
             all_fieldnames.update(row.keys())
         all_fieldnames.update(new_metrics.keys())
-        
+
         # Sort fieldnames for consistent ordering
         sorted_fieldnames = sorted(all_fieldnames)
-        
+
         # Rewrite the CSV file with new fieldnames
-        with open(csv_file, 'w', newline='') as f:
+        with open(csv_file, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=sorted_fieldnames)
             writer.writeheader()
-            
+
             # Write existing data (missing fields will be empty)
             for row in existing_data:
                 writer.writerow(row)
-        
+
         # Update the experiment's fieldnames
         self.experiment.metrics_keys = sorted_fieldnames
 
@@ -89,7 +89,7 @@ def get_loggers(
 ):
     """Set up logging to local CSV and optionally WandB."""
     loggers = []
-    
+
     # Use robust CSV logger that handles dynamic metrics
     if use_csv:
         csv_logger = RobustCSVLogger(save_dir=output_dir, name=name, version=0)
@@ -200,10 +200,23 @@ def get_lightning_module(model_type: str, data_config: dict, model_config: dict,
             batch_dim=var_dims["batch_dim"],
             **module_config,
         )
-    elif model_type.lower() == "neuralot" or model_type.lower() == "pertsets":
-        from ...tx.models.pert_sets import PertSetsPerturbationModel
+    elif model_type.lower() == "neuralot" or model_type.lower() == "pertsets" or model_type.lower() == "state":
+        from ...tx.models.state_transition import StateTransitionPerturbationModel
 
-        return PertSetsPerturbationModel(
+        return StateTransitionPerturbationModel(
+            input_dim=var_dims["input_dim"],
+            gene_dim=gene_dim,
+            hvg_dim=var_dims["hvg_dim"],
+            output_dim=var_dims["output_dim"],
+            pert_dim=var_dims["pert_dim"],
+            batch_dim=var_dims["batch_dim"],
+            basal_mapping_strategy=data_config["basal_mapping_strategy"],
+            **module_config,
+        )
+    elif model_type.lower() == "globalsimplesum" or model_type.lower() == "perturb_mean":
+        from ...tx.models.perturb_mean import PerturbMeanPerturbationModel
+
+        return PerturbMeanPerturbationModel(
             input_dim=var_dims["input_dim"],
             gene_dim=gene_dim,
             hvg_dim=var_dims["hvg_dim"],
@@ -212,34 +225,10 @@ def get_lightning_module(model_type: str, data_config: dict, model_config: dict,
             batch_dim=var_dims["batch_dim"],
             **module_config,
         )
-    elif model_type.lower() == "globalsimplesum":
-        from ...tx.models.global_simple_sum import GlobalSimpleSumPerturbationModel
+    elif model_type.lower() == "celltypemean" or model_type.lower() == "context_mean":
+        from ...tx.models.context_mean import ContextMeanPerturbationModel
 
-        return GlobalSimpleSumPerturbationModel(
-            input_dim=var_dims["input_dim"],
-            gene_dim=gene_dim,
-            hvg_dim=var_dims["hvg_dim"],
-            output_dim=var_dims["output_dim"],
-            pert_dim=var_dims["pert_dim"],
-            batch_dim=var_dims["batch_dim"],
-            **module_config,
-        )
-    elif model_type.lower() == "celltypemean":
-        from ...tx.models.cell_type_mean import CellTypeMeanModel
-
-        return CellTypeMeanModel(
-            input_dim=var_dims["input_dim"],
-            gene_dim=gene_dim,
-            hvg_dim=var_dims["hvg_dim"],
-            output_dim=var_dims["output_dim"],
-            pert_dim=var_dims["pert_dim"],
-            batch_dim=var_dims["batch_dim"],
-            **module_config,
-        )
-    elif model_type.lower() == "cellcontextmean":
-        from ...tx.models.cell_context_mean import CellContextPerturbationModel
-
-        return CellContextPerturbationModel(
+        return ContextMeanPerturbationModel(
             input_dim=var_dims["input_dim"],
             gene_dim=gene_dim,
             hvg_dim=var_dims["hvg_dim"],

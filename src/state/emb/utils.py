@@ -95,25 +95,25 @@ def is_valid_uuid(val):
 
 
 def get_embedding_cfg(cfg):
-    return cfg.embeddings[cfg.embeddings.current]
+    return cfg["embeddings"][cfg["embeddings"]["current"]]
 
 
 def get_dataset_cfg(cfg):
-    return cfg.dataset[cfg.dataset.current]
+    return cfg["dataset"][cfg["dataset"]["current"]]
 
 
-def get_precision_config(device_type='cuda'):
+def get_precision_config(device_type="cuda"):
     """
     Single source of truth for precision configuration.
-    
+
     Args:
         device_type: Device type ('cuda' or 'cpu')
-    
+
     Returns:
         torch.dtype: The precision to use for autocast and model operations.
                     Returns torch.bfloat16 for CUDA, torch.float32 for CPU.
     """
-    if device_type == 'cuda':
+    if device_type == "cuda":
         return torch.bfloat16
     else:
         return torch.float32

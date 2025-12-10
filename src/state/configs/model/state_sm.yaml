@@ -1,4 +1,4 @@
-name: PertSets
+name: state
 checkpoint: null
 device: cuda
 
@@ -12,7 +12,7 @@ kwargs:
   n_decoder_layers: 4
   predict_residual: True
   softplus: True
-  freeze_pert: False
+  freeze_pert_backbone: False
   transformer_decoder: False
   finetune_vci_decoder: False
   residual_decoder: False
@@ -26,6 +26,7 @@ kwargs:
   init_from: null
   transformer_backbone_key: llama
   transformer_backbone_kwargs:
+      bidirectional_attention: false
       max_position_embeddings: ${model.kwargs.cell_set_len}
       hidden_size: ${model.kwargs.hidden_dim}
       intermediate_size: 2688
@@ -43,3 +44,13 @@ kwargs:
       tie_word_embeddings: false
       rotary_dim: 0
       use_rotary_embeddings: false
+  lora:
+      enable: false
+      r: 16
+      alpha: 32
+      dropout: 0.05
+      bias: none
+      target: auto
+      adapt_mlp: false
+      task_type: FEATURE_EXTRACTION
+      merge_on_eval: false

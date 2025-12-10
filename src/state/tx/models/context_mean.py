@@ -10,7 +10,7 @@ from .base import PerturbationModel
 logger = logging.getLogger(__name__)
 
 
-class CellTypeMeanModel(PerturbationModel):
+class ContextMeanPerturbationModel(PerturbationModel):
     """
     Baseline model that predicts the perturbed expression for a cell by returning
     the cell-type-specific average expression computed from perturbed cells in the training data.
@@ -91,7 +91,7 @@ class CellTypeMeanModel(PerturbationModel):
             return
 
         # Initialize dictionary to accumulate sum and count for each cell type.
-        celltype_sums = defaultdict(lambda: {"sum": torch.zeros(self.output_dim), "count": 0})
+        celltype_sums = defaultdict(lambda: {"sum": torch.zeros(self.output_dim), "count": 0, "control_sum": torch.zeros(self.output_dim), "control_count": 0})
 
         with torch.no_grad():
             for batch in train_loader:
@@ -108,25 +108,34 @@ class CellTypeMeanModel(PerturbationModel):
                 pert_names = batch["pert_name"]
                 cell_types = batch["cell_type"]
 
-                # Iterate over batch samples and accumulate only perturbed cells
+                # Iterate over batch samples and accumulate perturbed and control cells
                 for i in range(len(X_cpu)):
                     p_name = str(pert_names[i])
                     ct_name = str(cell_types[i])
                     if p_name == self.control_pert:
-                        # Skip control cells
-                        continue
-                    celltype_sums[ct_name]["sum"] += X_cpu[i]
-                    celltype_sums[ct_name]["count"] += 1
+                        # Accumulate control cells
+                        celltype_sums[ct_name]["control_sum"] += X_cpu[i]
+                        celltype_sums[ct_name]["control_count"] += 1
+                    else:
+                        # Accumulate perturbed cells
+                        celltype_sums[ct_name]["sum"] += X_cpu[i]
+                        celltype_sums[ct_name]["count"] += 1
 
         # Compute the mean expression per cell type from the accumulated sums.
         for ct_name, stats in celltype_sums.items():
             if stats["count"] == 0:
-                logger.warning(f"No perturbed cells found for cell type {ct_name}.")
-                continue
-            self.celltype_pert_means[ct_name] = stats["sum"] / stats["count"]
+                if stats["control_count"] > 0:
+                    # Use control cell average as fallback for cell types with no perturbations
+                    self.celltype_pert_means[ct_name] = stats["control_sum"] / stats["control_count"]
+                    logger.info(f"ContextMean: Using control cell average for cell type '{ct_name}' (no perturbations found, {stats['control_count']} control cells used).")
+                else:
+                    logger.warning(f"No perturbed or control cells found for cell type {ct_name}.")
+                    continue
+            else:
+                self.celltype_pert_means[ct_name] = stats["sum"] / stats["count"]
 
         logger.info(
-            f"CellTypeMeanModel: computed average perturbed expression for {len(self.celltype_pert_means)} cell types."
+            f"ContextMean: computed average perturbed expression for {len(self.celltype_pert_means)} cell types."
         )
 
     def configure_optimizers(self):
@@ -206,7 +215,7 @@ class CellTypeMeanModel(PerturbationModel):
         super().on_save_checkpoint(checkpoint)
         # Convert each tensor to a CPU numpy array for serialization.
         checkpoint["celltype_pert_means"] = {ct: mean.cpu().numpy() for ct, mean in self.celltype_pert_means.items()}
-        logger.info("CellTypeMeanModel: Saved celltype_pert_means to checkpoint.")
+        logger.info("ContextMean: Saved celltype_pert_means to checkpoint.")
 
     def on_load_checkpoint(self, checkpoint):
         """
@@ -218,11 +227,9 @@ class CellTypeMeanModel(PerturbationModel):
             for ct, mean_np in checkpoint["celltype_pert_means"].items():
                 loaded_means[ct] = torch.tensor(mean_np, dtype=torch.float32)
             self.celltype_pert_means = loaded_means
-            logger.info(
-                f"CellTypeMeanModel: Loaded means for {len(self.celltype_pert_means)} cell types from checkpoint."
-            )
+            logger.info(f"ContextMean: Loaded means for {len(self.celltype_pert_means)} cell types from checkpoint.")
         else:
-            logger.warning("CellTypeMeanModel: No celltype_pert_means found in checkpoint. All means set to empty.")
+            logger.warning("ContextMean: No celltype_pert_means found in checkpoint. All means set to empty.")
             self.celltype_pert_means = {}
 
     def _build_networks(self):

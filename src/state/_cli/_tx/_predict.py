@@ -7,7 +7,7 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     """
 
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         type=str,
         required=True,
         help="Path to the output_dir containing the config.yaml file that was saved during training.",
@@ -20,7 +20,7 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     )
 
     parser.add_argument(
-        "--test_time_finetune",
+        "--test-time-finetune",
         type=int,
         default=0,
         help="If >0, run test-time fine-tuning for the specified number of epochs on only control cells.",
@@ -35,9 +35,21 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     )
 
     parser.add_argument(
-        "--predict_only",
+        "--predict-only",
         action="store_true",
         help="If set, only run prediction without evaluation metrics.",
+    )
+
+    parser.add_argument(
+        "--shared-only",
+        action="store_true",
+        help=("If set, restrict predictions/evaluation to perturbations shared between train and test (train ∩ test)."),
+    )
+
+    parser.add_argument(
+        "--eval-train-data",
+        action="store_true",
+        help="If set, evaluate the model on the training data rather than on the test data.",
     )
 
 
@@ -146,19 +158,19 @@ def run_tx_predict(args: ap.ArgumentParser):
         from ...tx.models.old_neural_ot import OldNeuralOTPerturbationModel
 
         ModelClass = OldNeuralOTPerturbationModel
-    elif model_class_name.lower() in ["neuralot", "pertsets"]:
-        from ...tx.models.pert_sets import PertSetsPerturbationModel
+    elif model_class_name.lower() in ["neuralot", "pertsets", "state"]:
+        from ...tx.models.state_transition import StateTransitionPerturbationModel
 
-        ModelClass = PertSetsPerturbationModel
+        ModelClass = StateTransitionPerturbationModel
 
-    elif model_class_name.lower() == "globalsimplesum":
-        from ...tx.models.global_simple_sum import GlobalSimpleSumPerturbationModel
+    elif model_class_name.lower() in ["globalsimplesum", "perturb_mean"]:
+        from ...tx.models.perturb_mean import PerturbMeanPerturbationModel
 
-        ModelClass = GlobalSimpleSumPerturbationModel
-    elif model_class_name.lower() == "celltypemean":
-        from ...tx.models.cell_type_mean import CellTypeMeanModel
+        ModelClass = PerturbMeanPerturbationModel
+    elif model_class_name.lower() in ["celltypemean", "context_mean"]:
+        from ...tx.models.context_mean import ContextMeanPerturbationModel
 
-        ModelClass = CellTypeMeanModel
+        ModelClass = ContextMeanPerturbationModel
     elif model_class_name.lower() == "decoder_only":
         from ...tx.models.decoder_only import DecoderOnlyPerturbationModel
 
@@ -177,7 +189,7 @@ def run_tx_predict(args: ap.ArgumentParser):
         **model_kwargs,
     }
 
-    model = ModelClass.load_from_checkpoint(checkpoint_path, **model_init_kwargs)
+    model = ModelClass.load_from_checkpoint(checkpoint_path, weights_only=False, **model_init_kwargs)
     model.eval()
     logger.info("Model loaded successfully.")
 
@@ -185,7 +197,11 @@ def run_tx_predict(args: ap.ArgumentParser):
     data_module.batch_size = 1
     if args.test_time_finetune > 0:
         control_pert = data_module.get_control_pert()
-        test_loader = data_module.test_dataloader()
+        if args.eval_train_data:
+            test_loader = data_module.train_dataloader(test=True)
+        else:
+            test_loader = data_module.test_dataloader()
+
         run_test_time_finetune(
             model, test_loader, args.test_time_finetune, control_pert, device=next(model.parameters()).device
         )
@@ -193,7 +209,10 @@ def run_tx_predict(args: ap.ArgumentParser):
 
     # 5. Run inference on test set
     data_module.setup(stage="test")
-    test_loader = data_module.test_dataloader()
+    if args.eval_train_data:
+        test_loader = data_module.train_dataloader(test=True)
+    else:
+        test_loader = data_module.test_dataloader()
 
     if test_loader is None:
         logger.warning("No test dataloader found. Exiting.")
@@ -251,12 +270,13 @@ def run_tx_predict(args: ap.ArgumentParser):
             else:
                 all_pert_names.append(batch_preds["pert_name"])
 
-            if isinstance(batch_preds["pert_cell_barcode"], list):
-                all_pert_barcodes.extend(batch_preds["pert_cell_barcode"])
-                all_ctrl_barcodes.extend(batch_preds["ctrl_cell_barcode"])
-            else:
-                all_pert_barcodes.append(batch_preds["pert_cell_barcode"])
-                all_ctrl_barcodes.append(batch_preds["ctrl_cell_barcode"])
+            if "pert_cell_barcode" in batch_preds:
+                if isinstance(batch_preds["pert_cell_barcode"], list):
+                    all_pert_barcodes.extend(batch_preds["pert_cell_barcode"])
+                    all_ctrl_barcodes.extend(batch_preds["ctrl_cell_barcode"])
+                else:
+                    all_pert_barcodes.append(batch_preds["pert_cell_barcode"])
+                    all_ctrl_barcodes.append(batch_preds["ctrl_cell_barcode"])
 
             # Handle celltype_name
             if isinstance(batch_preds["celltype_name"], list):
@@ -292,15 +312,17 @@ def run_tx_predict(args: ap.ArgumentParser):
     logger.info("Creating anndatas from predictions from manual loop...")
 
     # Build pandas DataFrame for obs and var
-    obs = pd.DataFrame(
-        {
-            data_module.pert_col: all_pert_names,
-            data_module.cell_type_key: all_celltypes,
-            data_module.batch_col: all_gem_groups,
-            "pert_cell_barcode": all_pert_barcodes,
-            "ctrl_cell_barcode": all_ctrl_barcodes,
-        }
-    )
+    df_dict = {
+        data_module.pert_col: all_pert_names,
+        data_module.cell_type_key: all_celltypes,
+        data_module.batch_col: all_gem_groups,
+    }
+
+    if len(all_pert_barcodes) > 0:
+        df_dict["pert_cell_barcode"] = all_pert_barcodes
+        df_dict["ctrl_cell_barcode"] = all_ctrl_barcodes
+
+    obs = pd.DataFrame(df_dict)
 
     gene_names = var_dims["gene_names"]
     var = pd.DataFrame({"gene_names": gene_names})
@@ -334,6 +356,32 @@ def run_tx_predict(args: ap.ArgumentParser):
         # Create adata for real - using the true gene expression values
         # adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
         adata_real = anndata.AnnData(X=final_reals, obs=obs)
+
+    # Optionally filter to perturbations seen in at least one training context
+    if args.shared_only:
+        try:
+            shared_perts = data_module.get_shared_perturbations()
+            if len(shared_perts) == 0:
+                logger.warning("No shared perturbations between train and test; skipping filtering.")
+            else:
+                logger.info(
+                    "Filtering to %d shared perturbations present in train ∩ test.",
+                    len(shared_perts),
+                )
+                mask = adata_pred.obs[data_module.pert_col].isin(shared_perts)
+                before_n = adata_pred.n_obs
+                adata_pred = adata_pred[mask].copy()
+                adata_real = adata_real[mask].copy()
+                logger.info(
+                    "Filtered cells: %d -> %d (kept only seen perturbations)",
+                    before_n,
+                    adata_pred.n_obs,
+                )
+        except Exception as e:
+            logger.warning(
+                "Failed to filter by shared perturbations (%s). Proceeding without filter.",
+                str(e),
+            )
 
     # Save the AnnData objects
     results_dir = os.path.join(args.output_dir, "eval_" + os.path.basename(args.checkpoint))

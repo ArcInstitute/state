@@ -1,0 +1,40 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%labels
+    Author Nick Youngblut
+    Version 1.0
+    Description STATE - machine learning model for cellular perturbation prediction
+    
+%help
+    This container includes STATE (https://github.com/ArcInstitute/state), a machine learning model
+    that predicts cellular perturbation response across diverse contexts.
+    
+    STATE is trained on single-cell RNA-seq data and can predict how cells respond to various
+    perturbations including drugs, genetic modifications, and environmental changes.
+
+    To build with singularity, run:
+        singularity build state.sif singularity.def
+
+    To run the container, run:
+        singularity run state.sif --help
+
+%environment
+    export PATH="/root/.local/bin:$PATH"
+    
+%post
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        curl \
+        build-essential \
+        python3-dev \
+        && rm -rf /var/lib/apt/lists/*
+    
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # Install STATE
+    /root/.local/bin/uv tool install arc-state
+
+%runscript
+    exec state "$@"

@@ -1,6 +1,6 @@
 [project]
 name = "arc-state"
-version = "0.9.10"
+version = "0.9.32"
 description = "State is a machine learning model that predicts cellular perturbation response across diverse contexts."
 readme = "README.md"
 authors = [
@@ -13,7 +13,7 @@ authors = [
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "anndata>=0.11.4",
-    "cell-load>=0.7.6",
+    "cell-load>=0.8.3",
     "numpy>=2.2.6",
     "pandas>=2.2.3",
     "pyyaml>=6.0.2",
@@ -26,11 +26,19 @@ dependencies = [
     "hydra-core>=1.3.2",
     "geomloss>=0.2.6",
     "transformers>=4.52.3",
+    "peft>=0.11.0",
     "cell-eval>=0.5.22",
+    "ipykernel>=6.30.1",
+    "scipy>=1.15.0",
+]
+
+[project.optional-dependencies]
+vectordb = [
+    "lancedb>=0.24.0"
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.11.11", "vulture>=2.14"]
+dev = ["ruff>=0.11.11", "vulture>=2.14", "ipython>=8.37.0"]
 
 [build-system]
 requires = ["hatchling"]

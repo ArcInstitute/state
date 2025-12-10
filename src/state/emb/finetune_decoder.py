@@ -45,6 +45,11 @@ class Finetune:
 
         # Load and initialize model for eval
         self.model = StateEmbeddingModel.load_from_checkpoint(checkpoint, strict=False)
+
+        # Ensure model uses the provided config, not the stored one
+        if self._vci_conf is not None:
+            self.model.update_config(self._vci_conf)
+
         self.device = self.model.device
 
         # Load protein embeddings
