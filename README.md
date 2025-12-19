@@ -129,6 +129,21 @@ This command:
 - Applies log1p transformation (`sc.pp.log1p`) 
 - Identifies highly variable genes (`sc.pp.highly_variable_genes`)
 - Stores the HVG expression matrix in `.obsm['X_hvg']`
+- Stores HVG gene names in `.uns['X_hvg_var_names']` for downstream mapping
+
+#### Accessing HVG Gene Names
+
+The HVG gene names associated with `adata.obsm["X_hvg"]` are stored in `adata.uns["X_hvg_var_names"]`.
+This makes it easy to construct downstream AnnData objects for tools like `pdex`:
+
+```python
+hvg_names = adata.uns.get("X_hvg_var_names")
+adata_for_pdex = ad.AnnData(
+    X=adata.obsm["X_hvg"],
+    obs=adata.obs,
+    var=pd.DataFrame(index=hvg_names),
+)
+```
 
 #### Inference Data Preprocessing
 
