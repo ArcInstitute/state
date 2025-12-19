@@ -65,6 +65,8 @@ def run_tx_predict(args: ap.ArgumentParser):
     import torch
     import yaml
 
+    from state.tx.constants import HVG_VAR_NAMES_KEY
+
     # Cell-eval for metrics computation
     from cell_eval import MetricsEvaluator
     from cell_eval.utils import split_anndata_on_celltype
@@ -325,6 +327,9 @@ def run_tx_predict(args: ap.ArgumentParser):
     obs = pd.DataFrame(df_dict)
 
     gene_names = var_dims["gene_names"]
+    hvg_uns_names = None
+    if data_module.embed_key == "X_hvg" or cfg["data"]["kwargs"]["output_space"] == "gene":
+        hvg_uns_names = gene_names
     var = pd.DataFrame({"gene_names": gene_names})
 
     if final_X_hvg is not None:
@@ -332,6 +337,7 @@ def run_tx_predict(args: ap.ArgumentParser):
             gene_names = np.load(
                 "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_to_2k_names.npy", allow_pickle=True
             )
+            hvg_uns_names = gene_names
             var = pd.DataFrame({"gene_names": gene_names})
 
         # Create adata for predictions - using the decoded gene expression values
@@ -343,6 +349,11 @@ def run_tx_predict(args: ap.ArgumentParser):
         adata_pred.obsm[data_module.embed_key] = final_preds
         adata_real.obsm[data_module.embed_key] = final_reals
         logger.info(f"Added predicted embeddings to adata.obsm['{data_module.embed_key}']")
+
+        if hvg_uns_names is not None:
+            hvg_uns_array = np.array(hvg_uns_names, dtype=object)
+            adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
+            adata_real.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_uns_names, dtype=object)
     else:
         # if len(gene_names) != final_preds.shape[1]:
         #     gene_names = np.load(
@@ -350,12 +361,19 @@ def run_tx_predict(args: ap.ArgumentParser):
         #     )
         #     var = pd.DataFrame({"gene_names": gene_names})
 
+        var = None
+        if len(gene_names) == final_preds.shape[1]:
+            var = pd.DataFrame({"gene_names": gene_names})
+
         # Create adata for predictions - model was trained on gene expression space already
-        # adata_pred = anndata.AnnData(X=final_preds, obs=obs, var=var)
-        adata_pred = anndata.AnnData(X=final_preds, obs=obs)
+        adata_pred = anndata.AnnData(X=final_preds, obs=obs, var=var)
         # Create adata for real - using the true gene expression values
-        # adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
-        adata_real = anndata.AnnData(X=final_reals, obs=obs)
+        adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
+
+        if hvg_uns_names is not None:
+            hvg_uns_array = np.array(hvg_uns_names, dtype=object)
+            adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
+            adata_real.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_uns_names, dtype=object)
 
     # Optionally filter to perturbations seen in at least one training context
     if args.shared_only:

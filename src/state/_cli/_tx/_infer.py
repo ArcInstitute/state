@@ -77,6 +77,11 @@ def add_arguments_infer(parser: argparse.ArgumentParser):
         help="Reduce logging verbosity.",
     )
     parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show extra details about gene name mapping.",
+    )
+    parser.add_argument(
         "--tsv",
         type=str,
         default=None,
@@ -96,6 +101,7 @@ def run_tx_infer(args: argparse.Namespace):
     from tqdm import tqdm
 
     from ...tx.models.state_transition import StateTransitionPerturbationModel
+    from ...tx.utils.hvg import get_hvg_var_names
 
     # -----------------------
     # Helpers
@@ -396,6 +402,25 @@ def run_tx_infer(args: argparse.Namespace):
     # -----------------------
     adata = sc.read_h5ad(args.adata)
 
+    hvg_names_status = "n/a"
+    if args.embed_key == "X_hvg":
+        hvg_names = get_hvg_var_names(adata, obsm_key="X_hvg")
+        if hvg_names is None and not args.quiet:
+            print(
+                "Warning: adata.uns['X_hvg_var_names'] not found. "
+                "Downstream analysis (e.g., pdex) may not be able to map predictions to gene names. "
+                "Consider re-running preprocess_train with the latest STATE version."
+            )
+        if hvg_names is not None:
+            hvg_names_status = "present"
+        else:
+            hvg_names_status = "missing"
+        if args.verbose and not args.quiet:
+            if hvg_names is not None:
+                print(f"HVG gene names found for X_hvg: {len(hvg_names)} entries.")
+            else:
+                print("HVG gene names not found for X_hvg.")
+
     # optional TSV padding mode - pad with additional perturbation cells
     if args.tsv:
         if not args.quiet:
@@ -669,3 +694,4 @@ def run_tx_infer(args: argparse.Namespace):
     print(f"Treated simulated:   {n_nonctl}")
     print(f"Wrote predictions to adata.{out_target}")
     print(f"Saved:               {output_path}")
+    print(f"HVG names:           {hvg_names_status}")
