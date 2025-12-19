@@ -349,11 +349,6 @@ def run_tx_predict(args: ap.ArgumentParser):
         adata_pred.obsm[data_module.embed_key] = final_preds
         adata_real.obsm[data_module.embed_key] = final_reals
         logger.info(f"Added predicted embeddings to adata.obsm['{data_module.embed_key}']")
-
-        if hvg_uns_names is not None:
-            hvg_uns_array = np.array(hvg_uns_names, dtype=object)
-            adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
-            adata_real.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_uns_names, dtype=object)
     else:
         # if len(gene_names) != final_preds.shape[1]:
         #     gene_names = np.load(
@@ -370,10 +365,10 @@ def run_tx_predict(args: ap.ArgumentParser):
         # Create adata for real - using the true gene expression values
         adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
 
-        if hvg_uns_names is not None:
-            hvg_uns_array = np.array(hvg_uns_names, dtype=object)
-            adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
-            adata_real.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_uns_names, dtype=object)
+    if hvg_uns_names is not None:
+        hvg_uns_array = np.array(hvg_uns_names, dtype=object)
+        adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
+        adata_real.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
 
     # Optionally filter to perturbations seen in at least one training context
     if args.shared_only:
