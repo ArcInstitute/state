@@ -261,6 +261,26 @@ def get_lightning_module(model_type: str, data_config: dict, model_config: dict,
             batch_dim=var_dims["batch_dim"],
             **module_config,
         )
+    elif model_type.lower() in {"pdgrapher", "pdgrapher_inverse"}:
+        from ...tx.models.pdgrapher import PDGrapherLightningModule
+
+        mode = module_config.get("mode", "forward")
+        if model_type.lower() == "pdgrapher_inverse":
+            mode = "inverse"
+
+        return PDGrapherLightningModule(
+            gene_names=var_dims["gene_names"],
+            edge_index_path=module_config.get("edge_index_path"),
+            mode=mode,
+            lr=module_config.get("lr", 1e-3),
+            weight_decay=module_config.get("weight_decay", 1e-4),
+            positional_features_dims=module_config.get("positional_features_dims", 16),
+            embedding_layer_dim=module_config.get("embedding_layer_dim", 64),
+            dim_gnn=module_config.get("dim_gnn", 64),
+            n_layers_gnn=module_config.get("n_layers_gnn", 2),
+            n_layers_nn=module_config.get("n_layers_nn", 2),
+            dropout=module_config.get("dropout", 0.1),
+        )
     elif model_type.lower() == "cpa":
         from ...tx.models.cpa import CPAPerturbationModel
 

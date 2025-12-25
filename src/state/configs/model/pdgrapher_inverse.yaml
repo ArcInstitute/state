@@ -1,0 +1,14 @@
+name: pdgrapher_inverse
+checkpoint: null
+device: cuda
+
+kwargs:
+  mode: inverse
+  edge_index_path: null
+  positional_features_dims: 16
+  embedding_layer_dim: 64
+  dim_gnn: 64
+  n_layers_gnn: 2
+  n_layers_nn: 2
+  dropout: 0.1
+  cell_set_len: 1
