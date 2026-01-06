@@ -59,7 +59,7 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     )
 
 
-def run_tx_predict(args: ap.ArgumentParser):
+def run_tx_predict(args: ap.Namespace):
     import logging
     import os
     import sys

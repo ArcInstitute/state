@@ -138,6 +138,7 @@ def test_predict_outputs_hvg_names(monkeypatch, tmp_path):
         predict_only=True,
         shared_only=False,
         eval_train_data=False,
+        toml=None,
     )
 
     run_tx_predict(args)

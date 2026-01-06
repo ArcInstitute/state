@@ -68,6 +68,10 @@ def _make_args(model_dir: Path, adata_path: Path, output_path: Path, quiet: bool
         quiet=quiet,
         tsv=None,
         verbose=verbose,
+        all_perts=False,
+        virtual_cells_per_pert=None,
+        min_cells=None,
+        max_cells=None,
     )
 
 

@@ -130,10 +130,18 @@ This command:
 - Identifies highly variable genes (`sc.pp.highly_variable_genes`)
 - Stores the HVG expression matrix in `.obsm['X_hvg']`
 - Stores HVG gene names in `.uns['X_hvg_var_names']` for downstream mapping
+- **Inference/Prediction**: `tx infer` and `tx predict` commands preserve HVG gene names in output AnnData when using `--embed-key X_hvg`
 
 #### Accessing HVG Gene Names
 
 The HVG gene names associated with `adata.obsm["X_hvg"]` are stored in `adata.uns["X_hvg_var_names"]`.
+This applies to:
+- **Training data**: Output from `preprocess_train`
+- **Inference results**: Output from `tx infer` with `--embed-key X_hvg`
+- **Prediction results**: Output from `tx predict` (both prediction and ground truth AnnData)
+
+**Note**: If HVG gene names are missing during inference, a warning will be displayed recommending re-running `preprocess_train` with the latest STATE version.
+
 This makes it easy to construct downstream AnnData objects for tools like `pdex`:
 
 ```python
