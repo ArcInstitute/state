@@ -122,7 +122,7 @@ class Inference:
 
         # Keep internal cfg in sync
         self._vci_conf = cfg_to_use
-        self.model = StateEmbeddingModel.load_from_checkpoint(checkpoint, dropout=0.0, strict=False, cfg=self._vci_conf)
+        self.model = StateEmbeddingModel.load_from_checkpoint(checkpoint, dropout=0.0, strict=False, cfg=self._vci_conf, weights_only=False)
 
         # Convert model to appropriate precision for faster inference
         device_type = "cuda" if torch.cuda.is_available() else "cpu"
@@ -276,6 +276,8 @@ class Inference:
             )
 
             log.info(f"Successfully saved {len(all_embeddings)} embeddings to LanceDB")
+
+        return all_embeddings
 
     def _convert_to_csr(self, adata):
         """Convert the adata.X matrix to CSR format if it's not already."""

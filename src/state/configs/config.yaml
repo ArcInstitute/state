@@ -2,7 +2,7 @@
 # training tasks
 defaults:
   - data: perturbation
-  - model: pertsets
+  - model: state
   - training: default
   - wandb: default
   - _self_

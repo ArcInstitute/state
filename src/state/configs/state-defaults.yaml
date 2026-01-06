@@ -19,8 +19,8 @@ experiment:
   ddp_timeout: 3600
   checkpoint:
     path: /scratch/ctc/ML/vci/checkpoint/pretrain
-    save_top_k: 4
-    monitor: trainer/train_loss
+    save_top_k: 2
+    monitor: validation/val_loss
     every_n_train_steps: 1000
 wandb:
   enable: true

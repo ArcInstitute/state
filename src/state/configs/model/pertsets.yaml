@@ -1,4 +1,4 @@
-name: PertSets
+name: state
 checkpoint: null
 device: cuda
 

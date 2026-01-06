@@ -27,7 +27,7 @@ def add_arguments_infer(parser: argparse.ArgumentParser):
         "--output",
         type=str,
         default=None,
-        help="Path to output AnnData file (.h5ad). Defaults to <input>_simulated.h5ad",
+        help="Path to output file (.h5ad or .npy). Defaults to <input>_simulated.h5ad",
     )
     parser.add_argument(
         "--model-dir",
@@ -77,15 +77,33 @@ def add_arguments_infer(parser: argparse.ArgumentParser):
         help="Reduce logging verbosity.",
     )
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Show extra details about gene name mapping.",
-    )
-    parser.add_argument(
         "--tsv",
         type=str,
         default=None,
         help="Path to TSV file with columns 'perturbation' and 'num_cells' to pad the adata with additional perturbation cells copied from random controls.",
+    )
+    parser.add_argument(
+        "--all-perts",
+        action="store_true",
+        help="If set, add virtual copies of control cells for every perturbation in the saved one-hot map so all perturbations are simulated.",
+    )
+    parser.add_argument(
+        "--virtual-cells-per-pert",
+        type=int,
+        default=None,
+        help="When using --all-perts, limit the number of control cells cloned for each virtual perturbation to this many (default: use all available controls).",
+    )
+    parser.add_argument(
+        "--min-cells",
+        type=int,
+        default=None,
+        help="Ensure each perturbation has at least this many cells by padding with virtual controls (if needed).",
+    )
+    parser.add_argument(
+        "--max-cells",
+        type=int,
+        default=None,
+        help="Upper bound on cells per perturbation after padding; subsamples excess cells if necessary.",
     )
 
 
@@ -101,7 +119,6 @@ def run_tx_infer(args: argparse.Namespace):
     from tqdm import tqdm
 
     from ...tx.models.state_transition import StateTransitionPerturbationModel
-    from ...tx.utils.hvg import get_hvg_var_names
 
     # -----------------------
     # Helpers
@@ -327,6 +344,7 @@ def run_tx_infer(args: argparse.Namespace):
         control_pert = "non-targeting"
     if not args.quiet:
         print(f"Control perturbation: {control_pert}")
+    control_pert_str = str(control_pert)
 
     # choose cell type column
     if args.celltype_col is None:
@@ -367,6 +385,8 @@ def run_tx_infer(args: argparse.Namespace):
     if not os.path.exists(pert_onehot_map_path):
         raise FileNotFoundError(f"Missing pert_onehot_map.pt at {pert_onehot_map_path}")
     pert_onehot_map: Dict[str, torch.Tensor] = torch.load(pert_onehot_map_path, weights_only=False)
+    pert_name_lookup: Dict[str, object] = {str(k): k for k in pert_onehot_map.keys()}
+    pert_names_in_map: List[str] = list(pert_name_lookup.keys())
 
     batch_onehot_map_path = os.path.join(args.model_dir, "batch_onehot_map.pkl")
     batch_onehot_map = None
@@ -402,25 +422,6 @@ def run_tx_infer(args: argparse.Namespace):
     # -----------------------
     adata = sc.read_h5ad(args.adata)
 
-    hvg_names_status = "n/a"
-    if args.embed_key == "X_hvg":
-        hvg_names = get_hvg_var_names(adata, obsm_key="X_hvg")
-        if hvg_names is None and not args.quiet:
-            print(
-                "Warning: adata.uns['X_hvg_var_names'] not found. "
-                "Downstream analysis (e.g., pdex) may not be able to map predictions to gene names. "
-                "Consider re-running preprocess_train with the latest STATE version."
-            )
-        if hvg_names is not None:
-            hvg_names_status = "present"
-        else:
-            hvg_names_status = "missing"
-        if args.verbose and not args.quiet:
-            if hvg_names is not None:
-                print(f"HVG gene names found for X_hvg: {len(hvg_names)} entries.")
-            else:
-                print("HVG gene names not found for X_hvg.")
-
     # optional TSV padding mode - pad with additional perturbation cells
     if args.tsv:
         if not args.quiet:
@@ -447,6 +448,145 @@ def run_tx_infer(args: argparse.Namespace):
         adata = adata[adata.obs[args.celltype_col].isin(keep_cts)].copy()
         if not args.quiet:
             print(f"Filtered to {adata.n_obs} cells (from {n0}) for cell types: {keep_cts}")
+
+    needs_virtual_padding = args.all_perts or (args.min_cells is not None) or (args.max_cells is not None)
+    if needs_virtual_padding:
+        if args.pert_col not in adata.obs:
+            raise KeyError(f"Perturbation column '{args.pert_col}' not found in adata.obs")
+
+        adata.obs = adata.obs.copy()
+        adata.obs[args.pert_col] = adata.obs[args.pert_col].astype(str)
+
+    # optionally expand controls to cover every perturbation in the map
+    if args.all_perts:
+        observed_perts = set(adata.obs[args.pert_col].values)
+        missing_perts = [p for p in pert_names_in_map if p not in observed_perts]
+
+        if missing_perts:
+            ctrl_mask_all_perts = adata.obs[args.pert_col] == control_pert_str
+            if not bool(np.any(ctrl_mask_all_perts)):
+                raise ValueError(
+                    "--all-perts requested, but no control cells are available to template new perturbations."
+                )
+
+            ctrl_template = adata[ctrl_mask_all_perts].copy()
+            ctrl_template.obs = ctrl_template.obs.copy()
+            ctrl_template.obs[args.pert_col] = ctrl_template.obs[args.pert_col].astype(str)
+
+            if args.virtual_cells_per_pert is not None:
+                if args.virtual_cells_per_pert <= 0:
+                    raise ValueError("--virtual-cells-per-pert must be a positive integer if provided.")
+                if ctrl_template.n_obs > args.virtual_cells_per_pert:
+                    virtual_rng = np.random.RandomState(args.seed)
+                    sampled_idx = virtual_rng.choice(
+                        ctrl_template.n_obs, size=args.virtual_cells_per_pert, replace=False
+                    )
+                    ctrl_template = ctrl_template[sampled_idx].copy()
+                    ctrl_template.obs = ctrl_template.obs.copy()
+                    ctrl_template.obs[args.pert_col] = ctrl_template.obs[args.pert_col].astype(str)
+                    if not args.quiet:
+                        print(
+                            "--all-perts: limiting virtual control template to "
+                            f"{ctrl_template.n_obs} cells per perturbation (requested {args.virtual_cells_per_pert})."
+                        )
+
+            virtual_blocks: List["sc.AnnData"] = []
+            for pert_name in missing_perts:
+                clone = ctrl_template.copy()
+                clone.obs = clone.obs.copy()
+                clone.obs[args.pert_col] = pert_name
+                clone.obs_names = [f"{obs_name}__virt_{pert_name}" for obs_name in clone.obs_names]
+                virtual_blocks.append(clone)
+
+            adata = sc.concat([adata, *virtual_blocks], axis=0, join="inner")
+
+            if not args.quiet:
+                preview = ", ".join(missing_perts[:5])
+                if len(missing_perts) > 5:
+                    preview += ", ..."
+                print(
+                    f"Added virtual control copies for {len(missing_perts)} perturbations"
+                    f" ({preview if preview else 'n/a'}). Total cells: {adata.n_obs}."
+                )
+        elif not args.quiet:
+            print("--all-perts requested, but all perturbations already present in AnnData.")
+
+    # ensure each perturbation meets the minimum count by cloning controls
+    if args.min_cells is not None:
+        if args.min_cells <= 0:
+            raise ValueError("--min-cells must be a positive integer if provided.")
+
+        ctrl_mask_min_cells = adata.obs[args.pert_col] == control_pert_str
+        if not bool(np.any(ctrl_mask_min_cells)):
+            raise ValueError("--min-cells requested, but no control cells are available for cloning.")
+
+        pad_rng = np.random.RandomState(args.seed)
+        ctrl_pool = adata[ctrl_mask_min_cells].copy()
+        ctrl_pool.obs = ctrl_pool.obs.copy()
+        virtual_blocks: List["sc.AnnData"] = []
+
+        pert_counts = adata.obs[args.pert_col].value_counts()
+        for pert_name, count in pert_counts.items():
+            deficit = int(args.min_cells) - int(count)
+            if deficit <= 0:
+                continue
+
+            sampled_idx = pad_rng.choice(ctrl_pool.n_obs, size=deficit, replace=True)
+            clone = ctrl_pool[sampled_idx].copy()
+            clone.obs = clone.obs.copy()
+            clone.obs[args.pert_col] = pert_name
+            base_names = list(clone.obs_names)
+            clone.obs_names = [f"{obs_name}__virt_{pert_name}__pad{idx + 1}" for idx, obs_name in enumerate(base_names)]
+            virtual_blocks.append(clone)
+
+        if virtual_blocks:
+            adata = sc.concat([adata, *virtual_blocks], axis=0, join="inner")
+            if not args.quiet:
+                preview = ", ".join(
+                    [f"{pert}:{args.min_cells}" for pert, cnt in pert_counts.items() if int(cnt) < int(args.min_cells)][
+                        :5
+                    ]
+                )
+                if len(virtual_blocks) > 5:
+                    preview += ", ..."
+                total_added = sum(vb.n_obs for vb in virtual_blocks)
+                print(
+                    f"Added {total_added} padding cells to meet --min-cells "
+                    f"(examples: {preview if preview else 'n/a'}). Total cells: {adata.n_obs}."
+                )
+        elif not args.quiet:
+            print("--min-cells set, but all perturbations already meet the threshold.")
+
+    # cap the number of cells per perturbation by subsampling
+    if args.max_cells is not None:
+        if args.max_cells <= 0:
+            raise ValueError("--max-cells must be a positive integer if provided.")
+        if args.min_cells is not None and args.max_cells < args.min_cells:
+            raise ValueError("--max-cells cannot be smaller than --min-cells.")
+
+        trim_rng = np.random.RandomState(args.seed + 1)
+        keep_mask = np.ones(adata.n_obs, dtype=bool)
+        pert_labels = adata.obs[args.pert_col].values
+
+        unique_perts = np.unique(pert_labels)
+        for pert_name in unique_perts:
+            idxs = np.where(pert_labels == pert_name)[0]
+            if len(idxs) <= args.max_cells:
+                continue
+
+            chosen = trim_rng.choice(idxs, size=args.max_cells, replace=False)
+            chosen = np.sort(chosen)
+            drop = np.setdiff1d(idxs, chosen, assume_unique=True)
+            keep_mask[drop] = False
+
+        if not np.all(keep_mask):
+            original_n = adata.n_obs
+            adata = adata[keep_mask].copy()
+            if not args.quiet:
+                total_dropped = original_n - adata.n_obs
+                print(
+                    f"Subsampled perturbations exceeding --max-cells; dropped {total_dropped} cells. Total cells: {adata.n_obs}."
+                )
 
     # select features: embeddings or genes
     if args.embed_key is None:
@@ -516,7 +656,7 @@ def run_tx_infer(args: argparse.Namespace):
     rng = np.random.RandomState(args.seed)
 
     # Identify control vs non-control
-    ctl_mask = pert_names_all == str(control_pert)
+    ctl_mask = pert_names_all == control_pert_str
     n_controls = int(ctl_mask.sum())
     n_total = adata.n_obs
     n_nonctl = n_total - n_controls
@@ -525,11 +665,25 @@ def run_tx_infer(args: argparse.Namespace):
 
     # Where we will write predictions (initialize with originals; we overwrite all rows, including controls)
     if writes_to[0] == ".X":
-        sim_X = X_in.copy()
+        sim_X = X_in.astype(np.float32, copy=True)
         out_target = "X"
     else:
-        sim_obsm = X_in.copy()
+        sim_obsm = X_in.astype(np.float32, copy=True)
         out_target = f"obsm['{writes_to[1]}']"
+
+    counts_expected = output_space in {"gene", "all"}
+    counts_out_target: Optional[str] = None
+    counts_obsm_key: Optional[str] = None
+    sim_counts: Optional[np.ndarray] = None
+    counts_written = False
+
+    if output_space == "gene":
+        counts_out_target = "obsm['X_hvg']"
+        counts_obsm_key = "X_hvg"
+    elif output_space == "all":
+        counts_out_target = "X"
+        if writes_to[0] == ".X":
+            sim_counts = sim_X
 
     # Group labels for set-to-set behavior
     if args.celltype_col and args.celltype_col in adata.obs:
@@ -550,8 +704,9 @@ def run_tx_infer(args: argparse.Namespace):
         return grp_ctl if len(grp_ctl) > 0 else all_control_indices
 
     # default pert vector when unmapped label shows up
-    if control_pert in pert_onehot_map:
-        default_pert_vec = pert_onehot_map[control_pert].float().clone()
+    control_map_key = pert_name_lookup.get(control_pert_str, control_pert)
+    if control_map_key in pert_onehot_map:
+        default_pert_vec = pert_onehot_map[control_map_key].float().clone()
     else:
         default_pert_vec = torch.zeros(pert_dim, dtype=torch.float32)
         if pert_dim and pert_dim > 0:
@@ -593,7 +748,8 @@ def run_tx_infer(args: argparse.Namespace):
                     continue
 
                 # one-hot vector for this perturbation (repeat across window)
-                vec = pert_onehot_map.get(p, None)
+                map_key = pert_name_lookup.get(p, p)
+                vec = pert_onehot_map.get(map_key, None)
                 if vec is None:
                     vec = default_pert_vec
                     if not args.quiet:
@@ -640,6 +796,43 @@ def run_tx_infer(args: argparse.Namespace):
                     else:
                         preds = batch_out["preds"].detach().cpu().numpy().astype(np.float32)  # [win, D]
 
+                    counts_preds = None
+                    if counts_expected and ("pert_cell_counts_preds" in batch_out):
+                        counts_tensor = batch_out.get("pert_cell_counts_preds")
+                        if counts_tensor is not None:
+                            counts_preds = counts_tensor.detach().cpu().numpy().astype(np.float32)
+
+                    if counts_preds is not None:
+                        if sim_counts is None:
+                            target_dim = counts_preds.shape[1]
+                            if output_space == "gene":
+                                if counts_obsm_key and counts_obsm_key in adata.obsm:
+                                    existing = np.asarray(adata.obsm[counts_obsm_key])
+                                    if existing.shape[1] == target_dim:
+                                        sim_counts = existing.astype(np.float32, copy=True)
+                                    else:
+                                        if not args.quiet:
+                                            print(
+                                                f"Dimension mismatch for existing obsm['{counts_obsm_key}'] "
+                                                f"(got {existing.shape[1]} vs predictions {target_dim}). "
+                                                "Reinitializing storage with zeros."
+                                            )
+                                        sim_counts = np.zeros((n_total, target_dim), dtype=np.float32)
+                                else:
+                                    sim_counts = np.zeros((n_total, target_dim), dtype=np.float32)
+                            else:  # output_space == "all"
+                                if writes_to[0] == ".X":
+                                    sim_counts = sim_X
+                                else:
+                                    sim_counts = np.zeros((n_total, target_dim), dtype=np.float32)
+                        if sim_counts.shape[1] != counts_preds.shape[1]:
+                            raise ValueError(
+                                "Predicted counts dimension mismatch: "
+                                f"expected {sim_counts.shape[1]} but got {counts_preds.shape[1]}"
+                            )
+                        sim_counts[idx_window, :] = counts_preds
+                        counts_written = True
+
                     # 6) Write predictions for these rows (controls included)
                     if writes_to[0] == ".X":
                         if preds.shape[1] == sim_X.shape[1]:
@@ -675,15 +868,48 @@ def run_tx_infer(args: argparse.Namespace):
     # -----------------------
     # 5) Persist the updated AnnData
     # -----------------------
+    output_path = args.output or args.adata.replace(".h5ad", "_simulated.h5ad")
+    output_is_npy = output_path.lower().endswith(".npy")
+
+    if counts_expected and not counts_written and not args.quiet:
+        print(
+            "Warning: Model configured to produce gene counts, but no predicted counts were returned; "
+            "counts will not be saved."
+        )
+
+    pred_matrix = None
     if writes_to[0] == ".X":
         if out_target == "X":
             adata.X = sim_X
+            pred_matrix = sim_X
+        elif out_target.startswith("obsm['") and out_target.endswith("']"):
+            pred_key = out_target[6:-2]
+            pred_matrix = adata.obsm.get(pred_key)
+        else:
+            pred_matrix = sim_X
     else:
         if out_target == f"obsm['{writes_to[1]}']":
             adata.obsm[writes_to[1]] = sim_obsm
+            pred_matrix = sim_obsm
+        elif out_target.startswith("obsm['") and out_target.endswith("']"):
+            pred_key = out_target[6:-2]
+            pred_matrix = adata.obsm.get(pred_key)
+        else:
+            pred_matrix = sim_obsm
 
-    output_path = args.output or args.adata.replace(".h5ad", "_simulated.h5ad")
-    adata.write_h5ad(output_path)
+    if counts_written and sim_counts is not None:
+        if output_space == "gene":
+            key = counts_obsm_key or "X_hvg"
+            adata.obsm[key] = sim_counts
+        elif output_space == "all":
+            adata.X = sim_counts
+
+    if output_is_npy:
+        if pred_matrix is None:
+            raise ValueError("Predictions matrix is unavailable; cannot write .npy output")
+        np.save(output_path, np.asarray(pred_matrix))
+    else:
+        adata.write_h5ad(output_path)
 
     # -----------------------
     # 6) Summary
@@ -692,6 +918,12 @@ def run_tx_infer(args: argparse.Namespace):
     print(f"Input cells:         {n_total}")
     print(f"Controls simulated:  {n_controls}")
     print(f"Treated simulated:   {n_nonctl}")
-    print(f"Wrote predictions to adata.{out_target}")
-    print(f"Saved:               {output_path}")
-    print(f"HVG names:           {hvg_names_status}")
+    if output_is_npy:
+        shape_str = " x ".join(str(dim) for dim in pred_matrix.shape) if pred_matrix is not None else "unknown"
+        print(f"Wrote predictions array (shape: {shape_str})")
+        print(f"Saved NumPy file:    {output_path}")
+    else:
+        print(f"Wrote predictions to adata.{out_target}")
+        print(f"Saved:               {output_path}")
+    if counts_written and counts_out_target:
+        print(f"Saved count predictions to adata.{counts_out_target}")

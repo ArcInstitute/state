@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional
+import math
 
 import anndata as ad
 import numpy as np
@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from geomloss import SamplesLoss
-from typing import Tuple
+from typing import Dict, Optional, Tuple
 
 from .base import PerturbationModel
 from .decoders import FinetuneVCICountsDecoder
@@ -20,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class CombinedLoss(nn.Module):
-    """
-    Combined Sinkhorn + Energy loss
-    """
+    """Combined Sinkhorn + Energy loss."""
 
     def __init__(self, sinkhorn_weight=0.001, energy_weight=1.0, blur=0.05):
         super().__init__()
@@ -98,7 +96,6 @@ class ConfidenceToken(nn.Module):
 
         return main_output, confidence_pred
 
-
 class StateTransitionPerturbationModel(PerturbationModel):
     """
     This model:
@@ -164,6 +161,8 @@ class StateTransitionPerturbationModel(PerturbationModel):
 
         self.distributional_loss = distributional_loss
         self.gene_dim = gene_dim
+        self.mmd_num_chunks = max(int(kwargs.get("mmd_num_chunks", 1)), 1)
+        self.randomize_mmd_chunks = bool(kwargs.get("randomize_mmd_chunks", False))
 
         # Build the distributional loss from geomloss
         blur = kwargs.get("blur", 0.05)
@@ -173,7 +172,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
         elif loss_name == "mse":
             self.loss_fn = nn.MSELoss()
         elif loss_name == "se":
-            sinkhorn_weight = kwargs.get("sinkhorn_weight", 0.01)  # 1/100 = 0.01
+            sinkhorn_weight = kwargs.get("sinkhorn_weight", 0.01)
             energy_weight = kwargs.get("energy_weight", 1.0)
             self.loss_fn = CombinedLoss(sinkhorn_weight=sinkhorn_weight, energy_weight=energy_weight, blur=blur)
         elif loss_name == "sinkhorn":
@@ -196,6 +195,44 @@ class StateTransitionPerturbationModel(PerturbationModel):
                 embedding_dim=hidden_dim,
             )
             self.batch_dim = batch_dim
+
+        # Optional batch predictor ablation: learns a single batch token added to every position,
+        # and adds an auxiliary per-token batch classification head + CE loss.
+        self.batch_predictor = bool(kwargs.get("batch_predictor", False))
+        # If batch_encoder is enabled, disable batch_predictor per request
+        if self.batch_encoder is not None and self.batch_predictor:
+            logger.warning(
+                "Both model.kwargs.batch_encoder and model.kwargs.batch_predictor are True. "
+                "Disabling batch_predictor and proceeding with batch_encoder."
+            )
+            self.batch_predictor = False
+            try:
+                # Keep hparams in sync if available
+                self.hparams["batch_predictor"] = False  # type: ignore[index]
+            except Exception:
+                pass
+
+        self.batch_predictor_weight = float(kwargs.get("batch_predictor_weight", 0.1))
+        self.batch_predictor_num_classes: Optional[int] = batch_dim if self.batch_predictor else None
+        if self.batch_predictor:
+            if self.batch_predictor_num_classes is None:
+                raise ValueError("batch_predictor=True requires a valid `batch_dim` (number of batch classes).")
+            # A single learnable batch token that is added to each position
+            self.batch_token = nn.Parameter(torch.randn(1, 1, self.hidden_dim))
+            # Simple per-token classifier from transformer hidden to batch classes
+            self.batch_classifier = build_mlp(
+                in_dim=self.hidden_dim,
+                out_dim=self.batch_predictor_num_classes,
+                hidden_dim=self.hidden_dim,
+                n_layers=4,
+                dropout=self.dropout,
+                activation=self.activation_class,
+            )
+        else:
+            self.batch_token = None
+            self.batch_classifier = None
+        # Internal cache for last token features (B, S, H) from transformer for aux loss
+        self._token_features: Optional[torch.Tensor] = None
 
         # if the model is outputting to counts space, apply relu
         # otherwise its in embedding space and we don't want to
@@ -250,6 +287,11 @@ class StateTransitionPerturbationModel(PerturbationModel):
         if kwargs.get("confidence_token", False):
             self.confidence_token = ConfidenceToken(hidden_dim=self.hidden_dim, dropout=self.dropout)
             self.confidence_loss_fn = nn.MSELoss()
+            self.confidence_target_scale = float(kwargs.get("confidence_target_scale", 10.0))
+            self.confidence_weight = float(kwargs.get("confidence_weight", 0.01))
+        else:
+            self.confidence_target_scale = None
+            self.confidence_weight = 0.0
 
         # Backward-compat: accept legacy key `freeze_pert`
         self.freeze_pert_backbone = kwargs.get("freeze_pert_backbone", kwargs.get("freeze_pert", False))
@@ -274,32 +316,22 @@ class StateTransitionPerturbationModel(PerturbationModel):
 
         control_pert = kwargs.get("control_pert", "non-targeting")
         if kwargs.get("finetune_vci_decoder", False):  # TODO: This will go very soon
-            gene_names = []
+            # Prefer the gene names supplied by the data module (aligned to training output)
+            gene_names = self.gene_names
+            if gene_names is None:
+                raise ValueError(
+                    "finetune_vci_decoder=True but model.gene_names is None. "
+                    "Please provide gene_names via data module var_dims."
+                )
 
-            if output_space == "gene":
-                # hvg's but for which dataset?
-                if "DMSO_TF" in control_pert:
-                    gene_names = np.load(
-                        "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_to_2k_names.npy", allow_pickle=True
-                    )
-                elif "non-targeting" in control_pert:
-                    temp = ad.read_h5ad("/large_storage/ctc/userspace/aadduri/datasets/hvg/replogle/jurkat.h5")
-                    # gene_names = temp.var.index.values
-            else:
-                assert output_space == "all"
-                if "DMSO_TF" in control_pert:
-                    gene_names = np.load(
-                        "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_names.npy", allow_pickle=True
-                    )
-                elif "non-targeting" in control_pert:
-                    # temp = ad.read_h5ad('/scratch/ctc/ML/vci/paper_replogle/jurkat.h5')
-                    # gene_names = temp.var.index.values
-                    temp = ad.read_h5ad("/large_storage/ctc/userspace/aadduri/cross_dataset/replogle/jurkat.h5")
-                    gene_names = temp.var.index.values
-
+            n_genes = len(gene_names)
+            logger.info(
+                f"Initializing FinetuneVCICountsDecoder with {n_genes} genes (output_space={output_space}; "
+                + ("HVG subset" if output_space == "gene" else "all genes")
+                + ")"
+            )
             self.gene_decoder = FinetuneVCICountsDecoder(
                 genes=gene_names,
-                # latent_dim=self.output_dim + (self.batch_dim or 0),
             )
         print(self)
 
@@ -431,11 +463,11 @@ class StateTransitionPerturbationModel(PerturbationModel):
         if self.hparams.get("mask_attn", False):
             batch_size, seq_length, _ = seq_input.shape
             device = seq_input.device
-            self.transformer_backbone._attn_implementation = "eager"   # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
+            self.transformer_backbone._attn_implementation = "eager"  # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
 
             # create a [1,1,S,S] mask (now S+1 if confidence token is used)
             base = torch.eye(seq_length, device=device, dtype=torch.bool).view(1, 1, seq_length, seq_length)
-            
+
             # Get number of attention heads from model config
             num_heads = self.transformer_backbone.config.num_attention_heads
 
@@ -471,6 +503,9 @@ class StateTransitionPerturbationModel(PerturbationModel):
             res_pred = transformer_output
             self._batch_token_cache = None
 
+        # Cache token features for auxiliary batch prediction loss (B, S, H)
+        self._token_features = res_pred
+
         # add to basal if predicting residual
         if self.predict_residual and self.output_space == "all":
             # Project control_cells to hidden_dim space to match res_pred
@@ -485,8 +520,6 @@ class StateTransitionPerturbationModel(PerturbationModel):
 
         # apply relu if specified and we output to HVG space
         is_gene_space = self.hparams["embed_key"] == "X_hvg" or self.hparams["embed_key"] is None
-        # logger.info(f"DEBUG: is_gene_space: {is_gene_space}")
-        # logger.info(f"DEBUG: self.gene_decoder: {self.gene_decoder}")
         if is_gene_space or self.gene_decoder is None:
             out_pred = self.relu(out_pred)
 
@@ -496,6 +529,24 @@ class StateTransitionPerturbationModel(PerturbationModel):
             return output, confidence_pred
         else:
             return output
+
+    def _compute_distribution_loss(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """Apply the primary distributional loss, optionally chunking feature dimensions for SamplesLoss."""
+
+        if isinstance(self.loss_fn, SamplesLoss) and self.mmd_num_chunks > 1:
+            feature_dim = pred.shape[-1]
+            num_chunks = min(self.mmd_num_chunks, feature_dim)
+            if num_chunks > 1 and feature_dim > 0:
+                if self.randomize_mmd_chunks and self.training:
+                    perm = torch.randperm(feature_dim, device=pred.device)
+                    pred = pred.index_select(-1, perm)
+                    target = target.index_select(-1, perm)
+                pred_chunks = torch.chunk(pred, num_chunks, dim=-1)
+                target_chunks = torch.chunk(target, num_chunks, dim=-1)
+                chunk_losses = [self.loss_fn(p_chunk, t_chunk) for p_chunk, t_chunk in zip(pred_chunks, target_chunks)]
+                return torch.stack(chunk_losses, dim=0).nanmean(dim=0)
+
+        return self.loss_fn(pred, target)
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, padded=True) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
@@ -515,7 +566,8 @@ class StateTransitionPerturbationModel(PerturbationModel):
             pred = pred.reshape(1, -1, self.output_dim)
             target = target.reshape(1, -1, self.output_dim)
 
-        main_loss = self.loss_fn(pred, target).nanmean()
+        per_set_main_losses = self._compute_distribution_loss(pred, target)
+        main_loss = torch.nanmean(per_set_main_losses)
         self.log("train_loss", main_loss)
 
         # Log individual loss components if using combined loss
@@ -579,6 +631,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
             self.log("train/batch_token_loss", ce_loss)
             total_loss = total_loss + self.batch_token_weight * ce_loss
 
+        # Auxiliary batch prediction loss (per token), if enabled
         if self.gene_decoder is not None and "pert_cell_counts" in batch:
             gene_targets = batch["pert_cell_counts"]
             # Train decoder to map latent predictions to gene space
@@ -603,7 +656,8 @@ class StateTransitionPerturbationModel(PerturbationModel):
                 else:
                     gene_targets = gene_targets.reshape(1, -1, self.gene_decoder.gene_dim())
 
-                decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
+                decoder_per_set = self._compute_distribution_loss(pert_cell_counts_preds, gene_targets)
+                decoder_loss = decoder_per_set.mean()
 
             # Log decoder loss
             self.log("decoder_loss", decoder_loss)
@@ -611,25 +665,18 @@ class StateTransitionPerturbationModel(PerturbationModel):
             total_loss = total_loss + self.decoder_loss_weight * decoder_loss
 
         if confidence_pred is not None:
-            # Detach main loss to prevent gradients flowing through it
-            loss_target = total_loss.detach().clone().unsqueeze(0) * 10
+            confidence_pred_vals = confidence_pred
+            if confidence_pred_vals.dim() > 1:
+                confidence_pred_vals = confidence_pred_vals.squeeze(-1)
+            confidence_targets = per_set_main_losses.detach()
+            if self.confidence_target_scale is not None:
+                confidence_targets = confidence_targets * self.confidence_target_scale
+            confidence_targets = confidence_targets.to(confidence_pred_vals.device)
 
-            # Ensure proper shapes for confidence loss computation
-            if confidence_pred.dim() == 2:  # [B, 1]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0), 1)
-            else:  # confidence_pred is [B,]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0))
-
-            # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred.squeeze(), loss_target.squeeze())
+            confidence_loss = self.confidence_weight * self.confidence_loss_fn(confidence_pred_vals, confidence_targets)
             self.log("train/confidence_loss", confidence_loss)
-            self.log("train/actual_loss", loss_target.mean())
+            self.log("train/actual_loss", confidence_targets.mean())
 
-            # Add to total loss with weighting
-            confidence_weight = 0.1  # You can make this configurable
-            total_loss = total_loss + confidence_weight * confidence_loss
-
-            # Add to total loss
             total_loss = total_loss + confidence_loss
 
         if self.regularization > 0.0:
@@ -658,7 +705,8 @@ class StateTransitionPerturbationModel(PerturbationModel):
         target = batch["pert_cell_emb"]
         target = target.reshape(-1, self.cell_sentence_len, self.output_dim)
 
-        loss = self.loss_fn(pred, target).mean()
+        per_set_main_losses = self._compute_distribution_loss(pred, target)
+        loss = torch.nanmean(per_set_main_losses)
         self.log("val_loss", loss)
 
         # Log individual loss components if using combined loss
@@ -685,26 +733,25 @@ class StateTransitionPerturbationModel(PerturbationModel):
                     -1, self.cell_sentence_len, self.gene_decoder.gene_dim()
                 )
                 gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_decoder.gene_dim())
-                decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
+                decoder_per_set = self._compute_distribution_loss(pert_cell_counts_preds, gene_targets)
+                decoder_loss = decoder_per_set.mean()
 
             # Log the validation metric
             self.log("val/decoder_loss", decoder_loss)
             loss = loss + self.decoder_loss_weight * decoder_loss
 
         if confidence_pred is not None:
-            # Detach main loss to prevent gradients flowing through it
-            loss_target = loss.detach().clone() * 10
+            confidence_pred_vals = confidence_pred
+            if confidence_pred_vals.dim() > 1:
+                confidence_pred_vals = confidence_pred_vals.squeeze(-1)
+            confidence_targets = per_set_main_losses.detach()
+            if self.confidence_target_scale is not None:
+                confidence_targets = confidence_targets * self.confidence_target_scale
+            confidence_targets = confidence_targets.to(confidence_pred_vals.device)
 
-            # Ensure proper shapes for confidence loss computation
-            if confidence_pred.dim() == 2:  # [B, 1]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0), 1)
-            else:  # confidence_pred is [B,]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0))
-
-            # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred.squeeze(), loss_target.squeeze())
+            confidence_loss = self.confidence_weight * self.confidence_loss_fn(confidence_pred_vals, confidence_targets)
             self.log("val/confidence_loss", confidence_loss)
-            self.log("val/actual_loss", loss_target.mean())
+            self.log("val/actual_loss", confidence_targets.mean())
 
         return {"loss": loss, "predictions": pred}
 
@@ -717,21 +764,20 @@ class StateTransitionPerturbationModel(PerturbationModel):
         target = batch["pert_cell_emb"]
         pred = pred.reshape(1, -1, self.output_dim)
         target = target.reshape(1, -1, self.output_dim)
-        loss = self.loss_fn(pred, target).mean()
+        per_set_main_losses = self._compute_distribution_loss(pred, target)
+        loss = torch.nanmean(per_set_main_losses)
         self.log("test_loss", loss)
 
         if confidence_pred is not None:
-            # Detach main loss to prevent gradients flowing through it
-            loss_target = loss.detach().clone() * 10.0
+            confidence_pred_vals = confidence_pred
+            if confidence_pred_vals.dim() > 1:
+                confidence_pred_vals = confidence_pred_vals.squeeze(-1)
+            confidence_targets = per_set_main_losses.detach()
+            if self.confidence_target_scale is not None:
+                confidence_targets = confidence_targets * self.confidence_target_scale
+            confidence_targets = confidence_targets.to(confidence_pred_vals.device)
 
-            # Ensure proper shapes for confidence loss computation
-            if confidence_pred.dim() == 2:  # [B, 1]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0), 1)
-            else:  # confidence_pred is [B,]
-                loss_target = loss_target.unsqueeze(0).expand(confidence_pred.size(0))
-
-            # Compute confidence loss
-            confidence_loss = self.confidence_loss_fn(confidence_pred.squeeze(), loss_target.squeeze())
+            confidence_loss = self.confidence_weight * self.confidence_loss_fn(confidence_pred_vals, confidence_targets)
             self.log("test/confidence_loss", confidence_loss)
 
     def predict_step(self, batch, batch_idx, padded=True, **kwargs):

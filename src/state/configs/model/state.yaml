@@ -5,9 +5,9 @@ device: cuda
 kwargs:
   cell_set_len: 512
   blur: 0.05
-  hidden_dim: 696      # hidden dimension going into the transformer backbone
+  hidden_dim: 768
   loss: energy
-  confidence_head: False
+  confidence_token: False
   n_encoder_layers: 1
   n_decoder_layers: 1
   predict_residual: True
@@ -20,19 +20,23 @@ kwargs:
   use_batch_token: False
   nb_decoder: False
   mask_attn: False
+
   use_effect_gating_token: False
   distributional_loss: energy
   init_from: null
+  mmd_num_chunks: 1
+  randomize_mmd_chunks: false
+
   transformer_backbone_key: llama
   transformer_backbone_kwargs:
-      bidirectional_attention: false
+      bidirectional_attention: true
       max_position_embeddings: ${model.kwargs.cell_set_len}
       hidden_size: ${model.kwargs.hidden_dim}
-      intermediate_size: 2784
+      intermediate_size: 3072
       num_hidden_layers: 8
       num_attention_heads: 12
       num_key_value_heads: 12
-      head_dim: 58
+      head_dim: 64
       use_cache: false
       attention_dropout: 0.0
       hidden_dropout: 0.0
@@ -43,6 +47,7 @@ kwargs:
       tie_word_embeddings: false
       rotary_dim: 0
       use_rotary_embeddings: false
+
   lora:
       enable: false
       r: 16

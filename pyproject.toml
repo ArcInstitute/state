@@ -7,13 +7,13 @@ authors = [
     { name = "Abhinav Adduri", email = "abhinav.adduri@arcinstitute.org" },
     { name = "Yusuf Roohani", email = "yusuf.roohani@arcinstitute.org" },
     { name = "Noam Teyssier", email = "noam.teyssier@arcinstitute.org" },
-    { name = "Rajesh Ilango" },
+    { name = "Rajesh Ilango", email = "rilango@gmail.com" },
     { name = "Dhruv Gautam", email = "dhruvgautam@berkeley.edu" },
 ]
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "anndata>=0.11.4",
-    "cell-load>=0.8.3",
+    "cell-load>=0.8.6",
     "numpy>=2.2.6",
     "pandas>=2.2.3",
     "pyyaml>=6.0.2",
@@ -27,7 +27,7 @@ dependencies = [
     "geomloss>=0.2.6",
     "transformers>=4.52.3",
     "peft>=0.11.0",
-    "cell-eval>=0.5.22",
+    "cell-eval>=0.6.6",
     "ipykernel>=6.30.1",
     "scipy>=1.15.0",
 ]

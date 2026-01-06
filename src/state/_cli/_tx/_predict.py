@@ -13,6 +13,12 @@ def add_arguments_predict(parser: ap.ArgumentParser):
         help="Path to the output_dir containing the config.yaml file that was saved during training.",
     )
     parser.add_argument(
+        "--toml",
+        type=str,
+        default=None,
+        help="Optional path to a TOML data config to use instead of the training config.",
+    )
+    parser.add_argument(
         "--checkpoint",
         type=str,
         default="last.ckpt",
@@ -62,10 +68,9 @@ def run_tx_predict(args: ap.ArgumentParser):
     import lightning.pytorch as pl
     import numpy as np
     import pandas as pd
+    from scipy import sparse as sp
     import torch
     import yaml
-
-    from state.tx.constants import HVG_VAR_NAMES_KEY
 
     # Cell-eval for metrics computation
     from cell_eval import MetricsEvaluator
@@ -121,10 +126,30 @@ def run_tx_predict(args: ap.ArgumentParser):
             cfg = yaml.safe_load(f)
         return cfg
 
+    def clip_anndata_values(adata: anndata.AnnData, max_value: float, min_value: float = 0.0) -> None:
+        """Clip adata.X values in-place to keep cell-eval scale checks happy."""
+        if sp.issparse(adata.X):
+            # Clip only the stored data to keep sparsity intact.
+            if adata.X.data.size:
+                np.clip(adata.X.data, min_value, max_value, out=adata.X.data)
+                if hasattr(adata.X, "eliminate_zeros"):
+                    adata.X.eliminate_zeros()
+        else:
+            np.clip(adata.X, min_value, max_value, out=adata.X)
+
     # 1. Load the config
     config_path = os.path.join(args.output_dir, "config.yaml")
     cfg = load_config(config_path)
     logger.info(f"Loaded config from {config_path}")
+
+    if args.toml:
+        data_section = cfg.get("data")
+        if data_section is None or "kwargs" not in data_section:
+            raise KeyError(
+                "The loaded config does not contain data.kwargs, unable to override toml_config_path."
+            )
+        cfg["data"]["kwargs"]["toml_config_path"] = args.toml
+        logger.info("Overriding data.kwargs.toml_config_path to %s", args.toml)
 
     # 2. Find run output directory & load data module
     run_output_dir = os.path.join(cfg["output_dir"], cfg["name"])
@@ -132,6 +157,19 @@ def run_tx_predict(args: ap.ArgumentParser):
     if not os.path.exists(data_module_path):
         raise FileNotFoundError(f"Could not find data module at {data_module_path}?")
     data_module = PerturbationDataModule.load_state(data_module_path)
+    if args.toml:
+        if not os.path.exists(args.toml):
+            raise FileNotFoundError(f"Could not find TOML config file at {args.toml}")
+        from cell_load.config import ExperimentConfig
+
+        logger.info("Reloading data module configuration from %s", args.toml)
+        data_module.toml_config_path = args.toml
+        data_module.config = ExperimentConfig.from_toml(args.toml)
+        data_module.config.validate()
+        data_module.train_datasets = []
+        data_module.val_datasets = []
+        data_module.test_datasets = []
+        data_module._setup_global_maps()
     data_module.setup(stage="test")
     logger.info("Loaded data module from %s", data_module_path)
 
@@ -177,6 +215,10 @@ def run_tx_predict(args: ap.ArgumentParser):
         from ...tx.models.decoder_only import DecoderOnlyPerturbationModel
 
         ModelClass = DecoderOnlyPerturbationModel
+    elif model_class_name.lower() == "pseudobulk":
+        from ...tx.models.pseudobulk import PseudobulkPerturbationModel
+
+        ModelClass = PseudobulkPerturbationModel
     else:
         raise ValueError(f"Unknown model class: {model_class_name}")
 
@@ -286,17 +328,70 @@ def run_tx_predict(args: ap.ArgumentParser):
             else:
                 all_celltypes.append(batch_preds["celltype_name"])
 
-            # Handle gem_group
-            if isinstance(batch_preds["batch"], list):
-                all_gem_groups.extend([str(x) for x in batch_preds["batch"]])
-            elif isinstance(batch_preds["batch"], torch.Tensor):
-                all_gem_groups.extend([str(x) for x in batch_preds["batch"].cpu().numpy()])
-            else:
-                all_gem_groups.append(str(batch_preds["batch"]))
+            batch_size = batch_preds["preds"].shape[0]
+
+            # Handle gem_group - prefer human-readable batch names when available
+            def normalize_batch_labels(values):
+                if values is None:
+                    return None
+                if isinstance(values, torch.Tensor):
+                    values = values.detach().cpu().numpy()
+                if isinstance(values, np.ndarray):
+                    if values.ndim == 2:
+                        if values.shape[0] != batch_size:
+                            return None
+                        if values.shape[1] == 1:
+                            flat = values.reshape(batch_size)
+                            return [str(x) for x in flat.tolist()]
+                        indices = values.argmax(axis=1)
+                        return [str(int(x)) for x in indices.tolist()]
+                    if values.ndim == 1:
+                        if values.shape[0] != batch_size:
+                            return None
+                        return [str(x) for x in values.tolist()]
+                    if values.ndim == 0:
+                        return [str(values.item())] * batch_size
+                    return None
+                if isinstance(values, (list, tuple)):
+                    if len(values) != batch_size:
+                        return None
+                    normalized = []
+                    for item in values:
+                        if isinstance(item, torch.Tensor):
+                            item = item.detach().cpu().numpy()
+                        if isinstance(item, np.ndarray):
+                            if item.ndim == 0:
+                                normalized.append(str(item.item()))
+                                continue
+                            if item.ndim == 1:
+                                if item.size == 1:
+                                    normalized.append(str(item.item()))
+                                elif np.count_nonzero(item) == 1:
+                                    normalized.append(str(int(item.argmax())))
+                                else:
+                                    normalized.append(str(item.tolist()))
+                                continue
+                        normalized.append(str(item))
+                    return normalized
+                return [str(values)] * batch_size
+
+            batch_name_candidates = (
+                batch.get("batch_name"),
+                batch_preds.get("batch_name"),
+                batch_preds.get("batch"),
+            )
+
+            batch_labels = None
+            for candidate in batch_name_candidates:
+                batch_labels = normalize_batch_labels(candidate)
+                if batch_labels is not None:
+                    break
+            if batch_labels is None:
+                batch_labels = ["None"] * batch_size
+            all_gem_groups.extend(batch_labels)
 
             batch_pred_np = batch_preds["preds"].cpu().numpy().astype(np.float32)
             batch_real_np = batch_preds["pert_cell_emb"].cpu().numpy().astype(np.float32)
-            batch_size = batch_pred_np.shape[0]
             final_preds[current_idx : current_idx + batch_size, :] = batch_pred_np
             final_reals[current_idx : current_idx + batch_size, :] = batch_real_np
             current_idx += batch_size
@@ -314,11 +409,17 @@ def run_tx_predict(args: ap.ArgumentParser):
     logger.info("Creating anndatas from predictions from manual loop...")
 
     # Build pandas DataFrame for obs and var
+    cfg_batch_col = cfg.get("data", {}).get("kwargs", {}).get("batch_col", None)
+    batch_obs_key = cfg_batch_col or data_module.batch_col
+    print(batch_obs_key)
     df_dict = {
         data_module.pert_col: all_pert_names,
         data_module.cell_type_key: all_celltypes,
-        data_module.batch_col: all_gem_groups,
+        batch_obs_key: all_gem_groups,
     }
+    if data_module.batch_col and data_module.batch_col != batch_obs_key:
+        print("\t\t STORING BATCH")
+        df_dict[data_module.batch_col] = all_gem_groups
 
     if len(all_pert_barcodes) > 0:
         df_dict["pert_cell_barcode"] = all_pert_barcodes
@@ -327,23 +428,19 @@ def run_tx_predict(args: ap.ArgumentParser):
     obs = pd.DataFrame(df_dict)
 
     gene_names = var_dims["gene_names"]
-    hvg_uns_names = None
-    if data_module.embed_key == "X_hvg" or cfg["data"]["kwargs"]["output_space"] == "gene":
-        hvg_uns_names = gene_names
     var = pd.DataFrame({"gene_names": gene_names})
 
     if final_X_hvg is not None:
-        if len(gene_names) != final_pert_cell_counts_preds.shape[1]:
-            gene_names = np.load(
-                "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_to_2k_names.npy", allow_pickle=True
-            )
-            hvg_uns_names = gene_names
-            var = pd.DataFrame({"gene_names": gene_names})
+        # if len(gene_names) != final_pert_cell_counts_preds.shape[1]:
+        #     gene_names = np.load(
+        #         "/large_storage/ctc/userspace/aadduri/datasets/tahoe_19k_to_2k_names.npy", allow_pickle=True
+        #     )
+        #     var = pd.DataFrame({"gene_names": gene_names})
 
         # Create adata for predictions - using the decoded gene expression values
-        adata_pred = anndata.AnnData(X=final_pert_cell_counts_preds, obs=obs, var=var)
+        adata_pred = anndata.AnnData(X=final_pert_cell_counts_preds, obs=obs)
         # Create adata for real - using the true gene expression values
-        adata_real = anndata.AnnData(X=final_X_hvg, obs=obs, var=var)
+        adata_real = anndata.AnnData(X=final_X_hvg, obs=obs)
 
         # add the embedding predictions
         adata_pred.obsm[data_module.embed_key] = final_preds
@@ -356,19 +453,17 @@ def run_tx_predict(args: ap.ArgumentParser):
         #     )
         #     var = pd.DataFrame({"gene_names": gene_names})
 
-        var = None
-        if len(gene_names) == final_preds.shape[1]:
-            var = pd.DataFrame({"gene_names": gene_names})
-
         # Create adata for predictions - model was trained on gene expression space already
-        adata_pred = anndata.AnnData(X=final_preds, obs=obs, var=var)
+        # adata_pred = anndata.AnnData(X=final_preds, obs=obs, var=var)
+        adata_pred = anndata.AnnData(X=final_preds, obs=obs)
         # Create adata for real - using the true gene expression values
-        adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
+        # adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
+        adata_real = anndata.AnnData(X=final_reals, obs=obs)
 
-    if hvg_uns_names is not None:
-        hvg_uns_array = np.array(hvg_uns_names, dtype=object)
-        adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
-        adata_real.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
+    # Clip extreme values to keep cell-eval log1p checks happy.
+    clip_anndata_values(adata_pred, max_value=14.0)
+    clip_anndata_values(adata_real, max_value=14.0)
+    logger.info("Clipped adata_pred and adata_real X values to [0.0, 14.0] before evaluation.")
 
     # Optionally filter to perturbations seen in at least one training context
     if args.shared_only:
@@ -397,7 +492,10 @@ def run_tx_predict(args: ap.ArgumentParser):
             )
 
     # Save the AnnData objects
-    results_dir = os.path.join(args.output_dir, "eval_" + os.path.basename(args.checkpoint))
+    if args.eval_train_data:
+        results_dir = os.path.join(args.output_dir, "eval_train_" + os.path.basename(args.checkpoint))
+    else:
+        results_dir = os.path.join(args.output_dir, "eval_" + os.path.basename(args.checkpoint))
     os.makedirs(results_dir, exist_ok=True)
     adata_pred_path = os.path.join(results_dir, "adata_pred.h5ad")
     adata_real_path = os.path.join(results_dir, "adata_real.h5ad")
@@ -422,6 +520,7 @@ def run_tx_predict(args: ap.ArgumentParser):
         )
 
         pdex_kwargs = dict(exp_post_agg=True, is_log1p=True)
+
         for ct in ct_split_real.keys():
             real_ct = ct_split_real[ct]
             pred_ct = ct_split_pred[ct]

@@ -160,16 +160,12 @@ def apply_lora(model: PreTrainedModel, backbone_key: str, lora_cfg: dict | None)
         return model
 
     if LoraConfig is None or get_peft_model is None:
-        raise ImportError(
-            "peft is not installed but `lora.enable` is True. Add `peft` to dependencies."
-        )
+        raise ImportError("peft is not installed but `lora.enable` is True. Add `peft` to dependencies.")
 
     target = lora_cfg.get("target", "auto")
     adapt_mlp = bool(lora_cfg.get("adapt_mlp", False))
     target_modules = (
-        lora_cfg.get("target_modules")
-        if target != "auto"
-        else _default_lora_targets(backbone_key, adapt_mlp)
+        lora_cfg.get("target_modules") if target != "auto" else _default_lora_targets(backbone_key, adapt_mlp)
     )
 
     # Build PEFT LoRA config
@@ -230,13 +226,13 @@ class LlamaBidirectionalModel(LlamaModel):
         self.rotary_emb = NoRoPE(
             head_dim=config.head_dim,
         )
-        
+
         # Explicitly disable causal attention
         self.config.is_causal = False
         # force every layer to be non-causal
         for layer in self.layers:
             if hasattr(layer, "self_attn"):
-                layer.self_attn.is_causal = False   # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
+                layer.self_attn.is_causal = False  # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
 
     def _update_causal_mask(
         self,
@@ -265,7 +261,7 @@ class LlamaBidirectionalModel(LlamaModel):
         **flash_attn_kwargs,
     ):
         flash_attn_kwargs["is_causal"] = False
-        
+
         # If no attention_mask is provided, create an all-ones mask (no masking)
         # This ensures bidirectional attention with correct device/dtype
         if attention_mask is None:

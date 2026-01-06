@@ -123,12 +123,12 @@ class PerturbationModel(ABC, LightningModule):
     Args:
         input_dim: Dimension of input features (genes or embeddings)
         hidden_dim: Hidden dimension for neural network layers
-        output_dim: Dimension of output (always gene space)
+        output_dim: Dimension of output (gene space or embedding space)
         pert_dim: Dimension of perturbation embeddings
         dropout: Dropout rate
         lr: Learning rate for optimizer
         loss_fn: Loss function ('mse' or custom nn.Module)
-        output_space: 'gene' or 'latent'
+        output_space: 'gene', 'all', or 'embedding'
     """
 
     def __init__(
@@ -174,6 +174,10 @@ class PerturbationModel(ABC, LightningModule):
 
         self.embed_key = embed_key
         self.output_space = output_space
+        if self.output_space not in {"embedding", "gene", "all"}:
+            raise ValueError(
+                f"Unsupported output_space '{self.output_space}'. Expected one of 'embedding', 'gene', or 'all'."
+            )
         self.batch_size = batch_size
         self.control_pert = control_pert
 
@@ -182,6 +186,18 @@ class PerturbationModel(ABC, LightningModule):
         self.dropout = dropout
         self.lr = lr
         self.loss_fn = get_loss_fn(loss_fn)
+
+        if self.output_space == "embedding":
+            self.gene_decoder_bool = False
+            self.decoder_cfg = None
+            # keep hyperparameters metadata consistent with the actual model state
+            try:
+                if hasattr(self, "hparams"):
+                    self.hparams["gene_decoder_bool"] = False  # type: ignore[index]
+                    self.hparams["decoder_cfg"] = None  # type: ignore[index]
+            except Exception:
+                pass
+
         self._build_decoder()
 
     def transfer_batch_to_device(self, batch, device, dataloader_idx: int):
@@ -216,6 +232,28 @@ class PerturbationModel(ABC, LightningModule):
         if self.gene_decoder_bool == False:
             self.gene_decoder = None
             return
+
+        # When finetuning with the pretrained VCI decoder, keep the existing
+        # FinetuneVCICountsDecoder instance. Overwriting it with a freshly
+        # constructed LatentToGeneDecoder would make the checkpoint weights
+        # incompatible and surface load_state_dict errors.
+        finetune_decoder_active = False
+        hparams = getattr(self, "hparams", None)
+        if hparams is not None:
+            if hasattr(hparams, "get"):
+                finetune_decoder_active = bool(hparams.get("finetune_vci_decoder", False))
+            else:
+                finetune_decoder_active = bool(getattr(hparams, "finetune_vci_decoder", False))
+        if not finetune_decoder_active:
+            finetune_decoder_active = bool(getattr(self, "finetune_vci_decoder", False))
+
+        if finetune_decoder_active:
+            # Preserve decoder_cfg for completeness but avoid rebuilding the module.
+            if "decoder_cfg" in checkpoint.get("hyper_parameters", {}):
+                self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
+            logger.info("Finetune VCI decoder active; keeping existing decoder during checkpoint load")
+            return
+
         if not decoder_already_configured and "decoder_cfg" in checkpoint["hyper_parameters"]:
             self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
             self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)

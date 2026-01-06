@@ -36,18 +36,32 @@ class CumulativeFLOPSCallback(Callback):
         self._batch_count: int = 0
 
     def _trainstep_forward_backward(self, model: LightningModule, batch: Any) -> torch.Tensor:
-        """Encapsulate calling StateTransitionPerturbationModel.training_step and backward.
+        """Call the model's training_step (handling optional args) and run backward if configured."""
 
-        This intentionally targets StateTransitionPerturbationModel's signature and
-        performs both forward and backward to capture full FLOPs.
-
-        !!WARNING!!
-        This has only been tested with StateTransitionPerturbationModel. Behavior with any other model has not been verified.
-        """
         model.zero_grad(set_to_none=True)
-        loss: torch.Tensor = model.training_step(batch, 0, padded=True)  # type: ignore
+
+        try:
+            loss_out = model.training_step(batch, 0, padded=True)
+        except TypeError:
+            loss_out = model.training_step(batch, 0)
+
+        if isinstance(loss_out, dict):
+            loss = loss_out.get("loss")
+            if loss is None:
+                raise RuntimeError(
+                    "CumulativeFLOPSCallback expected training_step to return a Tensor or dict containing 'loss'."
+                )
+        else:
+            loss = loss_out
+
+        if not isinstance(loss, torch.Tensor):  # pragma: no cover - defensive guard
+            raise TypeError(
+                "CumulativeFLOPSCallback requires training_step to return a Tensor (or dict with 'loss' Tensor)."
+            )
+
         if self.use_backward:
             loss.backward()
+
         return loss
 
     def _measure_flops_once(self, trainer: Trainer, pl_module: Any, batch: Any) -> None:

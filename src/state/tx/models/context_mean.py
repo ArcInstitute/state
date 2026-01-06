@@ -91,7 +91,14 @@ class ContextMeanPerturbationModel(PerturbationModel):
             return
 
         # Initialize dictionary to accumulate sum and count for each cell type.
-        celltype_sums = defaultdict(lambda: {"sum": torch.zeros(self.output_dim), "count": 0, "control_sum": torch.zeros(self.output_dim), "control_count": 0})
+        celltype_sums = defaultdict(
+            lambda: {
+                "sum": torch.zeros(self.output_dim),
+                "count": 0,
+                "control_sum": torch.zeros(self.output_dim),
+                "control_count": 0,
+            }
+        )
 
         with torch.no_grad():
             for batch in train_loader:
@@ -127,7 +134,9 @@ class ContextMeanPerturbationModel(PerturbationModel):
                 if stats["control_count"] > 0:
                     # Use control cell average as fallback for cell types with no perturbations
                     self.celltype_pert_means[ct_name] = stats["control_sum"] / stats["control_count"]
-                    logger.info(f"ContextMean: Using control cell average for cell type '{ct_name}' (no perturbations found, {stats['control_count']} control cells used).")
+                    logger.info(
+                        f"ContextMean: Using control cell average for cell type '{ct_name}' (no perturbations found, {stats['control_count']} control cells used)."
+                    )
                 else:
                     logger.warning(f"No perturbed or control cells found for cell type {ct_name}.")
                     continue

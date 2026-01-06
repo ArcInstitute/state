@@ -108,6 +108,11 @@ def run_tx_train(cfg: DictConfig):
     elif cfg["model"]["name"].lower() == "scvi":
         cfg["data"]["kwargs"]["transform"] = None
 
+    output_space = cfg["data"]["kwargs"].get("output_space", "gene")
+    assert output_space in {"embedding", "gene", "all"}, (
+        f"data.kwargs.output_space must be one of 'embedding', 'gene', or 'all'; got {output_space!r}"
+    )
+
     data_module: PerturbationDataModule = get_datamodule(
         cfg["data"]["name"],
         cfg["data"]["kwargs"],
@@ -125,23 +130,27 @@ def run_tx_train(cfg: DictConfig):
     print("batch size:", dl.batch_size)
 
     var_dims = data_module.get_var_dims()  # {"gene_dim": …, "hvg_dim": …}
-    if cfg["data"]["kwargs"]["output_space"] == "gene":
+    if output_space == "gene":
         gene_dim = var_dims.get("hvg_dim", 2000)  # fallback if key missing
     else:
         gene_dim = var_dims.get("gene_dim", 2000)  # fallback if key missing
     latent_dim = var_dims["output_dim"]  # same as model.output_dim
     hidden_dims = cfg["model"]["kwargs"].get("decoder_hidden_dims", [1024, 1024, 512])
 
-    decoder_cfg = dict(
-        latent_dim=latent_dim,
-        gene_dim=gene_dim,
-        hidden_dims=hidden_dims,
-        dropout=cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
-        residual_decoder=cfg["model"]["kwargs"].get("residual_decoder", False),
-    )
+    if output_space in {"gene", "all"}:
+        decoder_cfg = dict(
+            latent_dim=latent_dim,
+            gene_dim=gene_dim,
+            hidden_dims=hidden_dims,
+            dropout=cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
+            residual_decoder=cfg["model"]["kwargs"].get("residual_decoder", False),
+        )
 
-    # tuck it into the kwargs that will reach the LightningModule
-    cfg["model"]["kwargs"]["decoder_cfg"] = decoder_cfg
+        # tuck it into the kwargs that will reach the LightningModule
+        cfg["model"]["kwargs"]["decoder_cfg"] = decoder_cfg
+    else:
+        cfg["model"]["kwargs"].pop("decoder_cfg", None)
+        cfg["model"]["kwargs"]["gene_decoder_bool"] = False
 
     # Save the onehot maps as pickle files instead of storing in config
     cell_type_onehot_map_path = join(run_output_dir, "cell_type_onehot_map.pkl")
@@ -225,7 +234,7 @@ def run_tx_train(cfg: DictConfig):
 
         callbacks.append(mfu_cb)
 
-        # Add CumulativeFLOPSCallback to track cumulative FLOPs
+    if "cumulative_flops_use_backward" in cfg["training"] and cfg["model"]["name"] == "state":
         cumulative_flops_use_backward = cfg["training"]["cumulative_flops_use_backward"]
         cumulative_flops_cb = CumulativeFLOPSCallback(use_backward=cumulative_flops_use_backward)
         callbacks.append(cumulative_flops_cb)
@@ -247,25 +256,32 @@ def run_tx_train(cfg: DictConfig):
     else:
         accelerator = "cpu"
 
+    model_name_lower = cfg["model"]["name"].lower()
+    effective_max_steps = cfg["training"]["max_steps"]
+    if model_name_lower in {"perturb_mean", "context_mean"}:
+        # Mean baselines do not require long training loops; force a short run.
+        effective_max_steps = 1
+        logger.info(f"Overriding max_steps to {effective_max_steps} for model={model_name_lower}")
+
     # Decide on trainer params
     trainer_kwargs = dict(
         accelerator=accelerator,
         devices=cfg["training"].get("devices", 1),
         strategy=cfg["training"].get("strategy", "auto"),
-        max_steps=cfg["training"]["max_steps"],  # for normal models
+        max_steps=effective_max_steps,  # override for mean baselines
         check_val_every_n_epoch=None,
         val_check_interval=cfg["training"]["val_freq"],
         logger=loggers,
         plugins=plugins,
         callbacks=callbacks,
         gradient_clip_val=cfg["training"]["gradient_clip_val"] if cfg["model"]["name"].lower() != "cpa" else None,
-        use_distributed_sampler=False,  # Prevent Lightning from wrapping PerturbationBatchSampler with DistributedSampler
+        accumulate_grad_batches=cfg["training"].get("gradient_accumulation_steps", 1),
+        use_distributed_sampler=False,
     )
 
     # Align logging cadence with rolling MFU window (and W&B logging)
     if "log_every_n_steps" in cfg["training"]:
         trainer_kwargs["log_every_n_steps"] = cfg["training"]["log_every_n_steps"]
-
 
     # Build trainer
     print(f"Building trainer with kwargs: {trainer_kwargs}")
@@ -332,7 +348,9 @@ def run_tx_train(cfg: DictConfig):
         pert_encoder_weight_key = "pert_encoder.0.weight"
         if pert_encoder_weight_key in checkpoint_state:
             checkpoint_pert_dim = checkpoint_state[pert_encoder_weight_key].shape[1]
-            if checkpoint_pert_dim != model.pert_dim:
+
+            # if the cell embedding dim doesn't match, or if it was HVGs, rebuild for transfer learning
+            if checkpoint_pert_dim != model.pert_dim or cfg["data"]["kwargs"]["embed_key"] == "X_hvg":
                 print(
                     f"pert_encoder input dimension mismatch: model.pert_dim = {model.pert_dim} but checkpoint expects {checkpoint_pert_dim}. Overriding model's pert_dim and rebuilding pert_encoder."
                 )

@@ -26,7 +26,7 @@ kwargs:
   init_from: null
   transformer_backbone_key: llama
   transformer_backbone_kwargs:
-      bidirectional_attention: false
+      bidirectional_attention: true
       max_position_embeddings: ${model.kwargs.cell_set_len}
       hidden_size: ${model.kwargs.hidden_dim}
       intermediate_size: 5952
