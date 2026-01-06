@@ -104,7 +104,13 @@ in the TOML file:
 
 
 ```bash
-state tx infer --output $HOME/state/test/ --output_dir /path/to/model/ --checkpoint /path/to/model/final.ckpt --adata /path/to/anndata/processed.h5 --pert_col gene --embed_key X_hvg
+state tx infer \
+  --model-dir /path/to/model/ \
+  --checkpoint /path/to/model/final.ckpt \
+  --adata /path/to/anndata/processed.h5ad \
+  --pert-col gene \
+  --embed-key X_hvg \
+  --output /path/to/output/simulated.h5ad
 ```
 
 Here, `/path/to/model/` is the folder downloaded from [HuggingFace](https://huggingface.co/arcinstitute).
@@ -161,8 +167,8 @@ Use `preprocess_infer` to create a "control template" for model inference:
 state tx preprocess_infer \
   --adata /path/to/real_data.h5ad \
   --output /path/to/control_template.h5ad \
-  --control_condition "DMSO" \
-  --pert_col "treatment" \
+  --control-condition "DMSO" \
+  --pert-col "treatment" \
   --seed 42
 ```
 
@@ -269,19 +275,26 @@ test = ["MYC", "TP53"]
 
 ### Important Notes
 
-- **Automatic training assignment**: Any cell type not mentioned in `[zeroshot]` automatically participates in training, with perturbations not listed in `[fewshot]` going to the training set
-- **Overlapping splits**: Perturbations can appear in both validation and test sets within fewshot configurations
-- **Dataset naming**: Use the format `"dataset_name.cell_type"` when specifying cell types in zeroshot and fewshot sections
-- **Path requirements**: Dataset paths should point to directories containing h5ad files
-- **Control perturbations**: Ensure your control condition (specified via `control_pert` parameter) is available across all splits
+#### Data Splitting Logic
+- **Automatic training assignment**: Cell types not mentioned in `[zeroshot]` participate in training. Within each cell type, perturbations not listed in `[fewshot]` go to the training set.
+- **Overlapping splits**: Perturbations can appear in both validation and test sets within fewshot configurations.
+- **Dataset naming convention**: Use `"dataset_name.cell_type"` format when specifying cell types in zeroshot and fewshot sections.
+- **File requirements**: Dataset paths should point to directories containing `.h5ad` files.
+- **Control perturbations**: Ensure your control condition (specified via `control_pert` parameter) exists across all splits.
 
-### Validation
+#### Required vs Optional Sections
+- **`[datasets]`**: Required - defines dataset paths
+- **`[training]`**: Required - specifies which datasets participate in training
+- **`[zeroshot]`**: Optional - reserves entire cell types for evaluation
+- **`[fewshot]`**: Optional - specifies perturbation-level splits within cell types
 
-The configuration system will validate that:
-- All referenced datasets exist at the specified paths
-- Cell types mentioned in zeroshot/fewshot sections exist in the datasets
-- Perturbations listed in fewshot sections are present in the corresponding cell types
-- No conflicts exist between zeroshot and fewshot assignments for the same cell type
+### Configuration Validation
+
+The system validates configurations and will raise errors if:
+- Referenced datasets don't exist at specified paths
+- Cell types mentioned in `[zeroshot]` or `[fewshot]` don't exist in the datasets
+- Perturbations listed in `[fewshot]` are not present in the corresponding cell types
+- There are conflicts between zeroshot and fewshot assignments for the same cell type
 
 
 ## State Embedding Model (SE)
@@ -296,15 +309,54 @@ To run inference with a trained State checkpoint, e.g., the State trained to 16 
 
 ```bash
 state emb transform \
-  --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
-  --checkpoint /large_storage/ctc/userspace/aadduri/SE-600M/se600m_epoch15.ckpt \
-  --input /large_storage/ctc/datasets/replogle/rpe1_raw_singlecell_01.h5ad \
-  --output /home/aadduri/vci_pretrain/test_output.h5ad
+  --checkpoint /path/to/model.ckpt \
+  --input /path/to/input_data.h5ad \
+  --output /path/to/output_embeddings.h5ad \
+  --embed-key X_state
+```
+
+Or using a model folder (automatically finds latest checkpoint):
+
+```bash
+state emb transform \
+  --model-folder /path/to/model_directory \
+  --input /path/to/input_data.h5ad \
+  --output /path/to/output_embeddings.h5ad
 ```
 
 Notes on the h5ad file format:
  - CSR matrix format is required
  - `gene_name` is required in the `var` dataframe
+
+#### Preprocess datasets for embedding training
+
+Create embedding profiles and prepare datasets for training:
+
+```bash
+state emb preprocess \
+  --profile-name my_profile \
+  --train-csv train_datasets.csv \
+  --val-csv val_datasets.csv \
+  --output-dir embeddings/ \
+  --num-threads 4
+```
+
+This creates embedding profiles and prepares CSV files with dataset mappings for training.
+
+#### Evaluate embedding models
+
+Evaluate trained embedding models on differential expression prediction:
+
+```bash
+state emb eval \
+  --checkpoint /path/to/model.ckpt \
+  --adata /path/to/test_data.h5ad \
+  --pert-col gene \
+  --control-pert non-targeting \
+  --gene-column gene_name
+```
+
+This computes gene overlap metrics, ROC curves, and precision-recall curves for evaluating embedding model performance.
 
 ### Vector Database
 
@@ -324,34 +376,35 @@ uv sync --extra vectordb
 
 ```bash
 state emb transform \
-  --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
-  --input /large_storage/ctc/public/scBasecamp/GeneFull_Ex50pAS/GeneFull_Ex50pAS/Homo_sapiens/SRX27532045.h5ad \
-  --lancedb tmp/state_embeddings.lancedb \
-  --gene-column gene_symbols
+  --checkpoint /path/to/model.ckpt \
+  --input /path/to/dataset.h5ad \
+  --lancedb /path/to/vector_database.lancedb \
+  --gene-column gene_name
 ```
 
-Running this command multiple times with the same lancedb appends the new data to the provided database.
+Running this command multiple times with the same `--lancedb` path appends the new data to the existing database.
 
 #### Query the database
 
-Obtain the embeddings:
+First, obtain embeddings for your query cells:
 
 ```bash
 state emb transform \
-  --model-folder /large_storage/ctc/userspace/aadduri/SE-600M \
-  --input /large_storage/ctc/public/scBasecamp/GeneFull_Ex50pAS/GeneFull_Ex50pAS/Homo_sapiens/SRX27532046.h5ad \
-  --output tmp/SRX27532046.h5ad \
-  --gene-column gene_symbols
+  --checkpoint /path/to/model.ckpt \
+  --input /path/to/query_cells.h5ad \
+  --output /path/to/query_embeddings.h5ad \
+  --gene-column gene_name
 ```
 
-Query the database with the embeddings:
+Then query the database for similar cells:
 
 ```bash
 state emb query \
-  --lancedb tmp/state_embeddings.lancedb \
-  --input tmp/SRX27532046.h5ad \
-  --output tmp/similar_cells.csv \
+  --lancedb /path/to/vector_database.lancedb \
+  --input /path/to/query_embeddings.h5ad \
+  --output /path/to/similar_cells.csv \
   --k 3
+```
 
 # Singularity
 
