@@ -53,7 +53,7 @@ class scGPTPerturbationDataset(PerturbationDataset):
         should_yield_control_cells: bool = True,
         store_raw_basal: bool = False,
         vocab: Optional[Dict[str, int]] = None,
-        hvg_names_uns_key: Optional[str] = None,
+        hvg_names_uns_key: Optional[str] = "X_hvg_var_names",
         perturbation_type: Literal["chemical", "genetic"] = "chemical",
         **kwargs,
     ):
@@ -73,6 +73,7 @@ class scGPTPerturbationDataset(PerturbationDataset):
             random_state: Random seed for reproducibility
             pert_tracker: PerturbationTracker instance for tracking valid perturbations
             should_yield_control_cells: If True, control cells will be included in the dataset
+            hvg_names_uns_key: Optional uns key holding HVG names (default: "X_hvg_var_names")
         """
         super().__init__(
             name=name,

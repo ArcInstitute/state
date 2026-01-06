@@ -79,10 +79,16 @@ def run_tx_preprocess_infer(
     import numpy as np
     # tqdm removed from the hot path; the main speed-up is vectorization, not progress bars.
 
+    from state.tx.utils.hvg import get_hvg_var_names
+
     logger = logging.getLogger(__name__)
 
     print(f"Loading AnnData from {adata_path}")
     adata = ad.read_h5ad(adata_path)
+
+    hvg_names = get_hvg_var_names(adata)
+    if hvg_names is not None:
+        logger.info("Found %d HVG names in adata.uns for X_hvg", len(hvg_names))
 
     # Set random seed for reproducibility
     rng = np.random.default_rng(seed)
@@ -94,6 +100,12 @@ def run_tx_preprocess_infer(
 
     if embed_key is not None and embed_key not in adata.obsm:
         raise KeyError(f"obsm key '{embed_key}' not found in adata.obsm")
+    if embed_key == "X_hvg" and hvg_names is None:
+        logger.warning(
+            "Warning: adata.uns['X_hvg_var_names'] not found. "
+            "Downstream analysis (e.g., pdex) may not be able to map predictions to gene names. "
+            "Consider re-running preprocess_train with the latest STATE version."
+        )
 
     # Identify control cells
     print(f"Identifying control cells with condition: {control_condition!r}")

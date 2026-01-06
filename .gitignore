@@ -12,3 +12,4 @@ notebooks/
 *.slurm
 temp
 wandb/
+tasks/

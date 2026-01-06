@@ -59,7 +59,7 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     )
 
 
-def run_tx_predict(args: ap.ArgumentParser):
+def run_tx_predict(args: ap.Namespace):
     import logging
     import os
     import sys
@@ -71,6 +71,8 @@ def run_tx_predict(args: ap.ArgumentParser):
     from scipy import sparse as sp
     import torch
     import yaml
+
+    from state.tx.constants import HVG_VAR_NAMES_KEY
 
     # Cell-eval for metrics computation
     from cell_eval import MetricsEvaluator
@@ -428,6 +430,9 @@ def run_tx_predict(args: ap.ArgumentParser):
     obs = pd.DataFrame(df_dict)
 
     gene_names = var_dims["gene_names"]
+    hvg_uns_names = None
+    if data_module.embed_key == "X_hvg" or cfg["data"]["kwargs"]["output_space"] == "gene":
+        hvg_uns_names = gene_names
     var = pd.DataFrame({"gene_names": gene_names})
 
     if final_X_hvg is not None:
@@ -446,6 +451,11 @@ def run_tx_predict(args: ap.ArgumentParser):
         adata_pred.obsm[data_module.embed_key] = final_preds
         adata_real.obsm[data_module.embed_key] = final_reals
         logger.info(f"Added predicted embeddings to adata.obsm['{data_module.embed_key}']")
+
+        if hvg_uns_names is not None and len(hvg_uns_names) == final_pert_cell_counts_preds.shape[1]:
+            hvg_uns_array = np.array(hvg_uns_names, dtype=object)
+            adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
+            adata_real.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_uns_names, dtype=object)
     else:
         # if len(gene_names) != final_preds.shape[1]:
         #     gene_names = np.load(
@@ -453,12 +463,19 @@ def run_tx_predict(args: ap.ArgumentParser):
         #     )
         #     var = pd.DataFrame({"gene_names": gene_names})
 
+        var = None
+        if len(gene_names) == final_preds.shape[1]:
+            var = pd.DataFrame({"gene_names": gene_names})
+
         # Create adata for predictions - model was trained on gene expression space already
-        # adata_pred = anndata.AnnData(X=final_preds, obs=obs, var=var)
-        adata_pred = anndata.AnnData(X=final_preds, obs=obs)
+        adata_pred = anndata.AnnData(X=final_preds, obs=obs, var=var)
         # Create adata for real - using the true gene expression values
-        # adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
-        adata_real = anndata.AnnData(X=final_reals, obs=obs)
+        adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
+
+        if hvg_uns_names is not None and len(hvg_uns_names) == final_preds.shape[1]:
+            hvg_uns_array = np.array(hvg_uns_names, dtype=object)
+            adata_pred.uns[HVG_VAR_NAMES_KEY] = hvg_uns_array
+            adata_real.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_uns_names, dtype=object)
 
     # Clip extreme values to keep cell-eval log1p checks happy.
     clip_anndata_values(adata_pred, max_value=14.0)
