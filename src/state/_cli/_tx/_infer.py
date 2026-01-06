@@ -124,6 +124,7 @@ def run_tx_infer(args: argparse.Namespace):
     from tqdm import tqdm
 
     from ...tx.models.state_transition import StateTransitionPerturbationModel
+    from ...tx.constants import HVG_VAR_NAMES_KEY
     from ...tx.utils.hvg import get_hvg_var_names
 
     # -----------------------
@@ -428,6 +429,7 @@ def run_tx_infer(args: argparse.Namespace):
     # -----------------------
     adata = sc.read_h5ad(args.adata)
 
+    hvg_names = None
     hvg_names_status = "n/a"
     if args.embed_key == "X_hvg":
         hvg_names = get_hvg_var_names(adata, obsm_key="X_hvg")
@@ -928,6 +930,10 @@ def run_tx_infer(args: argparse.Namespace):
             adata.obsm[key] = sim_counts
         elif output_space == "all":
             adata.X = sim_counts
+
+    # Store HVG names if available
+    if hvg_names is not None:
+        adata.uns[HVG_VAR_NAMES_KEY] = np.array(hvg_names, dtype=object)
 
     if output_is_npy:
         if pred_matrix is None:
