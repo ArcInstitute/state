@@ -1,10 +1,10 @@
 import time
 import logging
+import os
 from contextlib import contextmanager
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from lightning.pytorch.loggers.csv_logs import CSVLogger as BaseCSVLogger
 import csv
-import os
 from lightning.pytorch.callbacks import ModelCheckpoint
 from os.path import join
 
@@ -100,13 +100,14 @@ def get_loggers(
         try:
             # Check if wandb is available
             import wandb
-
+            
             wandb_logger = WandbLogger(
                 name=name,
                 project=wandb_project,
                 entity=wandb_entity,
                 dir=local_wandb_dir,
                 tags=cfg["wandb"].get("tags", []) if cfg else [],
+                group=cfg["wandb"].get("group", None) if cfg else None,
             )
             if cfg is not None:
                 wandb_logger.experiment.config.update(cfg)
