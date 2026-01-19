@@ -58,6 +58,13 @@ def add_arguments_predict(parser: ap.ArgumentParser):
         help="If set, evaluate the model on the training data rather than on the test data.",
     )
 
+    parser.add_argument(
+        "--fdr-threshold",
+        type=float,
+        default=1e-3,
+        help="FDR threshold for DE significance in cell-eval metrics. Default is 1e-3.",
+    )
+
 
 def run_tx_predict(args: ap.ArgumentParser):
     import logging
@@ -534,6 +541,7 @@ def run_tx_predict(args: ap.ArgumentParser):
                 prefix=ct,
                 pdex_kwargs=pdex_kwargs,
                 batch_size=2048,
+                fdr_threshold=args.fdr_threshold,
             )
 
             evaluator.compute(

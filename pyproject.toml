@@ -1,6 +1,6 @@
 [project]
 name = "arc-state"
-version = "0.9.32"
+version = "0.9.33"
 description = "State is a machine learning model that predicts cellular perturbation response across diverse contexts."
 readme = "README.md"
 authors = [
