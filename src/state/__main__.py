@@ -14,6 +14,7 @@ from ._cli import (
     run_tx_infer,
     run_tx_predict,
     run_tx_preprocess_train,
+    run_tx_sort,
     run_tx_train,
 )
 
@@ -126,6 +127,8 @@ def main():
                 case "preprocess_train":
                     # Run preprocessing using argparse
                     run_tx_preprocess_train(args.adata, args.output, args.num_hvgs)
+                case "sort":
+                    run_tx_sort(args)
 
 
 if __name__ == "__main__":
