@@ -169,14 +169,3 @@ class ModelFLOPSUtilizationCallback(Callback):
             if mfu is not None:
                 mfu = 100 * mfu
                 pl_module.log("mfu (%)", mfu, prog_bar=True, on_step=True, on_epoch=False)
-
-            # Log cell_sets (cell_sentences) per second
-            cell_sets_per_sec = metrics.get("global/samples_per_sec", metrics.get("device/samples_per_sec", None))
-            if cell_sets_per_sec is not None:
-                pl_module.log(
-                    "cell_sets_per_sec",
-                    cell_sets_per_sec,
-                    prog_bar=False,
-                    on_step=True,
-                    on_epoch=False,
-                )

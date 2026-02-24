@@ -216,7 +216,7 @@ class PerturbMeanPerturbationModel(PerturbationModel):
         else:
             target = batch["pert_cell_emb"]
         loss = self.loss_fn(pred, target)
-        self.log("train_loss", loss, prog_bar=True)
+        self.log(self._train_main_loss_key(), loss, prog_bar=True)
         return None
 
     def on_save_checkpoint(self, checkpoint):

@@ -26,7 +26,6 @@ class LatentToGeneDecoder(nn.Module):
         gene_dim: Dimension of gene space (number of HVGs)
         hidden_dims: List of hidden layer dimensions
         dropout: Dropout rate
-        residual_decoder: If True, adds residual connections between every other layer block
     """
 
     def __init__(
@@ -35,54 +34,32 @@ class LatentToGeneDecoder(nn.Module):
         gene_dim: int,
         hidden_dims: List[int] = [512, 1024],
         dropout: float = 0.1,
-        residual_decoder=False,
     ):
         super().__init__()
 
-        self.residual_decoder = residual_decoder
+        layers = []
+        input_dim = latent_dim
 
-        if residual_decoder:
-            # Build individual blocks for residual connections
-            self.blocks = nn.ModuleList()
-            input_dim = latent_dim
+        for hidden_dim in hidden_dims:
+            layers.append(nn.Linear(input_dim, hidden_dim))
+            layers.append(nn.LayerNorm(hidden_dim))
+            layers.append(nn.GELU())
+            layers.append(nn.Dropout(dropout))
+            input_dim = hidden_dim
 
-            for hidden_dim in hidden_dims:
-                block = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.GELU(), nn.Dropout(dropout)
-                )
-                self.blocks.append(block)
-                input_dim = hidden_dim
+        # Final output layer
+        layers.append(nn.Linear(input_dim, gene_dim))
+        # Make sure outputs are non-negative
+        layers.append(nn.ReLU())
 
-            # Final output layer
-            self.final_layer = nn.Sequential(nn.Linear(input_dim, gene_dim), nn.ReLU())
-        else:
-            # Original implementation without residual connections
-            layers = []
-            input_dim = latent_dim
-
-            for hidden_dim in hidden_dims:
-                layers.append(nn.Linear(input_dim, hidden_dim))
-                layers.append(nn.LayerNorm(hidden_dim))
-                layers.append(nn.GELU())
-                layers.append(nn.Dropout(dropout))
-                input_dim = hidden_dim
-
-            # Final output layer
-            layers.append(nn.Linear(input_dim, gene_dim))
-            # Make sure outputs are non-negative
-            layers.append(nn.ReLU())
-
-            self.decoder = nn.Sequential(*layers)
+        self.decoder = nn.Sequential(*layers)
 
     def gene_dim(self):
         # return the output dimension of the last layer
-        if self.residual_decoder:
-            return self.final_layer[0].out_features
-        else:
-            for module in reversed(self.decoder):
-                if isinstance(module, nn.Linear):
-                    return module.out_features
-            return None
+        for module in reversed(self.decoder):
+            if isinstance(module, nn.Linear):
+                return module.out_features
+        return None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -94,26 +71,7 @@ class LatentToGeneDecoder(nn.Module):
         Returns:
             Gene expression predictions of shape [batch_size, gene_dim]
         """
-        if self.residual_decoder:
-            # Apply blocks with residual connections between every other block
-            block_outputs = []
-            current = x
-
-            for i, block in enumerate(self.blocks):
-                output = block(current)
-
-                # Add residual connection from every other previous block
-                # Pattern: blocks 1, 3, 5, ... get residual from blocks 0, 2, 4, ...
-                if i >= 1 and i % 2 == 1:  # Odd-indexed blocks (1, 3, 5, ...)
-                    residual_idx = i - 1  # Previous even-indexed block
-                    output = output + block_outputs[residual_idx]
-
-                block_outputs.append(output)
-                current = output
-
-            return self.final_layer(current)
-        else:
-            return self.decoder(x)
+        return self.decoder(x)
 
 
 class PerturbationModel(ABC, LightningModule):
@@ -130,6 +88,16 @@ class PerturbationModel(ABC, LightningModule):
         loss_fn: Loss function ('mse' or custom nn.Module)
         output_space: 'gene', 'all', or 'embedding'
     """
+
+    @staticmethod
+    def _sanitize_decoder_cfg(decoder_cfg: dict | None) -> dict | None:
+        if decoder_cfg is None:
+            return None
+        sanitized_cfg = dict(decoder_cfg)
+        if "residual_decoder" in sanitized_cfg:
+            sanitized_cfg.pop("residual_decoder")
+            logger.warning("decoder_cfg.residual_decoder is deprecated and will be ignored.")
+        return sanitized_cfg
 
     def __init__(
         self,
@@ -152,7 +120,11 @@ class PerturbationModel(ABC, LightningModule):
         **kwargs,
     ):
         super().__init__()
-        self.decoder_cfg = decoder_cfg
+        if "residual_decoder" in kwargs:
+            kwargs = dict(kwargs)
+            kwargs.pop("residual_decoder")
+            logger.warning("model.kwargs.residual_decoder is deprecated and will be ignored.")
+        self.decoder_cfg = self._sanitize_decoder_cfg(decoder_cfg)
         self.save_hyperparameters()
         self.gene_decoder_bool = kwargs.get("gene_decoder_bool", True)
 
@@ -169,8 +141,6 @@ class PerturbationModel(ABC, LightningModule):
             self.batch_dim = batch_dim
         else:
             self.batch_dim = None
-
-        self.residual_decoder = kwargs.get("residual_decoder", False)
 
         self.embed_key = embed_key
         self.output_space = output_space
@@ -210,6 +180,7 @@ class PerturbationModel(ABC, LightningModule):
 
     def _build_decoder(self):
         """Create self.gene_decoder from self.decoder_cfg (or leave None)."""
+        self.decoder_cfg = self._sanitize_decoder_cfg(self.decoder_cfg)
         if self.gene_decoder_bool == False:
             self.gene_decoder = None
             return
@@ -217,6 +188,28 @@ class PerturbationModel(ABC, LightningModule):
             self.gene_decoder = None
             return
         self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)
+
+    def _main_loss_is_expression(self) -> bool:
+        """
+        Determine whether the primary train/val loss is in expression/count space.
+        """
+        if self.output_space == "embedding":
+            return False
+        return self.embed_key in {"X_hvg", None}
+
+    def _train_main_loss_key(self) -> str:
+        return "train/expression_loss" if self._main_loss_is_expression() else "train/embedding_loss"
+
+    def _val_main_loss_key(self) -> str:
+        return "val/expression_loss" if self._main_loss_is_expression() else "val/embedding_loss"
+
+    @staticmethod
+    def _train_expression_loss_key() -> str:
+        return "train/expression_loss"
+
+    @staticmethod
+    def _val_expression_loss_key() -> str:
+        return "val/expression_loss"
 
     def on_load_checkpoint(self, checkpoint: dict[str, tp.Any]) -> None:
         """
@@ -233,66 +226,22 @@ class PerturbationModel(ABC, LightningModule):
             self.gene_decoder = None
             return
 
-        # When finetuning with the pretrained VCI decoder, keep the existing
-        # FinetuneVCICountsDecoder instance. Overwriting it with a freshly
-        # constructed LatentToGeneDecoder would make the checkpoint weights
-        # incompatible and surface load_state_dict errors.
-        finetune_decoder_active = False
-        hparams = getattr(self, "hparams", None)
-        if hparams is not None:
-            if hasattr(hparams, "get"):
-                finetune_decoder_active = bool(hparams.get("finetune_vci_decoder", False))
-            else:
-                finetune_decoder_active = bool(getattr(hparams, "finetune_vci_decoder", False))
-        if not finetune_decoder_active:
-            finetune_decoder_active = bool(getattr(self, "finetune_vci_decoder", False))
-
-        if finetune_decoder_active:
-            # Preserve decoder_cfg for completeness but avoid rebuilding the module.
-            if "decoder_cfg" in checkpoint.get("hyper_parameters", {}):
-                self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
-            logger.info("Finetune VCI decoder active; keeping existing decoder during checkpoint load")
+        if decoder_already_configured:
+            logger.info("Decoder was already configured externally, skipping checkpoint decoder configuration")
             return
 
-        if not decoder_already_configured and "decoder_cfg" in checkpoint["hyper_parameters"]:
-            self.decoder_cfg = checkpoint["hyper_parameters"]["decoder_cfg"]
-            self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)
-            logger.info(f"Loaded decoder from checkpoint decoder_cfg: {self.decoder_cfg}")
-        elif not decoder_already_configured:
-            # Only fall back to old logic if no decoder_cfg was saved and not externally configured
-            self.decoder_cfg = None
-            self._build_decoder()
-            logger.info(f"DEBUG: output_space: {self.output_space}")
-            if self.gene_decoder is None:
-                gene_dim = self.hvg_dim if self.output_space == "gene" else self.gene_dim
-                logger.info(f"DEBUG: gene_dim: {gene_dim}")
-                if (self.embed_key and self.embed_key != "X_hvg" and self.output_space == "gene") or (
-                    self.embed_key and self.output_space == "all"
-                ):  # we should be able to decode from hvg to all
-                    logger.info("DEBUG: Creating gene_decoder, checking conditions...")
-                    if gene_dim > 10000:
-                        hidden_dims = [1024, 512, 256]
-                    else:
-                        if "DMSO_TF" in self.control_pert:
-                            if self.residual_decoder:
-                                hidden_dims = [2058, 2058, 2058, 2058, 2058]
-                            else:
-                                hidden_dims = [4096, 2048, 2048]
-                        elif "PBS" in self.control_pert:
-                            hidden_dims = [2048, 1024, 1024]
-                        else:
-                            hidden_dims = [1024, 1024, 512]  # make this config
+        checkpoint_hparams = checkpoint.get("hyper_parameters", {})
+        if "decoder_cfg" in checkpoint_hparams:
+            self.decoder_cfg = self._sanitize_decoder_cfg(checkpoint_hparams["decoder_cfg"])
+        elif self.decoder_cfg is None:
+            raise ValueError(
+                "Checkpoint is missing hyper_parameters.decoder_cfg and no decoder_cfg was provided at init. "
+                "Decoder configuration is required."
+            )
 
-                    self.gene_decoder = LatentToGeneDecoder(
-                        latent_dim=self.output_dim,
-                        gene_dim=gene_dim,
-                        hidden_dims=hidden_dims,
-                        dropout=self.dropout,
-                        residual_decoder=self.residual_decoder,
-                    )
-                    logger.info(f"Initialized gene decoder for embedding {self.embed_key} to gene space")
-        else:
-            logger.info("Decoder was already configured externally, skipping checkpoint decoder configuration")
+        self.decoder_cfg = self._sanitize_decoder_cfg(self.decoder_cfg)
+        self.gene_decoder = LatentToGeneDecoder(**self.decoder_cfg)
+        logger.info(f"Loaded decoder from decoder_cfg: {self.decoder_cfg}")
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
@@ -301,7 +250,7 @@ class PerturbationModel(ABC, LightningModule):
 
         # Compute main model loss
         main_loss = self.loss_fn(pred, batch["pert_cell_emb"])
-        self.log("train_loss", main_loss)
+        self.log(self._train_main_loss_key(), main_loss)
 
         # Process decoder if available
         decoder_loss = None
@@ -315,7 +264,7 @@ class PerturbationModel(ABC, LightningModule):
             decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets)
 
             # Log decoder loss
-            self.log("decoder_loss", decoder_loss)
+            self.log(self._train_expression_loss_key(), decoder_loss)
 
             total_loss = main_loss + decoder_loss
         else:
@@ -330,14 +279,12 @@ class PerturbationModel(ABC, LightningModule):
 
         # TODO: remove unused
         # is_control = self.control_pert in batch["pert_name"]
-        self.log("val_loss", loss)
+        self.log(self._val_main_loss_key(), loss)
 
         return {"loss": loss, "predictions": pred}
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         latent_output = self(batch)
-        target = batch[self.embed_key]
-        loss = self.loss_fn(latent_output, target)
 
         output_dict = {
             "preds": latent_output,  # The distribution's sample
@@ -352,10 +299,6 @@ class PerturbationModel(ABC, LightningModule):
         if self.gene_decoder is not None:
             pert_cell_counts_preds = self.gene_decoder(latent_output)
             output_dict["pert_cell_counts_preds"] = pert_cell_counts_preds
-            decoder_loss = self.loss_fn(pert_cell_counts_preds, batch["pert_cell_counts"])
-            self.log("test_decoder_loss", decoder_loss, prog_bar=True)
-
-        self.log("test_loss", loss, prog_bar=True)
 
     def predict_step(self, batch, batch_idx, **kwargs):
         """

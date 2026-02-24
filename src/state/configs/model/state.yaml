@@ -7,7 +7,7 @@ kwargs:
   blur: 0.05
   hidden_dim: 768
   loss: energy
-  confidence_token: False
+  nb_loss: false
   n_encoder_layers: 1
   n_decoder_layers: 1
   predict_residual: True
@@ -15,16 +15,12 @@ kwargs:
   freeze_pert_backbone: False
   transformer_decoder: False
   finetune_vci_decoder: False
-  residual_decoder: False
   batch_encoder: False
-  use_batch_token: False
   mask_attn: False
 
   use_effect_gating_token: False
   distributional_loss: energy
   init_from: null
-  mmd_num_chunks: 1
-  randomize_mmd_chunks: false
   llm_name: null
 
   transformer_backbone_key: llama

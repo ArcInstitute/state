@@ -227,6 +227,46 @@ def run_tx_predict(args: ap.ArgumentParser):
         data_module.test_datasets = []
         data_module._setup_global_maps()
     data_module.setup(stage="test")
+    nb_loss_enabled = bool(cfg.get("model", {}).get("kwargs", {}).get("nb_loss", False))
+    output_space = cfg.get("data", {}).get("kwargs", {}).get("output_space", "gene")
+    if nb_loss_enabled and output_space == "embedding":
+        raise ValueError(
+            "model.kwargs.nb_loss=True is incompatible with data.kwargs.output_space='embedding'. "
+            "Use output_space='gene' or output_space='all'."
+        )
+    if nb_loss_enabled and output_space not in {"gene", "all"}:
+        raise ValueError(
+            f"model.kwargs.nb_loss=True requires data.kwargs.output_space in {{'gene', 'all'}}; got {output_space!r}."
+        )
+    if nb_loss_enabled:
+        resolved_is_log1p = bool(getattr(data_module, "is_log1p", cfg["data"]["kwargs"].get("is_log1p", False)))
+        expected_exp_counts = resolved_is_log1p
+        current_exp_counts = bool(getattr(data_module, "exp_counts", False))
+        if current_exp_counts != expected_exp_counts:
+            logger.warning(
+                "nb_loss=True requires exp_counts to follow is_log1p. "
+                "Resolved is_log1p=%s, overriding exp_counts %s -> %s.",
+                resolved_is_log1p,
+                current_exp_counts,
+                expected_exp_counts,
+            )
+            data_module.exp_counts = expected_exp_counts
+        if data_module.embed_key not in {None, "X_hvg"} and not bool(getattr(data_module, "store_raw_basal", False)):
+            logger.warning(
+                "nb_loss=True with embed_key=%r and store_raw_basal=False. "
+                "NB library-size estimation will fall back to ctrl_cell_emb.",
+                data_module.embed_key,
+            )
+        cfg["data"]["kwargs"]["is_log1p"] = resolved_is_log1p
+        cfg["data"]["kwargs"]["exp_counts"] = expected_exp_counts
+    resolved_exp_counts = bool(getattr(data_module, "exp_counts", cfg["data"]["kwargs"].get("exp_counts", False)))
+    metrics_is_log1p = not (nb_loss_enabled or resolved_exp_counts)
+    logger.info(
+        "Metrics config: setting pdex is_log1p=%s (nb_loss=%s, exp_counts=%s)",
+        metrics_is_log1p,
+        nb_loss_enabled,
+        resolved_exp_counts,
+    )
     logger.info("Loaded data module from %s", data_module_path)
 
     # Seed everything
@@ -250,10 +290,6 @@ def run_tx_predict(args: ap.ArgumentParser):
         from ...tx.models.embed_sum import EmbedSumPerturbationModel
 
         ModelClass = EmbedSumPerturbationModel
-    elif model_class_name.lower() == "old_neuralot":
-        from ...tx.models.old_neural_ot import OldNeuralOTPerturbationModel
-
-        ModelClass = OldNeuralOTPerturbationModel
     elif model_class_name.lower() in ["neuralot", "pertsets", "state"]:
         from ...tx.models.state_transition import StateTransitionPerturbationModel
 
@@ -337,6 +373,12 @@ def run_tx_predict(args: ap.ArgumentParser):
         and data_module.embed_key != "X_hvg"
         and cfg["data"]["kwargs"]["output_space"] == "gene"
     ) or (data_module.embed_key is not None and cfg["data"]["kwargs"]["output_space"] == "all")
+    use_count_outputs = store_raw_expression or nb_loss_enabled
+    if nb_loss_enabled and not store_raw_expression:
+        logger.info(
+            "nb_loss=True: forcing prediction artifacts to use NB count outputs even though "
+            "store_raw_expression would otherwise be disabled."
+        )
 
     if args.pseudobulk:
         logger.info("Pseudobulk enabled; aggregating running means by (context, perturbation).")
@@ -348,13 +390,13 @@ def run_tx_predict(args: ap.ArgumentParser):
         os.makedirs(results_dir, exist_ok=True)
 
         pseudo_x_dim = None
-        if store_raw_expression:
-            if cfg["data"]["kwargs"]["output_space"] == "gene":
+        if use_count_outputs:
+            if output_space == "gene":
                 pseudo_x_dim = hvg_dim
-            elif cfg["data"]["kwargs"]["output_space"] == "all":
+            elif output_space == "all":
                 pseudo_x_dim = gene_dim
             else:
-                raise ValueError(f"Unsupported output_space for pseudobulk: {cfg['data']['kwargs']['output_space']}")
+                raise ValueError(f"Unsupported output_space for pseudobulk: {output_space}")
 
         pb_groups: dict[tuple[str, str], dict] = {}
         context_mode = None
@@ -402,7 +444,7 @@ def run_tx_predict(args: ap.ArgumentParser):
 
                 batch_real_gene_np = None
                 batch_gene_pred_np = None
-                if store_raw_expression:
+                if use_count_outputs:
                     batch_real_gene_np = batch_preds["pert_cell_counts"].cpu().numpy().astype(np.float32)
                     batch_gene_pred_np = batch_preds["pert_cell_counts_preds"].cpu().numpy().astype(np.float32)
 
@@ -427,10 +469,8 @@ def run_tx_predict(args: ap.ArgumentParser):
                             "count": 0,
                             "pred_sum": np.zeros(output_dim, dtype=np.float64),
                             "real_sum": np.zeros(output_dim, dtype=np.float64),
-                            "x_hvg_sum": np.zeros(pseudo_x_dim, dtype=np.float64) if store_raw_expression else None,
-                            "counts_pred_sum": (
-                                np.zeros(pseudo_x_dim, dtype=np.float64) if store_raw_expression else None
-                            ),
+                            "x_hvg_sum": np.zeros(pseudo_x_dim, dtype=np.float64) if use_count_outputs else None,
+                            "counts_pred_sum": np.zeros(pseudo_x_dim, dtype=np.float64) if use_count_outputs else None,
                         }
                         pb_groups[(context_label, pert_name)] = entry
                     elif entry["celltype_name"] != current_celltype:
@@ -442,7 +482,7 @@ def run_tx_predict(args: ap.ArgumentParser):
                     entry["count"] += int(idx_arr.size)
                     entry["pred_sum"] += batch_pred_np[idx_arr].sum(axis=0, dtype=np.float64)
                     entry["real_sum"] += batch_real_np[idx_arr].sum(axis=0, dtype=np.float64)
-                    if store_raw_expression:
+                    if use_count_outputs:
                         entry["x_hvg_sum"] += batch_real_gene_np[idx_arr].sum(axis=0, dtype=np.float64)
                         entry["counts_pred_sum"] += batch_gene_pred_np[idx_arr].sum(axis=0, dtype=np.float64)
 
@@ -462,8 +502,8 @@ def run_tx_predict(args: ap.ArgumentParser):
 
         pred_bulk = np.empty((n_groups, output_dim), dtype=np.float32)
         real_bulk = np.empty((n_groups, output_dim), dtype=np.float32)
-        pred_x = np.empty((n_groups, pseudo_x_dim), dtype=np.float32) if store_raw_expression else None
-        real_x = np.empty((n_groups, pseudo_x_dim), dtype=np.float32) if store_raw_expression else None
+        pred_x = np.empty((n_groups, pseudo_x_dim), dtype=np.float32) if use_count_outputs else None
+        real_x = np.empty((n_groups, pseudo_x_dim), dtype=np.float32) if use_count_outputs else None
 
         reserved_obs_keys = {
             str(data_module.pert_col),
@@ -495,7 +535,7 @@ def run_tx_predict(args: ap.ArgumentParser):
             denom = float(count)
             pred_bulk[idx, :] = (entry["pred_sum"] / denom).astype(np.float32, copy=False)
             real_bulk[idx, :] = (entry["real_sum"] / denom).astype(np.float32, copy=False)
-            if store_raw_expression:
+            if use_count_outputs:
                 pred_x[idx, :] = (entry["counts_pred_sum"] / denom).astype(np.float32, copy=False)
                 real_x[idx, :] = (entry["x_hvg_sum"] / denom).astype(np.float32, copy=False)
 
@@ -508,18 +548,22 @@ def run_tx_predict(args: ap.ArgumentParser):
                 obs_dict[data_module.batch_col].append(entry["batch_name"])
 
         obs = pd.DataFrame(obs_dict)
-        if store_raw_expression:
+        if use_count_outputs:
             adata_pred = anndata.AnnData(X=pred_x, obs=obs)
             adata_real = anndata.AnnData(X=real_x, obs=obs)
-            adata_pred.obsm[data_module.embed_key] = pred_bulk
-            adata_real.obsm[data_module.embed_key] = real_bulk
+            if data_module.embed_key is not None:
+                adata_pred.obsm[data_module.embed_key] = pred_bulk
+                adata_real.obsm[data_module.embed_key] = real_bulk
         else:
             adata_pred = anndata.AnnData(X=pred_bulk, obs=obs)
             adata_real = anndata.AnnData(X=real_bulk, obs=obs)
 
-        clip_anndata_values(adata_pred, max_value=14.0)
-        clip_anndata_values(adata_real, max_value=14.0)
-        logger.info("Clipped pseudobulk adata_pred and adata_real X values to [0.0, 14.0].")
+        if nb_loss_enabled:
+            logger.info("nb_loss=True in run config; skipping pseudobulk clipping of adata_pred/adata_real X values.")
+        else:
+            clip_anndata_values(adata_pred, max_value=14.0)
+            clip_anndata_values(adata_real, max_value=14.0)
+            logger.info("Clipped pseudobulk adata_pred and adata_real X values to [0.0, 14.0].")
 
         if args.shared_only:
             try:
@@ -566,7 +610,7 @@ def run_tx_predict(args: ap.ArgumentParser):
                 f"Number of celltypes in real and pred anndata must match: {len(ct_split_real)} != {len(ct_split_pred)}"
             )
 
-            pdex_kwargs = dict(exp_post_agg=True, is_log1p=True)
+            pdex_kwargs = dict(exp_post_agg=True, is_log1p=metrics_is_log1p)
             for ct in ct_split_real.keys():
                 real_ct = ct_split_real[ct]
                 pred_ct = ct_split_pred[ct]
@@ -608,12 +652,12 @@ def run_tx_predict(args: ap.ArgumentParser):
 
     final_X_hvg = None
     final_pert_cell_counts_preds = None
-    if store_raw_expression:
+    if use_count_outputs:
         # Preallocate matrices of shape (num_cells, gene_dim) for decoded predictions.
-        if cfg["data"]["kwargs"]["output_space"] == "gene":
+        if output_space == "gene":
             final_X_hvg = np.empty((num_cells, hvg_dim), dtype=np.float32)
             final_pert_cell_counts_preds = np.empty((num_cells, hvg_dim), dtype=np.float32)
-        if cfg["data"]["kwargs"]["output_space"] == "all":
+        if output_space == "all":
             final_X_hvg = np.empty((num_cells, gene_dim), dtype=np.float32)
             final_pert_cell_counts_preds = np.empty((num_cells, gene_dim), dtype=np.float32)
 
@@ -719,9 +763,10 @@ def run_tx_predict(args: ap.ArgumentParser):
         adata_real = anndata.AnnData(X=final_X_hvg, obs=obs)
 
         # add the embedding predictions
-        adata_pred.obsm[data_module.embed_key] = final_preds
-        adata_real.obsm[data_module.embed_key] = final_reals
-        logger.info(f"Added predicted embeddings to adata.obsm['{data_module.embed_key}']")
+        if data_module.embed_key is not None:
+            adata_pred.obsm[data_module.embed_key] = final_preds
+            adata_real.obsm[data_module.embed_key] = final_reals
+            logger.info(f"Added predicted embeddings to adata.obsm['{data_module.embed_key}']")
     else:
         # if len(gene_names) != final_preds.shape[1]:
         #     gene_names = np.load(
@@ -736,10 +781,13 @@ def run_tx_predict(args: ap.ArgumentParser):
         # adata_real = anndata.AnnData(X=final_reals, obs=obs, var=var)
         adata_real = anndata.AnnData(X=final_reals, obs=obs)
 
-    # Clip extreme values to keep cell-eval log1p checks happy.
-    clip_anndata_values(adata_pred, max_value=14.0)
-    clip_anndata_values(adata_real, max_value=14.0)
-    logger.info("Clipped adata_pred and adata_real X values to [0.0, 14.0] before evaluation.")
+    # Clip extreme values to keep cell-eval log1p checks happy unless NB loss is active.
+    if nb_loss_enabled:
+        logger.info("nb_loss=True in run config; skipping clipping of adata_pred/adata_real X values.")
+    else:
+        clip_anndata_values(adata_pred, max_value=14.0)
+        clip_anndata_values(adata_real, max_value=14.0)
+        logger.info("Clipped adata_pred and adata_real X values to [0.0, 14.0] before evaluation.")
 
     # Optionally filter to perturbations seen in at least one training context
     if args.shared_only:
@@ -798,7 +846,7 @@ def run_tx_predict(args: ap.ArgumentParser):
             f"Number of celltypes in real and pred anndata must match: {len(ct_split_real)} != {len(ct_split_pred)}"
         )
 
-        pdex_kwargs = dict(exp_post_agg=True, is_log1p=True)
+        pdex_kwargs = dict(exp_post_agg=True, is_log1p=metrics_is_log1p)
 
         for ct in ct_split_real.keys():
             real_ct = ct_split_real[ct]

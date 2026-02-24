@@ -5,6 +5,8 @@ vci_job_*
 lightning_logs/
 outputs/
 log/
+logs/
+debugging/
 uv.lock
 tmp/
 notebooks/

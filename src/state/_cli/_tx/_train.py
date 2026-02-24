@@ -11,20 +11,17 @@ def add_arguments_train(parser: ap.ArgumentParser):
 
 
 def run_tx_train(cfg: DictConfig):
-    import json
     import logging
     import os
     import pickle
     import shutil
     from os.path import exists, join
-    from pathlib import Path
 
     import lightning.pytorch as pl
     import torch
     from cell_load.data_modules import PerturbationDataModule
     from cell_load.utils.modules import get_datamodule
     from lightning.pytorch.loggers import WandbLogger
-    from lightning.pytorch.plugins.precision import MixedPrecision
 
     from ...tx.callbacks import (
         BatchSpeedMonitorCallback,
@@ -66,52 +63,39 @@ def run_tx_train(cfg: DictConfig):
     try:
         sentence_len = cfg["model"]["cell_set_len"]
     except KeyError:
-        if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
-            if "cell_sentence_len" in cfg["model"]["kwargs"] and cfg["model"]["kwargs"]["cell_sentence_len"] > 1:
-                sentence_len = cfg["model"]["kwargs"]["cell_sentence_len"]
-                cfg["training"]["batch_size"] = 1
-            else:
-                sentence_len = 1
-        else:
-            try:
-                sentence_len = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["n_positions"]
-            except:
-                sentence_len = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["max_position_embeddings"]
-
-    if cfg["model"]["name"].lower().startswith("scgpt"):  # scGPT uses log-normalized expression
-        cfg["data"]["kwargs"]["transform"] = "log-normalize"
-        cfg["data"]["kwargs"]["hvg_names_uns_key"] = (
-            "hvg_names" if cfg["data"]["kwargs"]["train_task"] != "replogle" else None
-        )  # TODO: better to not hardcode this
-
-        cfg["data"]["kwargs"]["dataset_cls"] = "scGPTPerturbationDataset"
-
-        model_dir = Path(cfg["model"]["kwargs"]["pretrained_path"])
-
-        vocab_file = model_dir / "vocab.json"
-
-        vocab = json.load(open(vocab_file, "r"))
-        cfg["model"]["kwargs"]["pad_token_id"] = vocab["<pad>"]
-        for s in cfg["model"]["kwargs"]["special_tokens"]:
-            if s not in vocab:
-                vocab[s] = len(vocab)
-
-        cfg["data"]["kwargs"]["vocab"] = vocab
-        cfg["data"]["kwargs"]["perturbation_type"] = cfg["model"]["kwargs"]["perturbation_type"]
-        cfg["model"]["kwargs"]["ntoken"] = len(vocab)
-        cfg["model"]["kwargs"]["d_model"] = cfg["model"]["kwargs"]["embsize"]
-
-        logger.info("Added vocab and hvg_names_uns_key to data kwargs for scGPT")
-
-    elif cfg["model"]["name"].lower() == "cpa" and cfg["model"]["kwargs"]["recon_loss"] == "gauss":
-        cfg["data"]["kwargs"]["transform"] = "log-normalize"
-    elif cfg["model"]["name"].lower() == "scvi":
-        cfg["data"]["kwargs"]["transform"] = None
+        try:
+            sentence_len = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["n_positions"]
+        except:
+            sentence_len = cfg["model"]["kwargs"]["transformer_backbone_kwargs"]["max_position_embeddings"]
 
     output_space = cfg["data"]["kwargs"].get("output_space", "gene")
     assert output_space in {"embedding", "gene", "all"}, (
         f"data.kwargs.output_space must be one of 'embedding', 'gene', or 'all'; got {output_space!r}"
     )
+    nb_loss_enabled = bool(cfg["model"]["kwargs"].get("nb_loss", False))
+    if nb_loss_enabled and output_space == "embedding":
+        raise ValueError(
+            "model.kwargs.nb_loss=True is incompatible with data.kwargs.output_space='embedding'. "
+            "Use output_space='gene' or output_space='all'."
+        )
+    if nb_loss_enabled and output_space not in {"gene", "all"}:
+        raise ValueError(
+            f"model.kwargs.nb_loss=True requires data.kwargs.output_space in {{'gene', 'all'}}; got {output_space!r}."
+        )
+    embed_key = cfg["data"]["kwargs"].get("embed_key", None)
+    if nb_loss_enabled and embed_key not in {None, "X_hvg"}:
+        if not bool(cfg["data"]["kwargs"].get("store_raw_basal", False)):
+            logger.warning(
+                "nb_loss=True with embed_key=%r requires control counts for library-size estimation; "
+                "setting data.kwargs.store_raw_basal=True.",
+                embed_key,
+            )
+            cfg["data"]["kwargs"]["store_raw_basal"] = True
+
+    if output_space == "embedding":
+        checkpoint_monitor_metric = "val/embedding_loss"
+    else:
+        checkpoint_monitor_metric = "val/expression_loss"
 
     data_module: PerturbationDataModule = get_datamodule(
         cfg["data"]["name"],
@@ -120,11 +104,33 @@ def run_tx_train(cfg: DictConfig):
         cell_sentence_len=sentence_len,
     )
 
+    data_module.setup(stage="fit")
+    if nb_loss_enabled:
+        resolved_is_log1p = bool(getattr(data_module, "is_log1p", cfg["data"]["kwargs"].get("is_log1p", False)))
+        expected_exp_counts = resolved_is_log1p
+        current_exp_counts = bool(getattr(data_module, "exp_counts", False))
+        if current_exp_counts != expected_exp_counts:
+            logger.warning(
+                "nb_loss=True requires exp_counts to follow is_log1p. "
+                "Resolved is_log1p=%s, overriding exp_counts %s -> %s.",
+                resolved_is_log1p,
+                current_exp_counts,
+                expected_exp_counts,
+            )
+            data_module.exp_counts = expected_exp_counts
+        else:
+            logger.info(
+                "nb_loss=True with resolved is_log1p=%s and exp_counts=%s.",
+                resolved_is_log1p,
+                current_exp_counts,
+            )
+        cfg["data"]["kwargs"]["is_log1p"] = resolved_is_log1p
+        cfg["data"]["kwargs"]["exp_counts"] = expected_exp_counts
+
     with open(join(run_output_dir, "data_module.torch"), "wb") as f:
         # TODO-Abhi: only save necessary data
         data_module.save_state(f)
 
-    data_module.setup(stage="fit")
     dl = data_module.train_dataloader()
     print("num_workers:", dl.num_workers)
     print("batch size:", dl.batch_size)
@@ -143,7 +149,6 @@ def run_tx_train(cfg: DictConfig):
             gene_dim=gene_dim,
             hidden_dims=hidden_dims,
             dropout=cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
-            residual_decoder=cfg["model"]["kwargs"].get("residual_decoder", False),
         )
 
         # tuck it into the kwargs that will reach the LightningModule
@@ -163,11 +168,6 @@ def run_tx_train(cfg: DictConfig):
     torch.save(data_module.batch_onehot_map, batch_onehot_map_path)
     with open(var_dims_path, "wb") as f:
         pickle.dump(var_dims, f)
-
-    if cfg["model"]["name"].lower() in ["cpa", "scvi"] or cfg["model"]["name"].lower().startswith("scgpt"):
-        cfg["model"]["kwargs"]["n_cell_types"] = len(data_module.celltype_onehot_map)
-        cfg["model"]["kwargs"]["n_perts"] = len(data_module.pert_onehot_map)
-        cfg["model"]["kwargs"]["n_batches"] = len(data_module.batch_onehot_map)
 
     # Create model
     model = get_lightning_module(
@@ -206,6 +206,7 @@ def run_tx_train(cfg: DictConfig):
         cfg["name"],
         cfg["training"]["val_freq"],
         cfg["training"].get("ckpt_every_n_steps", 4000),
+        monitor_metric=checkpoint_monitor_metric,
     )
     # Add BatchSpeedMonitorCallback to log batches per second to wandb
     batch_speed_monitor = BatchSpeedMonitorCallback()
@@ -239,15 +240,7 @@ def run_tx_train(cfg: DictConfig):
 
     logger.info("Loggers and callbacks set up.")
 
-    if cfg["model"]["name"].lower().startswith("scgpt"):
-        plugins = [
-            MixedPrecision(
-                precision="bf16-mixed",
-                device="cuda",
-            )
-        ]
-    else:
-        plugins = []
+    plugins = []
 
     if torch.cuda.is_available():
         accelerator = "gpu"
@@ -272,7 +265,7 @@ def run_tx_train(cfg: DictConfig):
         logger=loggers,
         plugins=plugins,
         callbacks=callbacks,
-        gradient_clip_val=cfg["training"]["gradient_clip_val"] if cfg["model"]["name"].lower() != "cpa" else None,
+        gradient_clip_val=cfg["training"]["gradient_clip_val"],
         accumulate_grad_batches=cfg["training"].get("gradient_accumulation_steps", 1),
         use_distributed_sampler=False,
     )
@@ -320,7 +313,9 @@ def run_tx_train(cfg: DictConfig):
             )
             print("Creating new decoder for the specified output space...")
 
-            if cfg["model"]["kwargs"].get("gene_decoder_bool", True) == False:
+            if cfg["model"]["kwargs"].get("gene_decoder_bool", True) == False or cfg["model"]["kwargs"].get(
+                "nb_loss", False
+            ):
                 model._decoder_externally_configured = False
             else:
                 # Override the decoder_cfg to match the new output_space
@@ -334,7 +329,6 @@ def run_tx_train(cfg: DictConfig):
                     gene_dim=new_gene_dim,
                     hidden_dims=cfg["model"]["kwargs"].get("decoder_hidden_dims", [1024, 1024, 512]),
                     dropout=cfg["model"]["kwargs"].get("decoder_dropout", 0.1),
-                    residual_decoder=cfg["model"]["kwargs"].get("residual_decoder", False),
                 )
 
                 # Update the model's decoder_cfg and rebuild decoder

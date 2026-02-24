@@ -443,12 +443,21 @@ def run_tx_infer(args: argparse.Namespace):
     cell_set_len = args.max_set_len if args.max_set_len is not None else getattr(model, "cell_sentence_len", 256)
     uses_batch_encoder = getattr(model, "batch_encoder", None) is not None
     output_space = getattr(model, "output_space", cfg.get("data", {}).get("kwargs", {}).get("output_space", "gene"))
+    nb_loss_enabled = bool(getattr(model, "nb_loss", cfg.get("model", {}).get("kwargs", {}).get("nb_loss", False)))
+    if nb_loss_enabled and output_space == "embedding":
+        raise ValueError(
+            "model.kwargs.nb_loss=True is incompatible with data.kwargs.output_space='embedding'. "
+            "Use output_space='gene' or output_space='all'."
+        )
+    if nb_loss_enabled and output_space not in {"gene", "all"}:
+        raise ValueError(f"nb_loss=True requires output_space in {{'gene', 'all'}}; got {output_space!r}.")
 
     if not args.quiet:
         print(f"Model device: {device}")
         print(f"Model cell_set_len (max sequence length): {cell_set_len}")
         print(f"Model uses batch encoder: {bool(uses_batch_encoder)}")
         print(f"Model output space: {output_space}")
+        print(f"Model nb_loss enabled: {nb_loss_enabled}")
 
     # -----------------------
     # 3) Load AnnData
@@ -720,7 +729,7 @@ def run_tx_infer(args: argparse.Namespace):
     store_raw_expression = (args.embed_key is not None and args.embed_key != "X_hvg" and output_space == "gene") or (
         args.embed_key is not None and output_space == "all"
     )
-    counts_expected = store_raw_expression
+    counts_expected = store_raw_expression or nb_loss_enabled
     counts_out_target: Optional[str] = None
     counts_obsm_key: Optional[str] = None
     sim_counts: Optional[np.ndarray] = None
@@ -916,24 +925,28 @@ def run_tx_infer(args: argparse.Namespace):
 
                     start = end  # next window
 
-    # Clip gene-space predictions to keep downstream eval consistent.
+    # Clip legacy decoder outputs only; NB count outputs remain unclipped.
     if output_space in {"gene", "all"}:
-        if out_target == "X":
-            clip_array(sim_X)
-        elif out_target.startswith("obsm['") and out_target.endswith("']"):
-            pred_key = out_target[6:-2]
-            if writes_to[0] == ".obsm" and pred_key == writes_to[1]:
-                clip_array(sim_obsm)
-            elif pred_key in adata.obsm:
-                clip_array(adata.obsm[pred_key])
+        if nb_loss_enabled:
+            if not args.quiet:
+                print("nb_loss=True: skipping clipping of simulated outputs.")
         else:
-            if writes_to[0] == ".X":
+            if out_target == "X":
                 clip_array(sim_X)
+            elif out_target.startswith("obsm['") and out_target.endswith("']"):
+                pred_key = out_target[6:-2]
+                if writes_to[0] == ".obsm" and pred_key == writes_to[1]:
+                    clip_array(sim_obsm)
+                elif pred_key in adata.obsm:
+                    clip_array(adata.obsm[pred_key])
             else:
-                clip_array(sim_obsm)
+                if writes_to[0] == ".X":
+                    clip_array(sim_X)
+                else:
+                    clip_array(sim_obsm)
 
-        if counts_written and sim_counts is not None:
-            clip_array(sim_counts)
+            if counts_written and sim_counts is not None:
+                clip_array(sim_counts)
 
     # -----------------------
     # 5) Persist the updated AnnData

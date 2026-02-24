@@ -16,8 +16,8 @@ class DecoderOnlyPerturbationModel(PerturbationModel):
     this model simply feeds the latent representation through a decoder network. The loss is computed
     between the decoder output and the target HVG expression.
 
-    It keeps the overall architectural style (and uses the SamplesLoss loss function from geomloss)
-    as in the OldNeuralOT model.
+    It keeps the overall architectural style and uses the SamplesLoss loss
+    function from geomloss.
     """
 
     def __init__(
@@ -49,7 +49,7 @@ class DecoderOnlyPerturbationModel(PerturbationModel):
         self.activation_class = get_activation_class(kwargs.get("activation", "gelu"))
         self.gene_dim = gene_dim
 
-        # Use the same loss function as OldNeuralOT (e.g. using the MMD loss via geomloss)
+        # Use an MMD-style distributional loss via geomloss.
         self.loss_fn = SamplesLoss(loss=self.distributional_loss)
 
     def _build_networks(self):
@@ -71,7 +71,7 @@ class DecoderOnlyPerturbationModel(PerturbationModel):
         """
         pred = self(batch)
         # log a zero tensor
-        self.log("train_loss", 0.0)
+        self.log(self._train_main_loss_key(), 0.0)
 
         if self.gene_decoder is not None and "pert_cell_counts" in batch:
             pert_cell_counts_preds = self.gene_decoder(pred)
@@ -79,15 +79,15 @@ class DecoderOnlyPerturbationModel(PerturbationModel):
             gene_targets = batch["pert_cell_counts"]
             gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
             decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
-            self.log("decoder_loss", decoder_loss)
+            self.log(self._train_expression_loss_key(), decoder_loss)
         else:
-            self.log("decoder_loss", 0.0)
+            self.log(self._train_expression_loss_key(), 0.0)
             decoder_loss = None
         return decoder_loss
 
     def validation_step(self, batch, batch_idx):
         pred = self(batch)
-        self.log("val_loss", 0.0)
+        self.log(self._val_main_loss_key(), 0.0)
 
         return {"loss": None, "predictions": pred}
 
@@ -100,7 +100,7 @@ class DecoderOnlyPerturbationModel(PerturbationModel):
             pert_cell_counts_preds = pert_cell_counts_preds.reshape(-1, self.cell_sentence_len, self.gene_dim)
             gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
             decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
-            self.log("decoder_val_loss", decoder_loss)
+            self.log(self._val_expression_loss_key(), decoder_loss)
 
     def test_step(self, batch, batch_idx):
         pred = self(batch)
@@ -109,8 +109,7 @@ class DecoderOnlyPerturbationModel(PerturbationModel):
             pert_cell_counts_preds = self.gene_decoder(pred)
             gene_targets = batch["pert_cell_counts"]
             gene_targets = gene_targets.reshape(-1, self.cell_sentence_len, self.gene_dim)
-            decoder_loss = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
-            self.log("decoder_test_loss", decoder_loss)
+            _ = self.loss_fn(pert_cell_counts_preds, gene_targets).mean()
         return {"loss": None, "predictions": pred}
 
     def predict_step(self, batch, batch_idx, padded=True, **kwargs):

@@ -85,6 +85,29 @@ Optional downsampling overrides:
 - `data.kwargs.downsample` downsample counts during loading (`<=1` keeps that fraction by binomial sampling, `>1` targets that read depth per cell for `output_space=all`).
 - `data.kwargs.downsample_cells` caps the number of cells loaded per `(cell_type, perturbation[, batch])` group while leaving smaller groups unchanged.
 
+### ST training contract: `embed_key`, `output_space`, decoder, and metrics
+
+For ST (`state tx train`), two settings jointly define target tensors, decoder usage, and logged losses:
+- `data.kwargs.embed_key`
+- `data.kwargs.output_space`
+
+The current contract is:
+
+| `embed_key` | `output_space` | Main target/loss space | Decoder target (if present) | Logged metrics |
+|---|---|---|---|---|
+| `X_hvg` or `null` | `gene` | Expression (HVG/count space) | None expected | `train/expression_loss`, `val/expression_loss` |
+| non-`X_hvg` embedding key (for example `X_state`, `X_uce`) | `gene` | Embedding space | Expression (HVG/count space) | `train/embedding_loss`, `val/embedding_loss`, plus `train/expression_loss`, `val/expression_loss` |
+| non-`X_hvg` embedding key | `all` | Embedding space | Expression (full transcriptome) | `train/embedding_loss`, `val/embedding_loss`, plus `train/expression_loss`, `val/expression_loss` |
+| any | `embedding` | Embedding space | Disabled | `train/embedding_loss`, `val/embedding_loss` |
+
+Notes:
+- Main loss is always computed from the model output against `batch["pert_cell_emb"]`.
+- Decoder loss (expression loss) is only logged when decoder targets are available in `batch["pert_cell_counts"]`.
+- With `output_space=embedding`, decoder is disabled.
+- Best-checkpoint monitoring is:
+  - `val/expression_loss` when `output_space` is `gene` or `all`
+  - `val/embedding_loss` when `output_space` is `embedding`
+
 ### predict
 
 Evaluates a trained run with `cell-eval` metrics (or just runs prediction with `--predict-only`).

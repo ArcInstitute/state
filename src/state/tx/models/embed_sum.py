@@ -10,7 +10,7 @@ class EmbedSumPerturbationModel(PerturbationModel):
     """
     Implementation of the EmbedSum model which treats perturbations as learned embeddings
     that are added to control cell representations, which are input as gene expression counts
-    or as embeddings from a foundation model (UCE, scGPT, etc). The outputs are always in
+    or as embeddings from a foundation model (for example, UCE). The outputs are always in
     gene expression space.
 
     This model:

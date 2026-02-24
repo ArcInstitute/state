@@ -2,6 +2,11 @@ wandb_track: true
 weight_decay: 0.0005
 batch_size: 16
 lr: 1e-4
+optimizer: adam
+use_cosine_decay: false
+max_lr: null
+lr_decay_steps: null
+max_lr_fraction: 0.1
 max_steps: 400000
 train_seed: 42
 val_freq: 2000

@@ -15,7 +15,6 @@ kwargs:
   freeze_pert: False
   transformer_decoder: False
   finetune_vci_decoder: False
-  residual_decoder: False
   batch_encoder: False
   mask_attn: False
   use_effect_gating_token: False

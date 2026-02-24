@@ -45,22 +45,6 @@ class BatchSpeedMonitorCallback(Callback):
                 # Log to wandb
                 pl_module.log("batches_per_second", batches_per_second)
 
-                # Also log min, max, and coefficient of variation to help diagnose variability
-                if len(self.batch_times) > 1:
-                    min_time = min(self.batch_times)
-                    max_time = max(self.batch_times)
-                    std_dev = (sum((t - avg_batch_time) ** 2 for t in self.batch_times) / len(self.batch_times)) ** 0.5
-                    cv = (std_dev / avg_batch_time) * 100 if avg_batch_time > 0 else 0
-
-                    pl_module.log("batch_time_min", min_time)
-                    pl_module.log("batch_time_max", max_time)
-                    pl_module.log("batch_time_avg", avg_batch_time)
-                    pl_module.log("batch_time_cv_percent", cv)
-
-                    # Log max/min ratio to identify extreme outliers
-                    if min_time > 0:
-                        pl_module.log("batch_time_max_min_ratio", max_time / min_time)
-
             # Reset for next interval
             self.batch_times = []
             self.last_logged_batch = batch_idx
