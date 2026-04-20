@@ -73,6 +73,17 @@ def add_arguments_predict(parser: ap.ArgumentParser):
         ),
     )
 
+    parser.add_argument(
+        "--subsample-fraction",
+        type=float,
+        default=None,
+        help=(
+            "If set, subsample test cells per (context, perturbation) condition to this fraction "
+            "before prediction. Ensures no condition is left with fewer than 2 cells. "
+            "Mutually exclusive with --pseudobulk."
+        ),
+    )
+
 
 def run_tx_predict(args: ap.ArgumentParser):
     import logging
@@ -101,6 +112,13 @@ def run_tx_predict(args: ap.ArgumentParser):
 
     if args.predict_only and args.skip_adatas:
         logger.warning("Both --predict-only and --skip-adatas were set; no prediction artifacts will be written.")
+
+    if args.pseudobulk and args.subsample_fraction is not None:
+        raise ValueError("--pseudobulk and --subsample-fraction are mutually exclusive.")
+
+    if args.subsample_fraction is not None:
+        if not (0.0 < args.subsample_fraction <= 1.0):
+            raise ValueError(f"--subsample-fraction must be in (0, 1], got {args.subsample_fraction}")
 
     def run_test_time_finetune(model, dataloader, ft_epochs, control_pert, device):
         """
@@ -194,6 +212,51 @@ def run_tx_predict(args: ap.ArgumentParser):
                 return [values.item()] * batch_size
             return values.tolist()
         return [values] * batch_size
+
+    def subsample_test_datasets(test_datasets, fraction, min_cells=2, seed=42):
+        """Subsample test dataset indices per (cell_type, perturbation) condition.
+
+        Modifies each subset's ``.indices`` in-place so the downstream dataloader
+        only yields the sampled cells.
+        """
+        rng = np.random.default_rng(seed)
+        total_before = 0
+        total_after = 0
+
+        for subset in test_datasets:
+            cache = subset.dataset.metadata_cache
+            indices = subset.indices
+            n_before = len(indices)
+            total_before += n_before
+
+            pert_codes = cache.pert_codes[indices]
+            ct_codes = cache.cell_type_codes[indices]
+
+            keep_mask = np.zeros(n_before, dtype=bool)
+
+            # Build unique (cell_type, perturbation) conditions
+            pairs = np.stack([ct_codes, pert_codes], axis=1)
+            unique_pairs = np.unique(pairs, axis=0)
+
+            for ct_code, p_code in unique_pairs:
+                cond_mask = (ct_codes == ct_code) & (pert_codes == p_code)
+                cond_positions = np.where(cond_mask)[0]
+                n_total = len(cond_positions)
+                n_keep = max(min_cells, int(n_total * fraction))
+                n_keep = min(n_keep, n_total)  # never exceed available
+                chosen = rng.choice(cond_positions, size=n_keep, replace=False)
+                keep_mask[chosen] = True
+
+            subset.indices = indices[keep_mask]
+            total_after += len(subset.indices)
+
+        logger.info(
+            "Subsampled test sets: %d -> %d cells (fraction=%.3f, min_cells=%d).",
+            total_before,
+            total_after,
+            fraction,
+            min_cells,
+        )
 
     # 1. Load the config
     config_path = os.path.join(args.output_dir, "config.yaml")
@@ -290,6 +353,9 @@ def run_tx_predict(args: ap.ArgumentParser):
     }
 
     model = ModelClass.load_from_checkpoint(checkpoint_path, weights_only=False, **model_init_kwargs)
+    model.float()
+    if torch.cuda.is_available():
+        model = model.cuda()
     model.eval()
     logger.info("Model loaded successfully.")
 
@@ -310,6 +376,10 @@ def run_tx_predict(args: ap.ArgumentParser):
 
     # 5. Run inference on test set
     data_module.setup(stage="test")
+
+    if args.subsample_fraction is not None:
+        subsample_test_datasets(data_module.test_datasets, args.subsample_fraction)
+
     if args.eval_train_data:
         test_loader = data_module.train_dataloader(test=True)
     else:
@@ -362,7 +432,7 @@ def run_tx_predict(args: ap.ArgumentParser):
 
         with torch.no_grad():
             for batch_idx, batch in enumerate(tqdm(test_loader, desc="Predicting", unit="batch")):
-                batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
+                batch = {k: (v.to(device=device, dtype=torch.float32) if isinstance(v, torch.Tensor) and v.is_floating_point() else (v.to(device) if isinstance(v, torch.Tensor) else v)) for k, v in batch.items()}
                 batch_preds = model.predict_step(batch, batch_idx, padded=False)
 
                 batch_size = batch_preds["preds"].shape[0]
@@ -628,7 +698,7 @@ def run_tx_predict(args: ap.ArgumentParser):
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(test_loader, desc="Predicting", unit="batch")):
             # Move each tensor in the batch to the model's device
-            batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
+            batch = {k: (v.to(device=device, dtype=torch.float32) if isinstance(v, torch.Tensor) and v.is_floating_point() else (v.to(device) if isinstance(v, torch.Tensor) else v)) for k, v in batch.items()}
 
             # Get predictions
             batch_preds = model.predict_step(batch, batch_idx, padded=False)
