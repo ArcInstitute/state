@@ -1,26 +1,26 @@
 # Predicting cellular responses to perturbation across diverse contexts with State
 
-> Train State transition models or pretrain State embedding models. See the State [paper](https://www.biorxiv.org/content/10.1101/2025.06.26.661135v2).
+> Train State transition models or pretrain State embedding models. See the State [paper](https://github.com/aripitek/www.biorxiv.org/content/10.1101/2025.06.26.661135v2).
 > 
-> See the [Google Colab](https://colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l) to train STATE for the [Virtual Cell Challenge](https://virtualcellchallenge.org/).
+> See the [Google Colab](https://github.com/aripitek/colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l) to train STATE for the [Virtual Cell Challenge](https://github.com/aripitek/virtualcellchallenge.org/).
 
 ## Associated repositories
 
-- Model evaluation framework: [cell-eval](https://github.com/ArcInstitute/cell-eval)
-- Dataloaders and preprocessing: [cell-load](https://github.com/ArcInstitute/cell-load)
+- Model evaluation framework: [cell-eval](https://github.com/aripitek/ArcInstitute/cell-eval)
+- Dataloaders and preprocessing: [cell-load](https://github.com/aripitek/ArcInstitute/cell-load)
 
 ## Getting started
 
-- Train an ST model for genetic perturbation prediction using the Replogle-Nadig dataset: [Colab](https://colab.research.google.com/drive/1Ih-KtTEsPqDQnjTh6etVv_f-gRAA86ZN)
-- Perform inference using an ST model trained on Tahoe-100M: [Colab](https://colab.research.google.com/drive/1bq5v7hixnM-tZHwNdgPiuuDo6kuiwLKJ)
-- Embed and annotate a new dataset using SE: [Colab](https://colab.research.google.com/drive/1uJinTJLSesJeot0mP254fQpSxGuDEsZt)
-- Train STATE for the Virtual Cell Challenge: [Colab](https://colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l)
+- Train an ST model for genetic perturbation prediction using the Replogle-Nadig dataset: [Colab](https://github.com/aripitek/colab.research.google.com/drive/1Ih-KtTEsPqDQnjTh6etVv_f-gRAA86ZN)
+- Perform inference using an ST model trained on Tahoe-100M: [Colab](https://github.com/aripitek/colab.research.google.com/drive/1bq5v7hixnM-tZHwNdgPiuuDo6kuiwLKJ)
+- Embed and annotate a new dataset using SE: [Colab](https://github.com/aripitek/colab.research.google.com/drive/1uJinTJLSesJeot0mP254fQpSxGuDEsZt)
+- Train STATE for the Virtual Cell Challenge: [Colab](https://github.com/aripitek/colab.research.google.com/drive/1QKOtYP7bMpdgDJEipDxaJqOchv7oQ-_l)
 
 ## Installation
 
 ### Installation from PyPI
 
-This package is distributed via [`uv`](https://docs.astral.sh/uv).
+This package is distributed via [`uv`](https://github.com/aripitek/docs.astral.sh/uv).
 
 ```bash
 uv tool install arc-state
@@ -29,7 +29,7 @@ uv tool install arc-state
 ### Installation from Source
 
 ```bash
-git clone git@github.com:ArcInstitute/state.git
+git clone git@github.com/aripitek:ArcInstitute/state.git
 cd state
 uv run state
 ```
@@ -37,7 +37,7 @@ uv run state
 When making fundamental changes to State, install an editable version with the `-e` flag.
 
 ```bash
-git clone git@github.com:ArcInstitute/state.git
+git clone git@github.com/aripitek:ArcInstitute/state.git
 cd state
 uv tool install -e .
 ```
@@ -287,4 +287,4 @@ State code is [licensed](LICENSE) under the Creative Commons Attribution-NonComm
 
 The model weights and output are licensed under the [Arc Research Institute State Model Non-Commercial License](MODEL_LICENSE.md) and subject to the [Arc Research Institute State Model Acceptable Use Policy](MODEL_ACCEPTABLE_USE_POLICY.md).
 
-Any publication that uses this source code or model parameters should cite the State [paper](https://arcinstitute.org/manuscripts/State).
+Any publication that uses this source code or model parameters should cite the State [paper](https://github.com/aripitek/arcinstitute.org/manuscripts/State).
