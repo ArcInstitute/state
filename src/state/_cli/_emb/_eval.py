@@ -118,8 +118,9 @@ def run_emb_eval(args):
     with torch.no_grad():
         with torch.autocast(device_type=device_type, dtype=precision):
             for batch in tqdm(dataloader, desc="Processing batches"):
-                torch.cuda.synchronize()
-                torch.cuda.empty_cache()
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
+                    torch.cuda.empty_cache()
 
                 # Compute embeddings
                 _, _, _, emb, ds_emb = model._compute_embedding_for_batch(batch)

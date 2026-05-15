@@ -76,7 +76,8 @@ def evaluate_de(model, cfg, device=None, logger=print):
     pred_exp = model._predict_exp_for_adata(
         tmp_adata, cfg["validations"]["diff_exp"]["dataset_name"], cfg["validations"]["diff_exp"]["obs_pert_col"]
     )
-    torch.cuda.synchronize()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
     de_metrics = compute_gene_overlap_cross_pert(
         pred_exp, true_top_genes, k=cfg["validations"]["diff_exp"]["top_k_rank"]
     )
