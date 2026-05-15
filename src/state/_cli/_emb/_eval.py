@@ -118,7 +118,7 @@ def run_emb_eval(args):
     with torch.no_grad():
         with torch.autocast(device_type=device_type, dtype=precision):
             for batch in tqdm(dataloader, desc="Processing batches"):
-                if torch.cuda.is_available():
+                if device_type == "cuda":
                     torch.cuda.synchronize()
                     torch.cuda.empty_cache()
 
