@@ -68,6 +68,17 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     )
 
     parser.add_argument(
+        "--stream-adatas",
+        action="store_true",
+        help=(
+            "Stream per-batch predictions directly to adata_pred.h5ad / adata_real.h5ad on "
+            "disk, bounding host memory to ~one batch instead of materializing the full "
+            "(n_cells, n_genes) matrices. Implies --predict-only (in-process cell-eval is "
+            "skipped); score the written h5ads downstream."
+        ),
+    )
+
+    parser.add_argument(
         "--shared-only",
         action="store_true",
         help=("If set, restrict predictions/evaluation to perturbations shared between train and test (train ∩ test)."),
@@ -108,6 +119,7 @@ def run_tx_predict(args: ap.ArgumentParser):
     from cell_load.data_modules import PerturbationDataModule
     from tqdm import tqdm
     from ._utils import normalize_batch_labels
+    from ._stream_h5ad import validate_stream_adatas_args
 
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
@@ -116,6 +128,13 @@ def run_tx_predict(args: ap.ArgumentParser):
 
     if args.predict_only and args.skip_adatas:
         logger.warning("Both --predict-only and --skip-adatas were set; no prediction artifacts will be written.")
+
+    validate_stream_adatas_args(args)
+    if args.stream_adatas and args.pseudobulk:
+        logger.warning(
+            "--stream-adatas ignored: --pseudobulk already aggregates in a streaming, "
+            "low-memory fashion."
+        )
 
     def run_test_time_finetune(model, dataloader, ft_epochs, control_pert, device):
         """
