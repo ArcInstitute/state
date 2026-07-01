@@ -29,7 +29,7 @@ def _to_numpy(value: Any) -> np.ndarray:
 
 
 def select_stream_payload(
-    batch_preds: Mapping,
+    batch_preds: Mapping[str, Any],
     store_raw_expression: bool,
     embed_key: str,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray] | None, dict[str, np.ndarray] | None]:
@@ -105,7 +105,9 @@ class StreamingDenseH5ad:
             shape=(self._n_obs, self._n_vars),
             maxshape=(self._n_obs, self._n_vars),
             dtype=dtype,
-            chunks=(rows, self._n_vars),
+            # A 0-row dataset cannot be chunked (chunk dim > data dim); it needs
+            # no chunking anyway since nothing is streamed into it.
+            chunks=(rows, self._n_vars) if self._n_obs > 0 else None,
         )
         self._x.attrs["encoding-type"], self._x.attrs["encoding-version"] = _ARRAY_ENCODING
 
@@ -120,7 +122,7 @@ class StreamingDenseH5ad:
                     shape=(self._n_obs, ncols),
                     maxshape=(self._n_obs, ncols),
                     dtype=dtype,
-                    chunks=(rows, ncols),
+                    chunks=(rows, ncols) if self._n_obs > 0 else None,
                 )
                 ds.attrs["encoding-type"], ds.attrs["encoding-version"] = _ARRAY_ENCODING
                 self._obsm[key] = ds

@@ -63,6 +63,18 @@ def test_resize_down_for_shared_only(tmp_path):
     assert np.array_equal(a.X, x[:3])
 
 
+def test_empty_dataset(tmp_path):
+    # num_cells == 0 (empty test set / fully-masked shared-only) must still write
+    # a valid empty h5ad, matching the in-memory path's behavior.
+    p = str(tmp_path / "empty.h5ad")
+    w = StreamingDenseH5ad(p, 0, 3, obsm={"X_emb": 4}, clip=None)
+    w.close(_obs(0))
+    a = anndata.read_h5ad(p)
+    assert a.shape == (0, 3)
+    assert a.obsm["X_emb"].shape == (0, 4)
+    assert list(a.var.index) == ["0", "1", "2"]
+
+
 def test_row_overflow_raises(tmp_path):
     w = StreamingDenseH5ad(str(tmp_path / "o.h5ad"), 2, 3, clip=None)
     with pytest.raises(ValueError):
