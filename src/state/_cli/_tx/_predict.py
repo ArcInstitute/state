@@ -687,11 +687,11 @@ def run_tx_predict(args: ap.ArgumentParser):
             adata_real_path, num_cells, x_dim, obsm=obsm_spec, clip=(0.0, 14.0)
         )
 
-        all_pert_names: list = []
-        all_celltypes: list = []
-        all_gem_groups: list = []
-        all_pert_barcodes: list = []
-        all_ctrl_barcodes: list = []
+        all_pert_names: list[str] = []
+        all_celltypes: list[str] = []
+        all_gem_groups: list[str] = []
+        all_pert_barcodes: list[str] = []
+        all_ctrl_barcodes: list[str] = []
 
         with torch.no_grad():
             for batch_idx, batch in enumerate(
