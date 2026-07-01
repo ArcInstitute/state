@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Mapping
+from types import TracebackType
+from typing import Any, Mapping
 
 import anndata
 import h5py
@@ -18,7 +19,7 @@ _DICT_ENCODING = ("dict", "0.1.0")
 _EMPTY_DICT_KEYS = ("layers", "uns", "obsp", "varm", "varp")
 
 
-def _to_numpy(value) -> np.ndarray:
+def _to_numpy(value: Any) -> np.ndarray:
     """Convert a torch tensor or array-like batch field to a float32 ndarray."""
     if hasattr(value, "detach"):
         value = value.detach()
@@ -31,7 +32,7 @@ def select_stream_payload(
     batch_preds: Mapping,
     store_raw_expression: bool,
     embed_key: str,
-) -> tuple[np.ndarray, np.ndarray, dict | None, dict | None]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray] | None, dict[str, np.ndarray] | None]:
     """Pick the X (and obsm) blocks for the pred/real writers from one batch.
 
     Mirrors the AnnData assembly in ``run_tx_predict``:
@@ -180,7 +181,12 @@ class StreamingDenseH5ad:
     def __enter__(self) -> "StreamingDenseH5ad":
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         # On an exception before close(), release the file handle.
         if exc_type is not None and not self._closed:
             self._file.close()
