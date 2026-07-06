@@ -73,7 +73,7 @@ def add_arguments_predict(parser: ap.ArgumentParser):
         help=(
             "Stream per-batch predictions directly to adata_pred.h5ad / adata_real.h5ad on "
             "disk, bounding host memory to ~one batch instead of materializing the full "
-            "(n_cells, n_genes) matrices. Implies --predict-only (in-process cell-eval is "
+            "(n_cells, n_genes) matrices. Requires --predict-only (in-process cell-eval is "
             "skipped); score the written h5ads downstream."
         ),
     )

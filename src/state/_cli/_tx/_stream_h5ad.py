@@ -56,6 +56,11 @@ def select_stream_payload(
 
 def validate_stream_adatas_args(args) -> None:
     """Reject contradictory flag combinations for ``--stream-adatas``."""
+    if getattr(args, "stream_adatas", False) and not getattr(args, "predict_only", False):
+        raise ValueError(
+            "--stream-adatas requires --predict-only because in-process "
+            "cell-eval is skipped in streaming mode."
+        )
     if getattr(args, "stream_adatas", False) and getattr(args, "skip_adatas", False):
         raise ValueError(
             "--stream-adatas cannot be combined with --skip-adatas: streaming "

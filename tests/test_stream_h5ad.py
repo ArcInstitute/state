@@ -116,7 +116,17 @@ def test_select_payload_gene_space():
 def test_validate_rejects_skip_and_stream():
     class A:
         stream_adatas = True
+        predict_only = True
         skip_adatas = True
+    with pytest.raises(ValueError):
+        validate_stream_adatas_args(A())
+
+
+def test_validate_rejects_stream_without_predict_only():
+    class A:
+        stream_adatas = True
+        predict_only = False
+        skip_adatas = False
     with pytest.raises(ValueError):
         validate_stream_adatas_args(A())
 
@@ -124,5 +134,6 @@ def test_validate_rejects_skip_and_stream():
 def test_validate_allows_stream_alone():
     class A:
         stream_adatas = True
+        predict_only = True
         skip_adatas = False
     validate_stream_adatas_args(A())  # no raise
