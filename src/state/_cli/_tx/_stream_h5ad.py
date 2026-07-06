@@ -122,9 +122,9 @@ class StreamingDenseH5ad:
         self._x.attrs["encoding-type"], self._x.attrs["encoding-version"] = _ARRAY_ENCODING
 
         self._obsm: dict[str, h5py.Dataset] = {}
+        grp = self._file.create_group("obsm")
+        grp.attrs["encoding-type"], grp.attrs["encoding-version"] = _DICT_ENCODING
         if obsm:
-            grp = self._file.create_group("obsm")
-            grp.attrs["encoding-type"], grp.attrs["encoding-version"] = _DICT_ENCODING
             for key, ncols in obsm.items():
                 ncols = int(ncols)
                 ds = grp.create_dataset(

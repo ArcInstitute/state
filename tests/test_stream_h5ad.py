@@ -1,4 +1,5 @@
 import anndata
+import h5py
 import numpy as np
 import pandas as pd
 import pytest
@@ -61,6 +62,19 @@ def test_resize_down_for_shared_only(tmp_path):
     a = anndata.read_h5ad(p)
     assert a.n_obs == 3
     assert np.array_equal(a.X, x[:3])
+
+
+def test_writes_empty_obsm_group_without_embeddings(tmp_path):
+    p = str(tmp_path / "no_obsm_payload.h5ad")
+    w = StreamingDenseH5ad(p, 2, 3, clip=None)
+    w.write_block(np.ones((2, 3), dtype=np.float32))
+    w.close(_obs(2))
+
+    a = anndata.read_h5ad(p)
+    assert list(a.obsm.keys()) == []
+    with h5py.File(p, "r") as f:
+        assert "obsm" in f
+        assert f["obsm"].attrs["encoding-type"] == "dict"
 
 
 def test_empty_dataset(tmp_path):
