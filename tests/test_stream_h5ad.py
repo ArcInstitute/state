@@ -118,6 +118,7 @@ def test_validate_rejects_skip_and_stream():
         stream_adatas = True
         predict_only = True
         skip_adatas = True
+        pseudobulk = False
     with pytest.raises(ValueError):
         validate_stream_adatas_args(A())
 
@@ -127,6 +128,17 @@ def test_validate_rejects_stream_without_predict_only():
         stream_adatas = True
         predict_only = False
         skip_adatas = False
+        pseudobulk = False
+    with pytest.raises(ValueError):
+        validate_stream_adatas_args(A())
+
+
+def test_validate_rejects_pseudobulk_and_stream():
+    class A:
+        stream_adatas = True
+        predict_only = True
+        skip_adatas = False
+        pseudobulk = True
     with pytest.raises(ValueError):
         validate_stream_adatas_args(A())
 
@@ -136,4 +148,5 @@ def test_validate_allows_stream_alone():
         stream_adatas = True
         predict_only = True
         skip_adatas = False
+        pseudobulk = False
     validate_stream_adatas_args(A())  # no raise

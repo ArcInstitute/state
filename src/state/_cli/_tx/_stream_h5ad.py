@@ -66,6 +66,11 @@ def validate_stream_adatas_args(args) -> None:
             "--stream-adatas cannot be combined with --skip-adatas: streaming "
             "exists to write the AnnData outputs to disk."
         )
+    if getattr(args, "stream_adatas", False) and getattr(args, "pseudobulk", False):
+        raise ValueError(
+            "--stream-adatas cannot be combined with --pseudobulk: pseudobulk "
+            "prediction already uses its own streaming aggregation path."
+        )
 
 
 class StreamingDenseH5ad:

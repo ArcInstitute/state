@@ -130,11 +130,6 @@ def run_tx_predict(args: ap.ArgumentParser):
         logger.warning("Both --predict-only and --skip-adatas were set; no prediction artifacts will be written.")
 
     validate_stream_adatas_args(args)
-    if args.stream_adatas and args.pseudobulk:
-        logger.warning(
-            "--stream-adatas ignored: --pseudobulk already aggregates in a streaming, "
-            "low-memory fashion."
-        )
 
     def run_test_time_finetune(model, dataloader, ft_epochs, control_pert, device):
         """
