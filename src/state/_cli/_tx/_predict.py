@@ -68,6 +68,17 @@ def add_arguments_predict(parser: ap.ArgumentParser):
     )
 
     parser.add_argument(
+        "--stream-adatas",
+        action="store_true",
+        help=(
+            "Stream per-batch predictions directly to adata_pred.h5ad / adata_real.h5ad on "
+            "disk, bounding host memory to ~one batch instead of materializing the full "
+            "(n_cells, n_genes) matrices. Requires --predict-only (in-process cell-eval is "
+            "skipped); score the written h5ads downstream."
+        ),
+    )
+
+    parser.add_argument(
         "--shared-only",
         action="store_true",
         help=("If set, restrict predictions/evaluation to perturbations shared between train and test (train ∩ test)."),
@@ -108,6 +119,7 @@ def run_tx_predict(args: ap.ArgumentParser):
     from cell_load.data_modules import PerturbationDataModule
     from tqdm import tqdm
     from ._utils import normalize_batch_labels
+    from ._stream_h5ad import StreamingDenseH5ad, select_stream_payload, validate_stream_adatas_args
 
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
@@ -116,6 +128,8 @@ def run_tx_predict(args: ap.ArgumentParser):
 
     if args.predict_only and args.skip_adatas:
         logger.warning("Both --predict-only and --skip-adatas were set; no prediction artifacts will be written.")
+
+    validate_stream_adatas_args(args)
 
     def run_test_time_finetune(model, dataloader, ft_epochs, control_pert, device):
         """
@@ -616,6 +630,153 @@ def run_tx_predict(args: ap.ArgumentParser):
                     else {},
                     skip_metrics=["pearson_edistance", "clustering_agreement"],
                 )
+        return
+
+    if args.stream_adatas:
+        logger.info("Streaming predictions directly to h5ad (low-memory mode).")
+        if args.eval_train_data:
+            results_dir = os.path.join(
+                args.output_dir, "eval_train_" + os.path.basename(args.checkpoint)
+            )
+        else:
+            results_dir = os.path.join(
+                args.output_dir, "eval_" + os.path.basename(args.checkpoint)
+            )
+        os.makedirs(results_dir, exist_ok=True)
+        adata_pred_path = os.path.join(results_dir, "adata_pred.h5ad")
+        adata_real_path = os.path.join(results_dir, "adata_real.h5ad")
+
+        # X width + obsm spec mirror the AnnData assembly in the in-memory path.
+        if store_raw_expression:
+            x_dim = hvg_dim if cfg["data"]["kwargs"]["output_space"] == "gene" else gene_dim
+            obsm_spec: dict[str, int] | None = {data_module.embed_key: output_dim}
+        else:
+            x_dim = output_dim
+            obsm_spec = None
+
+        # --shared-only: filter each batch to perts seen in train ∩ test.
+        shared_perts = None
+        if args.shared_only:
+            try:
+                shared_perts = set(data_module.get_shared_perturbations())
+                if not shared_perts:
+                    logger.warning(
+                        "No shared perturbations between train and test; not filtering."
+                    )
+                    shared_perts = None
+                else:
+                    logger.info(
+                        "Filtering to %d shared perturbations (train ∩ test).",
+                        len(shared_perts),
+                    )
+            except Exception as e:  # noqa: BLE001 - mirror the in-memory path's tolerance
+                logger.warning(
+                    "Failed to resolve shared perturbations (%s); not filtering.", str(e)
+                )
+                shared_perts = None
+
+        pred_writer = StreamingDenseH5ad(
+            adata_pred_path, num_cells, x_dim, obsm=obsm_spec, clip=(0.0, 14.0)
+        )
+        real_writer = StreamingDenseH5ad(
+            adata_real_path, num_cells, x_dim, obsm=obsm_spec, clip=(0.0, 14.0)
+        )
+
+        all_pert_names: list[str] = []
+        all_celltypes: list[str] = []
+        all_gem_groups: list[str] = []
+        all_pert_barcodes: list[str] = []
+        all_ctrl_barcodes: list[str] = []
+
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(
+                tqdm(test_loader, desc="Predicting (stream)", unit="batch")
+            ):
+                batch = {
+                    k: (v.to(device) if isinstance(v, torch.Tensor) else v)
+                    for k, v in batch.items()
+                }
+                batch_preds = model.predict_step(batch, batch_idx, padded=False)
+                batch_size = batch_preds["preds"].shape[0]
+
+                # Per-cell metadata (same sources as the in-memory loop).
+                if isinstance(batch_preds["pert_name"], list):
+                    pert_names = list(batch_preds["pert_name"])
+                else:
+                    pert_names = [batch_preds["pert_name"]]
+                if isinstance(batch_preds["celltype_name"], list):
+                    celltypes = list(batch_preds["celltype_name"])
+                else:
+                    celltypes = [batch_preds["celltype_name"]]
+                gem_groups = get_batch_labels(
+                    (
+                        batch.get("batch_name"),
+                        batch_preds.get("batch_name"),
+                        batch_preds.get("batch"),
+                    ),
+                    batch_size,
+                )
+                pert_bcs = None
+                ctrl_bcs = None
+                if "pert_cell_barcode" in batch_preds:
+                    if isinstance(batch_preds["pert_cell_barcode"], list):
+                        pert_bcs = list(batch_preds["pert_cell_barcode"])
+                        ctrl_bcs = list(batch_preds["ctrl_cell_barcode"])
+                    else:
+                        pert_bcs = [batch_preds["pert_cell_barcode"]]
+                        ctrl_bcs = [batch_preds["ctrl_cell_barcode"]]
+
+                x_pred, x_real, om_pred, om_real = select_stream_payload(
+                    batch_preds, store_raw_expression, data_module.embed_key
+                )
+
+                if shared_perts is not None:
+                    keep = np.array(
+                        [p in shared_perts for p in pert_names], dtype=bool
+                    )
+                    if not keep.any():
+                        continue
+                    x_pred, x_real = x_pred[keep], x_real[keep]
+                    if om_pred is not None:
+                        om_pred = {k: v[keep] for k, v in om_pred.items()}
+                        om_real = {k: v[keep] for k, v in om_real.items()}
+                    sel = np.flatnonzero(keep)
+                    pert_names = [pert_names[i] for i in sel]
+                    celltypes = [celltypes[i] for i in sel]
+                    gem_groups = [gem_groups[i] for i in sel]
+                    if pert_bcs is not None:
+                        pert_bcs = [pert_bcs[i] for i in sel]
+                        ctrl_bcs = [ctrl_bcs[i] for i in sel]
+
+                pred_writer.write_block(x_pred, om_pred)
+                real_writer.write_block(x_real, om_real)
+                all_pert_names.extend(pert_names)
+                all_celltypes.extend(celltypes)
+                all_gem_groups.extend(gem_groups)
+                if pert_bcs is not None:
+                    all_pert_barcodes.extend(pert_bcs)
+                    all_ctrl_barcodes.extend(ctrl_bcs)
+
+        df_dict = {
+            data_module.pert_col: all_pert_names,
+            data_module.cell_type_key: all_celltypes,
+            batch_obs_key: all_gem_groups,
+        }
+        if data_module.batch_col and data_module.batch_col != batch_obs_key:
+            df_dict[data_module.batch_col] = all_gem_groups
+        if len(all_pert_barcodes) > 0:
+            df_dict["pert_cell_barcode"] = all_pert_barcodes
+            df_dict["ctrl_cell_barcode"] = all_ctrl_barcodes
+        obs = pd.DataFrame(df_dict)
+
+        pred_writer.close(obs)
+        real_writer.close(obs)
+        logger.info(f"Saved adata_pred to {adata_pred_path}")
+        logger.info(f"Saved adata_real to {adata_real_path}")
+        logger.info(
+            "Streaming complete; skipping in-process cell-eval. "
+            "Score the written h5ads downstream."
+        )
         return
 
     final_preds = np.empty((num_cells, output_dim), dtype=np.float32)
