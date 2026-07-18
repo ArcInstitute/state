@@ -542,6 +542,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int, padded=True) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
+        batch = self._normalize_count_keys(batch)
         # Get model predictions (in latent space)
         confidence_pred = None
         if self.confidence_token is not None:
@@ -683,6 +684,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         """Validation step logic."""
+        batch = self._normalize_count_keys(batch)
         if self.confidence_token is None:
             pred, confidence_pred = self.forward(batch), None
         else:
@@ -737,6 +739,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
         return {"loss": loss, "predictions": pred}
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
+        batch = self._normalize_count_keys(batch)
         if self.confidence_token is None:
             pred, confidence_pred = self.forward(batch, padded=False), None
         else:
@@ -766,6 +769,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
         Typically used for final inference. We'll replicate old logic:s
          returning 'preds', 'X', 'pert_name', etc.
         """
+        batch = self._normalize_count_keys(batch)
         if self.confidence_token is None:
             latent_output = self.forward(batch, padded=padded)  # shape [B, ...]
             confidence_pred = None

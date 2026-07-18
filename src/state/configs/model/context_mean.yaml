@@ -16,6 +16,9 @@ kwargs:
   finetune_vci_decoder: False
   batch_encoder: False
   distributional_loss: energy
+  # Convert raw counts to log1p(CP(counts_target_sum)) inside the model.
+  log1p_from_raw_counts: False
+  counts_target_sum: 10000
   transformer_backbone_key: GPT2
   transformer_backbone_kwargs:
       n_positions: ${model.kwargs.cell_set_len}

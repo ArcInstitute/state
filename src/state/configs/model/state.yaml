@@ -20,6 +20,10 @@ kwargs:
   use_batch_token: False
   mask_attn: False
 
+  # Convert raw counts to log1p(CP(counts_target_sum)) inside the model.
+  log1p_from_raw_counts: False
+  counts_target_sum: 10000
+
   use_effect_gating_token: False
   distributional_loss: energy
   init_from: null

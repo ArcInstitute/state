@@ -102,6 +102,7 @@ class ContextMeanPerturbationModel(PerturbationModel):
 
         with torch.no_grad():
             for batch in train_loader:
+                batch = self._normalize_count_keys(batch)
                 # Select the proper expression space
                 if (self.embed_key and self.embed_key != "X_hvg" and self.output_space == "gene") or (
                     self.embed_key and self.output_space == "all"
@@ -205,6 +206,7 @@ class ContextMeanPerturbationModel(PerturbationModel):
         Returns:
             torch.Tensor: The computed loss.
         """
+        batch = self._normalize_count_keys(batch)
         pred = self(batch)
         output_key = (
             "pert_cell_counts"
