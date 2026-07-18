@@ -1,8 +1,16 @@
 from types import SimpleNamespace
 
+import anndata as ad
+import numpy as np
+import pandas as pd
 import pytest
+import pyscx
+import scipy.sparse as sp
 import torch
 import torch.nn as nn
+import toml
+
+from cell_load.data_modules import PerturbationDataModule
 
 from state.tx.models.base import PerturbationModel
 from state.tx.models.context_mean import ContextMeanPerturbationModel
@@ -175,3 +183,64 @@ def test_context_mean_fits_means_in_normalized_space():
 
     expected = model._cp_log1p(batch["pert_cell_counts"][1:]).squeeze(0)
     torch.testing.assert_close(model.celltype_pert_means["CT1"], expected)
+
+
+def test_scx_batch_is_normalized_by_state(tmp_path):
+    obs = pd.DataFrame(
+        {
+            "gene": pd.Categorical(
+                ["non-targeting", "non-targeting", "P1", "P1"]
+            ),
+            "cell_type": pd.Categorical(["CT1"] * 4),
+            "gem_group": pd.Categorical(["batch1"] * 4),
+        },
+        index=[f"cell-{index}" for index in range(4)],
+    )
+    adata = ad.AnnData(
+        X=sp.csr_matrix(
+            [[1, 0, 2], [0, 3, 0], [4, 0, 5], [0, 6, 7]], dtype=np.float32
+        ),
+        obs=obs,
+        var=pd.DataFrame(index=["G1", "G2", "G3"]),
+    )
+    adata.obsm["X_hvg"] = adata.X.toarray()
+    scx_path = tmp_path / "tiny.scx"
+    pyscx.from_anndata(adata, str(scx_path))
+
+    split_path = tmp_path / "split.toml"
+    with split_path.open("w") as split_file:
+        toml.dump(
+            {
+                "datasets": {"tiny": str(scx_path)},
+                "training": {"tiny": "train"},
+            },
+            split_file,
+        )
+
+    datamodule = PerturbationDataModule(
+        toml_config_path=str(split_path),
+        batch_size=2,
+        num_workers=0,
+        pert_col="gene",
+        cell_type_key="cell_type",
+        batch_col="gem_group",
+        control_pert="non-targeting",
+        embed_key="X_hvg",
+        output_space="all",
+        is_log1p=False,
+        cell_sentence_len=2,
+        use_consecutive_loading=True,
+    )
+    datamodule.setup()
+    raw_batch = next(iter(datamodule.train_dataloader()))
+
+    model = _model(
+        embed_key="X_hvg",
+        log1p_from_raw_counts=True,
+        counts_target_sum=4_000,
+    )
+    output = model.predict_step(raw_batch, batch_idx=0)
+
+    for key in ("preds", "ctrl_cell_emb", "pert_cell_emb", "pert_cell_counts"):
+        expected = torch.full_like(output[key].expm1().sum(dim=-1), 4_000.0)
+        torch.testing.assert_close(output[key].expm1().sum(dim=-1), expected)
