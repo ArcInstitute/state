@@ -100,6 +100,7 @@ class PerturbMeanPerturbationModel(PerturbationModel):
 
         with torch.no_grad():
             for batch in train_loader:
+                batch = self._normalize_count_keys(batch)
                 if (
                     self.embed_key
                     and self.embed_key != "X_hvg"
@@ -208,6 +209,7 @@ class PerturbMeanPerturbationModel(PerturbationModel):
         """
         We'll compute MSE vs. the ground truth. (Though no real learnable offsets.)
         """
+        batch = self._normalize_count_keys(batch)
         pred = self(batch)
         if (self.embed_key and self.embed_key != "X_hvg" and self.output_space == "gene") or (
             self.embed_key and self.output_space == "all"
