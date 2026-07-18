@@ -188,18 +188,14 @@ def test_context_mean_fits_means_in_normalized_space():
 def test_scx_batch_is_normalized_by_state(tmp_path):
     obs = pd.DataFrame(
         {
-            "gene": pd.Categorical(
-                ["non-targeting", "non-targeting", "P1", "P1"]
-            ),
+            "gene": pd.Categorical(["non-targeting", "non-targeting", "P1", "P1"]),
             "cell_type": pd.Categorical(["CT1"] * 4),
             "gem_group": pd.Categorical(["batch1"] * 4),
         },
         index=[f"cell-{index}" for index in range(4)],
     )
     adata = ad.AnnData(
-        X=sp.csr_matrix(
-            [[1, 0, 2], [0, 3, 0], [4, 0, 5], [0, 6, 7]], dtype=np.float32
-        ),
+        X=sp.csr_matrix([[1, 0, 2], [0, 3, 0], [4, 0, 5], [0, 6, 7]], dtype=np.float32),
         obs=obs,
         var=pd.DataFrame(index=["G1", "G2", "G3"]),
     )
