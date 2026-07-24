@@ -1,4 +1,5 @@
 import logging
+import math
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
@@ -181,6 +182,11 @@ class PerturbationModel(ABC, LightningModule):
         self.batch_size = batch_size
         self.control_pert = control_pert
 
+        self.log1p_from_raw_counts = bool(kwargs.get("log1p_from_raw_counts", False))
+        self.counts_target_sum = float(kwargs.get("counts_target_sum", 10_000.0))
+        if self.log1p_from_raw_counts and (not math.isfinite(self.counts_target_sum) or self.counts_target_sum <= 0):
+            raise ValueError("counts_target_sum must be positive and finite")
+
         # Training settings
         self.gene_names = gene_names  # store the gene names that this model output for gene expression space
         self.dropout = dropout
@@ -202,6 +208,33 @@ class PerturbationModel(ABC, LightningModule):
 
     def transfer_batch_to_device(self, batch, device, dataloader_idx: int):
         return {k: (v.to(device, non_blocking=True) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
+
+    def _cp_log1p(self, value: torch.Tensor) -> torch.Tensor:
+        """Normalize each count vector to ``counts_target_sum`` and apply log1p."""
+        counts = value.float().clamp_min(0)
+        totals = counts.sum(dim=-1, keepdim=True)
+        scale = torch.where(
+            totals > 0,
+            self.counts_target_sum / totals,
+            torch.zeros_like(totals),
+        )
+        return torch.log1p(counts * scale)
+
+    def _normalize_count_keys(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """Return count-space batch tensors in log1p(CP(target_sum)) space."""
+        if not self.log1p_from_raw_counts:
+            return batch
+
+        keys = ["pert_cell_counts"]
+        if self.embed_key in (None, "X_hvg"):
+            keys.extend(("ctrl_cell_emb", "pert_cell_emb"))
+
+        normalized = dict(batch)
+        for key in keys:
+            value = normalized.get(key)
+            if isinstance(value, torch.Tensor):
+                normalized[key] = self._cp_log1p(value)
+        return normalized
 
     @abstractmethod
     def _build_networks(self):
@@ -296,6 +329,7 @@ class PerturbationModel(ABC, LightningModule):
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step logic for both main model and decoder."""
+        batch = self._normalize_count_keys(batch)
         # Get model predictions (in latent space)
         pred = self(batch)
 
@@ -325,6 +359,7 @@ class PerturbationModel(ABC, LightningModule):
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
         """Validation step logic."""
+        batch = self._normalize_count_keys(batch)
         pred = self(batch)
         loss = self.loss_fn(pred, batch["pert_cell_emb"])
 
@@ -335,6 +370,7 @@ class PerturbationModel(ABC, LightningModule):
         return {"loss": loss, "predictions": pred}
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
+        batch = self._normalize_count_keys(batch)
         latent_output = self(batch)
         target = batch[self.embed_key]
         loss = self.loss_fn(latent_output, target)
@@ -362,6 +398,7 @@ class PerturbationModel(ABC, LightningModule):
         Typically used for final inference. We'll replicate old logic:
          returning 'preds', 'X', 'pert_name', etc.
         """
+        batch = self._normalize_count_keys(batch)
         latent_output = self.forward(batch)
         output_dict = {
             "preds": latent_output,
