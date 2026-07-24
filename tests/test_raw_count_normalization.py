@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from state.tx.models.base import PerturbationModel
 from state.tx.models.context_mean import ContextMeanPerturbationModel
