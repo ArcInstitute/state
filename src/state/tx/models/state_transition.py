@@ -181,6 +181,7 @@ class StateTransitionPerturbationModel(PerturbationModel):
             raise ValueError(f"Unknown loss function: {loss_name}")
 
         self.use_basal_projection = kwargs.get("use_basal_projection", True)
+        self.zero_perturbation_encoder = kwargs.get("zero_perturbation_encoder", False)
 
         # Build the underlying neural OT network
         self._build_networks(lora_cfg=kwargs.get("lora", None))
@@ -416,6 +417,8 @@ class StateTransitionPerturbationModel(PerturbationModel):
 
         # Shape: [B, S, input_dim]
         pert_embedding = self.encode_perturbation(pert)
+        if self.zero_perturbation_encoder:
+            pert_embedding = torch.zeros_like(pert_embedding)
         control_cells = self.encode_basal_expression(basal)
 
         # Add encodings in input_dim space, then project to hidden_dim

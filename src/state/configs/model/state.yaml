@@ -25,6 +25,7 @@ kwargs:
   counts_target_sum: 10000
 
   use_effect_gating_token: False
+  zero_perturbation_encoder: False
   distributional_loss: energy
   init_from: null
   mmd_num_chunks: 1

@@ -19,6 +19,7 @@ kwargs:
   batch_encoder: False
   mask_attn: False
   use_effect_gating_token: False
+  zero_perturbation_encoder: False
   use_basal_projection: False
   distributional_loss: energy
   gene_decoder_bool: False
