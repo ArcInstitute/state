@@ -213,6 +213,21 @@ def run_emb_preprocess(args):
     )
 
 
+def _column_values(grp):
+    """Raw values of a var column: categorical categories, nullable-string values, or a plain dataset.
+
+    anndata >= 0.11 with pandas >= 3 writes string columns (including var/_index) as a
+    nullable-string-array group with `values` and `mask` datasets instead of a plain dataset.
+    """
+    if isinstance(grp, h5.Group):
+        if "categories" in grp:
+            return grp["categories"][:]
+        if grp.attrs.get("encoding-type") == "nullable-string-array":
+            return grp["values"][:]
+        raise ValueError(f"Unsupported encoding {grp.attrs.get('encoding-type')!r} for {grp.name}")
+    return grp[:]
+
+
 def detect_gene_name_strategy(dataset_path, all_embeddings=None):
     """Detect which var field under /var/ holds gene names by max overlap."""
     with h5.File(dataset_path, "r") as f:
@@ -238,7 +253,7 @@ def detect_gene_name_strategy(dataset_path, all_embeddings=None):
         # for each candidate, count how many genes appear in all_embeddings
         for fld in fields:
             grp = f["var"][fld]
-            raw = grp["categories"][:] if "categories" in grp else grp[:]
+            raw = _column_values(grp)
             genes = [
                 item.decode("utf-8").upper() if isinstance(item, (bytes, bytearray)) else str(item).upper()
                 for item in raw
@@ -282,7 +297,7 @@ def extract_dataset_info(dataset_path, gene_field):
             ]
             genes = [cats[int(code)] for code in codes]
         else:
-            raw = grp["categories"][:] if "categories" in grp else grp[:]
+            raw = _column_values(grp)
             genes = [
                 item.decode("utf-8").upper() if isinstance(item, (bytes, bytearray)) else str(item).upper()
                 for item in raw
