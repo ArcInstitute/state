@@ -209,6 +209,7 @@ class FilteredGenesCounts(H5adSentenceDataset):
         emb_cfg = utils.get_embedding_cfg(self.cfg)
         # for inference, let's make sure this dataset's valid mask is available
         if adata_name is not None:
+            assert adata is not None
             # append it to self.datasets
             self.datasets.append(adata_name)
             self.shapes_dict[adata_name] = adata.shape
@@ -219,8 +220,12 @@ class FilteredGenesCounts(H5adSentenceDataset):
             # make a gene→global‐index lookup
             global_pos = {g: i for i, g in enumerate(valid_genes_list)}
 
-            # grab var_names from the AnnData
-            gene_names = np.array(adata.var_names)
+            # Honor the column selected by inference's overlap detection (or
+            # explicitly supplied by the caller). None selects var_names.
+            if self.gene_column is not None and self.gene_column in adata.var:
+                gene_names = np.asarray(adata.var[self.gene_column])
+            else:
+                gene_names = np.array(adata.var_names)
 
             # for each gene in this dataset, find its global idx or -1 if missing
             new_mapping = np.array([global_pos.get(g, -1) for g in gene_names])
@@ -255,15 +260,8 @@ class FilteredGenesCounts(H5adSentenceDataset):
                 valid_mask = np.isin(gene_names, valid_genes_list)
                 self.valid_gene_index[name] = valid_mask
             else:
-                gene_names = np.array(adata.var_names)
-                valid_mask = np.isin(gene_names, valid_genes_list)
-
-                if not valid_mask.any():
-                    # none of the genes were valid, probably ensembl id's
-                    gene_names = adata.var[self.gene_column].values
-                    valid_mask = np.isin(gene_names, valid_genes_list)
-
-                self.valid_gene_index[name] = valid_mask
+                # Derive the mask from the same gene names as the mapping.
+                self.valid_gene_index[name] = self.ds_emb_map[name] != -1
 
     def __getitem__(self, idx):
         counts, idx, dataset, dataset_num = super().__getitem__(idx)
